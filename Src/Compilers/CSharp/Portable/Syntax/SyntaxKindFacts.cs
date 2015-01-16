@@ -302,6 +302,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                 case SyntaxKind.DelegateDeclaration:
                 case SyntaxKind.EnumDeclaration:
                 case SyntaxKind.ClassDeclaration:
+                case SyntaxKind.RecordDeclaration:
                 case SyntaxKind.StructDeclaration:
                 case SyntaxKind.InterfaceDeclaration:
                     return true;
@@ -334,6 +335,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             switch (kind)
             {
                 case SyntaxKind.ClassDeclaration:
+                case SyntaxKind.RecordDeclaration:
                 case SyntaxKind.StructDeclaration:
                 case SyntaxKind.InterfaceDeclaration:
                 case SyntaxKind.DelegateDeclaration:
@@ -1068,6 +1070,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                 case SyntaxKind.NameOfKeyword:
                 case SyntaxKind.AsyncKeyword:
                 case SyntaxKind.AwaitKeyword:
+                case SyntaxKind.RecordKeyword:
                     return true;
                 default:
                     return false;
@@ -1165,6 +1168,8 @@ namespace Microsoft.CodeAnalysis.CSharp
                     return SyntaxKind.AwaitKeyword;
                 case "nameof":
                     return SyntaxKind.NameOfKeyword;
+                case "record":
+                    return SyntaxKind.RecordKeyword;
                 default:
                     return SyntaxKind.None;
             }
@@ -1558,6 +1563,8 @@ namespace Microsoft.CodeAnalysis.CSharp
                     return "await";
                 case SyntaxKind.NameOfKeyword:
                     return "nameof";
+                case SyntaxKind.RecordKeyword:
+                    return "record";
                 default:
                     return string.Empty;
             }

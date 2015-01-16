@@ -520,5 +520,34 @@ namespace Microsoft.CodeAnalysis.CSharp
         IncompleteMember = 8916,
         ArrowExpressionClause = 8917,
         InterpolatedStringInsert = 8918,
+
+        // Records
+        RecordDeclaration = 9000,
+        RecordKeyword = 9001,
+        RecordParameterList = 9002,
+        RecordParameter = 9003,
+
+        // Extended is operator: match
+        MatchExpression = 9004,
+
+        // Extended switch statement: match
+        MatchStatement = 9005,
+        CaseMatchLabel = 9006,
+
+        // Patterns
+        ConstantPattern = 9007,
+        DeclarationPattern = 9008,
+        WildCardPattern = 9009,
+        RecursivePattern = 9010,
+        PropertyPattern = 9011,
+
+        // Auxiliary nodes for RecursivePattern
+        SubRecursivePattern = 9012,
+        SubRecursivePatternList = 9013,
+        ColonName = 9014,
+
+        // Auxiliary nodes for PropertyPattern
+        SubPropertyPatternList = 9015,
+        SubPropertyPattern = 9016,
     }
 }

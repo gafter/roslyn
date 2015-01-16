@@ -106,6 +106,8 @@ namespace Microsoft.CodeAnalysis.CSharp
         IDS_LogoLine1 = MessageBase + 12698,
         IDS_LogoLine2 = MessageBase + 12699,
         IDS_CSCHelp = MessageBase + 12700,
+
+        IDS_FeatureRecords = MessageBase + 12701,
     }
 
     // Message IDs may refer to strings that need to be localized.
@@ -140,6 +142,9 @@ namespace Microsoft.CodeAnalysis.CSharp
             // Checks are in the LanguageParser unless otherwise noted.
             switch (feature)
             {
+                case MessageID.IDS_FeatureRecords:
+                    return LanguageVersion.Experimental;
+
                 // C# 6 features.
                 case MessageID.IDS_FeatureExceptionFilter:
                 case MessageID.IDS_FeatureAutoPropertyInitializer:

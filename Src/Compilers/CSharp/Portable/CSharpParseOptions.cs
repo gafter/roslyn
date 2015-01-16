@@ -189,5 +189,16 @@ namespace Microsoft.CodeAnalysis.CSharp
                 Hash.Combine(base.GetHashCodeHelper(),
                 Hash.Combine((int)this.LanguageVersion, 0));
         }
+
+        internal bool IsRecordsEnabled()
+        {
+            LanguageVersion availableVersion = this.LanguageVersion;
+            LanguageVersion requiredVersion = MessageID.IDS_FeatureRecords.RequiredVersion();
+            if (availableVersion >= requiredVersion)
+            {
+                return this.PreprocessorSymbolNames.Contains(name => name == "RECORDS");
+            }
+            return false;
+        }
     }
 }
