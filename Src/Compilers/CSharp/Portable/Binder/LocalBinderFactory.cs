@@ -253,8 +253,11 @@ namespace Microsoft.CodeAnalysis.CSharp
 
         public override void VisitIfStatement(IfStatementSyntax node)
         {
-            VisitPossibleEmbeddedStatement(node.Statement, enclosing);
-            Visit(node.Else, enclosing);
+            var ifBinder = new IfBinder(enclosing, node);
+            AddToMap(node, ifBinder);
+
+            VisitPossibleEmbeddedStatement(node.Statement, ifBinder);
+            Visit(node.Else, ifBinder);
         }
 
         public override void VisitElseClause(ElseClauseSyntax node)

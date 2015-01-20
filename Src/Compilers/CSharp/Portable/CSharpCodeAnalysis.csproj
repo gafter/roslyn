@@ -85,6 +85,7 @@
     <Compile Include="Binder\Binder_Lookup.cs" />
     <Compile Include="Binder\Binder_NameConflicts.cs" />
     <Compile Include="Binder\Binder_Operators.cs" />
+    <Compile Include="Binder\Binder_Patterns.cs" />
     <Compile Include="Binder\Binder_Query.cs" />
     <Compile Include="Binder\Binder_QueryErrors.cs" />
     <Compile Include="Binder\Binder_Statements.cs" />
@@ -110,6 +111,7 @@
     <Compile Include="Binder\ForEachLoopBinder.cs" />
     <Compile Include="Binder\ForLoopBinder.cs" />
     <Compile Include="Binder\HostObjectModeBinder.cs" />
+    <Compile Include="Binder\IfBinder.cs" />
     <Compile Include="Binder\ImplicitlyTypedFieldBinder.cs" />
     <Compile Include="Binder\ImplicitlyTypedLocalBinder.cs" />
     <Compile Include="Binder\Imports.cs" />
@@ -406,6 +408,8 @@
     <Compile Include="Lowering\LocalRewriter\LocalRewriter_Literal.cs" />
     <Compile Include="Lowering\LocalRewriter\LocalRewriter_LocalDeclaration.cs" />
     <Compile Include="Lowering\LocalRewriter\LocalRewriter_LockStatement.cs" />
+    <Compile Include="Lowering\LocalRewriter\LocalRewriter_MatchExpression.cs" />
+    <Compile Include="Lowering\LocalRewriter\LocalRewriter_MatchStatement.cs" />
     <Compile Include="Lowering\LocalRewriter\LocalRewriter_MultipleLocalDeclarations.cs" />
     <Compile Include="Lowering\LocalRewriter\LocalRewriter_NullCoalescingOperator.cs" />
     <Compile Include="Lowering\LocalRewriter\LocalRewriter_ObjectCreationExpression.cs" />
@@ -661,6 +665,12 @@
     <Compile Include="Symbols\Synthesized\GeneratedLabelSymbol.cs" />
     <Compile Include="Symbols\Synthesized\GeneratedNameKind.cs" />
     <Compile Include="Symbols\Synthesized\GeneratedNames.cs" />
+    <Compile Include="Symbols\Synthesized\Records\SynthesizedConstantHelperMethod.cs" />
+    <Compile Include="Symbols\Synthesized\Records\SynthesizedEqualsMethod.cs" />
+    <Compile Include="Symbols\Synthesized\Records\SynthesizedGetHashCodeMethod.cs" />
+    <Compile Include="Symbols\Synthesized\Records\SynthesizedIsOperator.cs" />
+    <Compile Include="Symbols\Synthesized\Records\SynthesizedMethodBaseForRecords.cs" />
+    <Compile Include="Symbols\Synthesized\Records\SynthesizedPropertySymbol.cs" />
     <Compile Include="Symbols\Synthesized\SynthesizedAccessorValueParameterSymbol.cs" />
     <Compile Include="Symbols\Synthesized\SynthesizedBackingFieldSymbol.cs" />
     <Compile Include="Symbols\Synthesized\SynthesizedContainer.cs" />

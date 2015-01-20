@@ -336,6 +336,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                 // if (local.HasValue) local.GetValueOrDefault().Dispose();
                 finallyStatement = RewriteIfStatement(
                     syntax: syntax,
+                    locals: ImmutableArray<LocalSymbol>.Empty,
                     rewrittenCondition: ifCondition,
                     rewrittenConsequence: disposeStatement,
                     rewrittenAlternativeOpt: null,

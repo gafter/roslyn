@@ -144,6 +144,7 @@ namespace Microsoft.CodeAnalysis.CSharp
 
                 exitCall = RewriteIfStatement(
                     lockSyntax,
+                    ImmutableArray<LocalSymbol>.Empty,
                     boundFlagTemp,
                     exitCall,
                     null,

@@ -36,7 +36,9 @@ namespace Microsoft.CodeAnalysis.CSharp
         Async = 1 << 19,
 
         All = (Async | (Async - 1)), // all modifiers
-        Unset = 1 << 20, // used when a modifiers value hasn't yet been computed
+
+        Record = 1 << 20,
+        Unset = 1 << 21, // used when a modifiers value hasn't yet been computed
 
         AccessibilityMask = Private | Protected | Internal | ProtectedInternal | Public,
     }

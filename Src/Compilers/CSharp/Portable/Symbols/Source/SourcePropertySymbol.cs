@@ -395,7 +395,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             }
         }
 
-        internal bool HasPointerType
+        internal override bool HasPointerType
         {
             get
             {

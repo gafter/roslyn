@@ -462,6 +462,9 @@ namespace Microsoft.CodeAnalysis.CSharp
                 case SyntaxKind.IsExpression:
                     return BindIsOperator((BinaryExpressionSyntax)node, diagnostics);
 
+                case SyntaxKind.MatchExpression:
+                    return BindMatchExpression((MatchExpressionSyntax)node, diagnostics);
+
                 case SyntaxKind.AsExpression:
                     return BindAsOperator((BinaryExpressionSyntax)node, diagnostics);
 

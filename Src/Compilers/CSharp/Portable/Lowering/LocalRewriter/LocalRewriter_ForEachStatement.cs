@@ -185,6 +185,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                         // if ((object)e != null) ((IDisposable)e).Dispose(); 
                         disposeStmt = RewriteIfStatement(
                             syntax: forEachSyntax,
+                            locals: ImmutableArray<LocalSymbol>.Empty,
                             rewrittenCondition: new BoundBinaryOperator(forEachSyntax,
                                 operatorKind: BinaryOperatorKind.NotEqual,
                                 left: MakeConversion(
@@ -236,6 +237,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                     // if (d != null) d.Dispose();
                     BoundStatement ifStmt = RewriteIfStatement(
                         syntax: forEachSyntax,
+                        locals: ImmutableArray<LocalSymbol>.Empty,
                         rewrittenCondition: new BoundBinaryOperator(forEachSyntax,
                             operatorKind: BinaryOperatorKind.NotEqual, // reference equality
                             left: boundDisposableVar,

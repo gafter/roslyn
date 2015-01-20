@@ -298,5 +298,10 @@ namespace Microsoft.CodeAnalysis
         /// (see C# Specification, §7.7.7.1 Awaitable expressions).
         /// </summary>
         public const string OnCompleted = "OnCompleted";
+
+        /// <summary>
+        /// The name assigned to the Is operator
+        /// </summary>
+        public const string IsOperatorName = "op_Is";
     }
 }

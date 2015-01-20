@@ -621,6 +621,11 @@ namespace Microsoft.CodeAnalysis.CSharp
         {
             if (initializer == null)
             {
+                if (errorSyntax.Parent.Parent.Kind == SyntaxKind.DeclarationPattern)
+                {
+                    return null;
+                }
+
                 if (!errorSyntax.HasErrors)
                 {
                     Error(diagnostics, ErrorCode.ERR_ImplicitlyTypedVariableWithNoInitializer, errorSyntax);
@@ -2476,15 +2481,14 @@ namespace Microsoft.CodeAnalysis.CSharp
 
         private BoundIfStatement BindIfStatement(IfStatementSyntax node, DiagnosticBag diagnostics)
         {
-            var condition = BindBooleanExpression(node.Condition, diagnostics);
-            var consequence = BindPossibleEmbeddedStatement(node.Statement, diagnostics);
-            if (node.Else == null)
-            {
-                return new BoundIfStatement(node, condition, consequence, null);
-            }
+            var ifBinder = this.GetBinder(node);
+            Debug.Assert(ifBinder != null);
+            return ifBinder.BindIfParts(diagnostics, ifBinder);
+        }
 
-            var alternative = BindPossibleEmbeddedStatement(node.Else.Statement, diagnostics);
-            return new BoundIfStatement(node, condition, consequence, alternative);
+        internal virtual BoundIfStatement BindIfParts(DiagnosticBag diagnostics, Binder originalBinder)
+        {
+            return this.Next.BindIfParts(diagnostics, originalBinder);
         }
 
         protected BoundExpression BindBooleanExpression(ExpressionSyntax node, DiagnosticBag diagnostics)
@@ -2623,14 +2627,14 @@ namespace Microsoft.CodeAnalysis.CSharp
             };
         }
 
-        public BoundSwitchStatement BindSwitchStatement(SwitchStatementSyntax node, DiagnosticBag diagnostics)
+        public BoundStatement BindSwitchStatement(SwitchStatementSyntax node, DiagnosticBag diagnostics)
         {
             Debug.Assert(node != null);
             Binder switchBinder = this.GetBinder(node);
             return switchBinder.BindSwitchExpressionAndSections(node, switchBinder, diagnostics);
         }
 
-        internal virtual BoundSwitchStatement BindSwitchExpressionAndSections(SwitchStatementSyntax node, Binder originalBinder, DiagnosticBag diagnostics)
+        internal virtual BoundStatement BindSwitchExpressionAndSections(SwitchStatementSyntax node, Binder originalBinder, DiagnosticBag diagnostics)
         {
             return this.Next.BindSwitchExpressionAndSections(node, originalBinder, diagnostics);
         }

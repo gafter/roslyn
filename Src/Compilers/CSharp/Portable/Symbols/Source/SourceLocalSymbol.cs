@@ -237,7 +237,8 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
 
             Debug.Assert((object)originalType == null ||
                 originalType.IsErrorType() && newType.IsErrorType() ||
-                originalType == newType);
+                originalType == newType ||
+                declarationKind == LocalDeclarationKind.Pattern);
 
             if ((object)originalType == null)
             {
@@ -285,6 +286,10 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
 
                     case LocalDeclarationKind.CatchVariable:
                         Debug.Assert(node is CatchDeclarationSyntax);
+                        break;
+
+                    case LocalDeclarationKind.Pattern:
+                        Debug.Assert(node is DeclarationPatternSyntax);
                         break;
 
                     default:

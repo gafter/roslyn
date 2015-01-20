@@ -13,8 +13,8 @@ namespace Microsoft.CodeAnalysis.CSharp.Test.Utilities
     public class CSharpTrackingDiagnosticAnalyzer : TrackingDiagnosticAnalyzer<SyntaxKind>
     {
         static readonly Regex omittedSyntaxKindRegex =
-            new Regex(@"Using|Extern|Parameter|Constraint|Specifier|Initializer|Global|Method|Destructor|MemberBindingExpression|ElementBindingExpression|ArrowExpressionClause|NameOfExpression");
-        
+            new Regex(@"Using|Extern|Parameter|Constraint|Specifier|Initializer|Global|Method|Destructor|MemberBindingExpression|ElementBindingExpression|ArrowExpressionClause|NameOfExpressionConstantPattern|DeclarationPattern|WildCardPattern|RecursivePattern|PropertyPattern|ColonName|RecordDeclaration|MatchExpression|SubRecursivePattern|SubPropertyPattern|MatchStatement|CaseMatchLabel");
+
         protected override bool IsOnCodeBlockSupported(SymbolKind symbolKind, MethodKind methodKind, bool returnsVoid)
         {
             return base.IsOnCodeBlockSupported(symbolKind, methodKind, returnsVoid) && methodKind != MethodKind.EventRaise;

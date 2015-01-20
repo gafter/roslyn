@@ -2386,11 +2386,50 @@ namespace Microsoft.CodeAnalysis.CSharp
             return false;
         }
 
+        private BoundExpression BindMatchExpression(MatchExpressionSyntax node, DiagnosticBag diagnostics)
+        {
+            var leftBound = BindValue(node.Expression, diagnostics, BindValueKind.RValue);
+            var pattern = node.Pattern;
+            var resultType = GetSpecialType(SpecialType.System_Boolean, diagnostics, node);
+            var rightBound = this.BindPattern(pattern, leftBound.Type, diagnostics);
+            return new BoundMatchExpression(node, leftBound, rightBound, resultType);
+        }
+
         private BoundExpression BindIsOperator(BinaryExpressionSyntax node, DiagnosticBag diagnostics)
         {
             var operand = BindValue(node.Left, diagnostics, BindValueKind.RValue);
             AliasSymbol alias;
-            TypeSymbol targetType = BindType(node.Right, diagnostics, out alias);
+            TypeSymbol targetType;
+            var options = (CSharpParseOptions)node.SyntaxTree.Options;
+            if (options.IsRecordsEnabled())
+            {
+                var extraDiagnostics = DiagnosticBag.GetInstance();
+                targetType = BindType(node.Right, extraDiagnostics, out alias);
+
+                // node.Right might be a constant and it might be converted to a constant expression (e.g., o is Days.Sun)
+                if (extraDiagnostics.HasAnyErrors() && node.Right is NameSyntax)
+                {
+                    var diagnosticsForConstant = DiagnosticBag.GetInstance();
+                    var boundConstant = BindValue(node.Right, diagnosticsForConstant, BindValueKind.RValue);
+                    if (boundConstant.ConstantValue != null)
+                    {
+                        // E.g., (o is Days.Sun) Days.Sun would not be bound as a type so we will try our chance for a constant expression. 
+                        // If it is constant, remove old diagnostics about why Days.Sun could not be bounded as a type. 
+                        // Then, bind the is operator as a match expression. 
+                        extraDiagnostics.Free();
+                        diagnostics.AddRangeAndFree(diagnosticsForConstant);
+                        var boolType = GetSpecialType(SpecialType.System_Boolean, diagnostics, node);
+                        return new BoundMatchExpression(node, operand, new BoundConstantPattern(node.Right, boundConstant), boolType);
+                    }
+                    diagnosticsForConstant.Free();
+                }
+                diagnostics.AddRangeAndFree(extraDiagnostics);
+            }
+            else
+            {
+                targetType = BindType(node.Right, diagnostics, out alias);
+            }
+
             var typeExpression = new BoundTypeExpression(node.Right, alias, targetType);
             var targetTypeKind = targetType.TypeKind;
             var resultType = (TypeSymbol)GetSpecialType(SpecialType.System_Boolean, diagnostics, node);

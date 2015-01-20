@@ -426,6 +426,21 @@ namespace Microsoft.CodeAnalysis.CSharp
             return new BoundAsOperator(this.Syntax, operand, Type(type), Conversion.ExplicitReference, type) { WasCompilerGenerated = true };
         }
 
+        public BoundAsOperator As(BoundExpression operand, TypeSymbol type, Conversion k)
+        {
+            return new BoundAsOperator(this.Syntax, operand, Type(type), k, type) { WasCompilerGenerated = true };
+        }
+
+        public BoundIsOperator Is(BoundExpression operand, TypeSymbol type)
+        {
+            return new BoundIsOperator(this.Syntax, operand, Type(type), Conversion.ExplicitReference, SpecialType(Microsoft.CodeAnalysis.SpecialType.System_Boolean)) { WasCompilerGenerated = true };
+        }
+
+        public BoundMatchExpression Match(BoundExpression operand, BoundPattern pattern)
+        {
+            return new BoundMatchExpression(this.Syntax, operand, pattern, SpecialType(Microsoft.CodeAnalysis.SpecialType.System_Boolean)) { WasCompilerGenerated = true };
+        }
+
         public BoundBinaryOperator LogicalAnd(BoundExpression left, BoundExpression right)
         {
             return Binary(BinaryOperatorKind.LogicalBoolAnd, SpecialType(Microsoft.CodeAnalysis.SpecialType.System_Boolean), left, right);
@@ -602,10 +617,17 @@ namespace Microsoft.CodeAnalysis.CSharp
         public BoundCall Call(BoundExpression receiver, MethodSymbol method, ImmutableArray<BoundExpression> args)
         {
             Debug.Assert(method.ParameterCount == args.Length);
+            return Call(receiver, method, args, ImmutableArray<RefKind>.Empty);
+        }
+
+        public BoundCall Call(BoundExpression receiver, MethodSymbol method, ImmutableArray<BoundExpression> args, ImmutableArray<RefKind> refKinds)
+        {
+            Debug.Assert(method.ParameterCount == args.Length);
             return new BoundCall(
                 Syntax, receiver, method, args,
-                ImmutableArray<String>.Empty, ImmutableArray<RefKind>.Empty, false, false, false,
-                ImmutableArray<int>.Empty, LookupResultKind.Viable, method.ReturnType) { WasCompilerGenerated = true };
+                ImmutableArray<String>.Empty, refKinds, false, false, false,
+                ImmutableArray<int>.Empty, LookupResultKind.Viable, method.ReturnType)
+            { WasCompilerGenerated = true };
         }
 
         public BoundCall Call(BoundExpression receiver, TypeSymbol declaringType, string methodName, ImmutableArray<BoundExpression> args)
@@ -644,6 +666,11 @@ namespace Microsoft.CodeAnalysis.CSharp
             //       elseClause
             //       afterif:
             //    }
+            return If(ImmutableArray<LocalSymbol>.Empty, condition, thenClause, elseClauseOpt);
+        }
+
+        public BoundStatement If(ImmutableArray<LocalSymbol> locals, BoundExpression condition, BoundStatement thenClause, BoundStatement elseClauseOpt)
+        {
             Debug.Assert(thenClause != null);
 
             var statements = ArrayBuilder<BoundStatement>.GetInstance();
@@ -666,7 +693,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             }
 
             statements.Add(Label(afterif));
-            return Block(statements.ToImmutableAndFree());
+            return Block(locals, statements.ToImmutableAndFree());
         }
 
         public BoundStatement For(BoundExpression initialization, BoundExpression termination, BoundExpression increment, BoundStatement body)
@@ -813,6 +840,11 @@ namespace Microsoft.CodeAnalysis.CSharp
         public BoundLiteral Literal(Boolean value)
         {
             return new BoundLiteral(Syntax, ConstantValue.Create(value), SpecialType(Microsoft.CodeAnalysis.SpecialType.System_Boolean)) { WasCompilerGenerated = true };
+        }
+
+        public BoundLiteral Literal(ConstantValue value)
+        {
+            return new BoundLiteral(Syntax, value, SpecialType(value.SpecialType)) { WasCompilerGenerated = true };
         }
 
         public BoundLiteral Literal(string value)
@@ -968,6 +1000,19 @@ namespace Microsoft.CodeAnalysis.CSharp
                 (fieldContainer.AllTypeArgumentCount() == 0) ?
                 CodeAnalysis.WellKnownMember.System_Reflection_FieldInfo__GetFieldFromHandle :
                 CodeAnalysis.WellKnownMember.System_Reflection_FieldInfo__GetFieldFromHandle2);
+        }
+
+        public BoundExpression Cast(TypeSymbol type, BoundExpression arg)
+        {
+            HashSet<DiagnosticInfo> useSiteDiagnostics = null;
+            Conversion c = Compilation.Conversions.ClassifyConversionForCast(arg, type, ref useSiteDiagnostics);
+
+            Debug.Assert(useSiteDiagnostics.IsNullOrEmpty());
+
+            // If this happens, we should probably check if the method has ObsoleteAttribute.
+            Debug.Assert((object)c.Method == null, "Why are we synthesizing a user-defined conversion after initial binding?");
+
+            return new BoundConversion(Syntax, arg, c, @checked: false, explicitCastInCode: true, constantValueOpt: ConstantValue.NotAvailable, type: type) { WasCompilerGenerated = true };
         }
 
         public BoundExpression Convert(TypeSymbol type, BoundExpression arg)

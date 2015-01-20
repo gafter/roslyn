@@ -73,8 +73,10 @@
       <HintPath>..\..\..\..\..\packages\xunit.core.2.0.0-alpha-build2576\lib\net45\xunit2.dll</HintPath>
     </Reference>
   </ItemGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' "></PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' "></PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+  </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|ARM' ">
     <PlatformTarget>ARM</PlatformTarget>
   </PropertyGroup>
@@ -135,6 +137,7 @@
     <Compile Include="Semantics\OperatorTests.cs" />
     <Compile Include="Semantics\OverloadResolutionTestBase.cs" />
     <Compile Include="Semantics\OverloadResolutionTests.cs" />
+    <Compile Include="Semantics\PatternMatchingTests.cs" />
     <Compile Include="Semantics\QueryTests.cs" />
     <Compile Include="Semantics\SemanticAnalyzerTests.cs" />
     <Compile Include="Semantics\SemanticErrorTests.cs" />
