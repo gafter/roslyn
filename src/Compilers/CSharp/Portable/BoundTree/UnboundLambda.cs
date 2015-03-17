@@ -48,8 +48,8 @@ namespace Microsoft.CodeAnalysis.CSharp
 
             Debug.Assert(
                 syntax.IsAnonymousFunction() ||                                                 // lambda expressions
-                syntax is ExpressionSyntax && SyntaxFacts.IsLambdaBody(syntax) ||               // query lambdas
-                SyntaxFacts.IsQueryPairLambda(syntax)                                           // "pair" lambdas in queries
+                syntax is ExpressionSyntax && LambdaUtilities.IsLambdaBody(syntax) ||           // query lambdas
+                LambdaUtilities.IsQueryPairLambda(syntax)                                       // "pair" lambdas in queries
             );
         }
 
