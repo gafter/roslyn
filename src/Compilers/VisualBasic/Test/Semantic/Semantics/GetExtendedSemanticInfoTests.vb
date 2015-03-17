@@ -8616,8 +8616,6 @@ End Module
             Assert.Equal(alias2, alias2b)
         End Sub
 
-
-
         <Fact()>
         Public Sub StaticLocals()
             Dim compilation = CreateCompilationWithMscorlib(
@@ -8649,7 +8647,7 @@ End Class
                                                     End Sub)
 
 
-            Dim containingType = DirectCast(model, SemanticModel).GetEnclosingSymbol(SLDeclaration.SpanStart)
+            Dim containingType = model.GetEnclosingSymbol(SLDeclaration.SpanStart)
             Assert.Equal("Function C.foo() As System.Int32", DirectCast(containingType, Symbol).ToTestDisplayString())
 
             'GetSymbolInfo
@@ -8663,6 +8661,32 @@ End Class
 
             'GetAliasImports - only applicable for Imports statements
             'ConstantValue
+        End Sub
+
+        <Fact(), WorkItem(1290, "https://github.com/dotnet/roslyn/issues/1290")>
+        Public Sub ContainingMemberInLambda()
+            Dim compilation = CreateCompilationWithMscorlib(
+<compilation>
+    <file name="a.vb"><![CDATA[
+Imports System
+Class C
+    Sub F()
+        Dim f1 = New Func(Of Integer, Integer, Integer)(
+            Function(a1, a2)
+                Return a1
+            End Function)
+    End Sub
+End Class
+    ]]></file>
+</compilation>)
+
+            Dim tree = compilation.SyntaxTrees(0)
+            Dim model = compilation.GetSemanticModel(tree)
+            Dim locOfA1 = tree.ToString().IndexOf("a1")
+            ' locOfA1 = tree.ToString().IndexOf("a1", locOfA1 + 1)
+            Assert.True(locOfA1 > 0)
+            Dim containingType = model.GetEnclosingSymbol(locOfA1).ContainingSymbol
+            Assert.Equal("Function (a1 As System.Int32, a2 As System.Int32) As System.Int32", DirectCast(containingType, Symbol).ToTestDisplayString())
         End Sub
 
         <WorkItem(530631, "DevDiv")>

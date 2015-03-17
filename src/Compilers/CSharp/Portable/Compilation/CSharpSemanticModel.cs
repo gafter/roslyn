@@ -4178,8 +4178,20 @@ namespace Microsoft.CodeAnalysis.CSharp
             CancellationToken cancellationToken = default(CancellationToken))
         {
             position = CheckAndAdjustPosition(position);
-            var binder = GetEnclosingBinder(position);
-            return binder == null ? null : binder.ContainingMemberOrLambda;
+            // We do not use
+            // this.GetEnclosingBinder(position)?.ContainingMemberOrLambda
+            // to get the enclosing symbol, as not all symbols have distinct binders.
+
+            for (var node = Root.FindToken(position).Parent; node != null; node = node.Parent)
+            {
+                var sym = GetDeclaredSymbolCore(node, cancellationToken);
+                if ((object)sym != null)
+                {
+                    return sym;
+                }
+            }
+
+            return null;
         }
 
         #region SemanticModel Members

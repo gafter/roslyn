@@ -2926,12 +2926,24 @@ _Default:
 
         ''' <summary>
         ''' Given a position in the SyntaxTree for this SemanticModel returns the innermost Symbol
-        ''' that the position is considered inside of. 
+        ''' that the position is considered inside of.
         ''' </summary>
         Public Shadows Function GetEnclosingSymbol(position As Integer, Optional cancellationToken As CancellationToken = Nothing) As ISymbol
             CheckPosition(position)
-            Dim binder = Me.GetEnclosingBinder(position)
-            Return If(binder Is Nothing, Nothing, binder.ContainingMember)
+            ' We cannot use Me.GetEnclosingBinder(position)?.ContainingMember to get the enclosing symbol
+            ' because the binder for a lambda header is the binder for the enclosing scope, not the lambda body.
+
+            Dim node = Root.FindToken(position).Parent
+            While node IsNot Nothing
+                Dim sym = GetDeclaredSymbolCore(node, cancellationToken)
+                If sym IsNot Nothing Then
+                    Return sym
+                End If
+
+                node = node.Parent
+            End While
+
+            Return Nothing
         End Function
 
         ''' <summary>
