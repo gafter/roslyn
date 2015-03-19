@@ -639,12 +639,14 @@ class C
             var model = compilation.GetSemanticModel(compilation.SyntaxTrees.Single());
 
             var type = compilation.GlobalNamespace.GetMember<NamedTypeSymbol>("C");
+            var method = type.GetMember("M");
 
             int start = source.IndexOf("param", StringComparison.Ordinal);
             int end = source.LastIndexOf("param", StringComparison.Ordinal);
             for (int position = start; position < end; position++)
             {
-                Assert.Equal(type, model.GetEnclosingSymbol(position));
+                var sym = model.GetEnclosingSymbol(position);
+                Assert.Equal(method, sym);
             }
         }
 

@@ -2943,7 +2943,8 @@ _Default:
                 node = node.Parent
             End While
 
-            Return Nothing
+            ' all source files are implicitly in the root namespace
+            Return Me.Compilation.RootNamespace
         End Function
 
         ''' <summary>
