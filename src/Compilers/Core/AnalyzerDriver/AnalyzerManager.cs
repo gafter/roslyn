@@ -40,8 +40,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
             new ConditionalWeakTable<Compilation, ConcurrentDictionary<AnalyzerAndOptions, Task<HostCompilationStartAnalysisScope>>>();
 
         private readonly ConditionalWeakTable<Compilation, ConcurrentDictionary<AnalyzerAndOptions, Task<HostCompilationStartAnalysisScope>>>.CreateValueCallback _compilationScopeMapCallback =
-            new ConditionalWeakTable<Compilation, ConcurrentDictionary<AnalyzerAndOptions, Task<HostCompilationStartAnalysisScope>>>.CreateValueCallback(
-                comp => new ConcurrentDictionary<AnalyzerAndOptions, Task<HostCompilationStartAnalysisScope>>(concurrencyLevel: 2, capacity: 5));
+            comp => new ConcurrentDictionary<AnalyzerAndOptions, Task<HostCompilationStartAnalysisScope>>(concurrencyLevel: 2, capacity: 5);
 
         /// <summary>
         /// Cache descriptors for each diagnostic analyzer. We do this since <see cref="DiagnosticAnalyzer.SupportedDiagnostics"/> is
@@ -265,12 +264,6 @@ namespace Microsoft.CodeAnalysis.Diagnostics
 
             foreach (var diag in supportedDiagnostics)
             {
-                if (HasNotConfigurableTag(diag.CustomTags))
-                {
-                    // If diagnostic descriptor is not configurable, then diagnostics created through it cannot be suppressed.
-                    return false;
-                }
-
                 // Is this diagnostic suppressed by default (as written by the rule author)
                 var isSuppressed = !diag.IsEnabledByDefault;
 
@@ -280,11 +273,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
                     isSuppressed = diagnosticOptions[diag.Id] == ReportDiagnostic.Suppress;
                 }
 
-                if (isSuppressed)
-                {
-                    continue;
-                }
-                else
+                if (!isSuppressed)
                 {
                     return false;
                 }
