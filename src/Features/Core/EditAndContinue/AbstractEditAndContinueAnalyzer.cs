@@ -3113,14 +3113,14 @@ namespace Microsoft.CodeAnalysis.EditAndContinue
 
                         // We don't include lambda parameters in mapping, so we need to go thru symbols:
                         var oldCaptureSyntax = GetSymbolSyntax(oldCapture, cancellationToken);
-                        var oldContainingLambda = (IMethodSymbol)oldModel.GetEnclosingSymbol(oldCaptureSyntax.SpanStart);
+                        var oldContainingLambda = oldModel.GetEnclosingSymbol<IMethodSymbol>(oldCaptureSyntax.SpanStart, default(CancellationToken));
 
                         // TODO: VB doesn't return lambda symbol, but the containing method (bug https://github.com/dotnet/roslyn/issues/1290)
                         if (oldContainingLambda.MethodKind == MethodKind.LambdaMethod)
                         {
                             var oldContainingLambdaSyntax = GetSymbolSyntax(oldContainingLambda, cancellationToken);
                             var newContainingLambdaSyntax = map.Forward[oldContainingLambdaSyntax];
-                            var newContainingLambda = (IMethodSymbol)newModel.GetEnclosingSymbol(newContainingLambdaSyntax.SpanStart);
+                            var newContainingLambda = newModel.GetEnclosingSymbol<IMethodSymbol>(newContainingLambdaSyntax.SpanStart, default(CancellationToken));
                             span = GetVariableDiagnosticSpan(newContainingLambda.Parameters[ordinal], cancellationToken);
                         }
                         else
@@ -3172,11 +3172,11 @@ namespace Microsoft.CodeAnalysis.EditAndContinue
 
             oldLocalCapturesBySyntax.Free();
         }
-
+        
         private void ReportLambdaSignatureRudeEdits(SemanticModel oldModel, SyntaxNode oldLambdaBody, SemanticModel newModel, SyntaxNode newLambdaBody, List<RudeEditDiagnostic> diagnostics, out bool hasErrors)
         {
-            var oldLambdaSymbol = (IMethodSymbol)oldModel.GetEnclosingSymbol(oldLambdaBody.SpanStart);
-            var newLambdaSymbol = (IMethodSymbol)newModel.GetEnclosingSymbol(newLambdaBody.SpanStart);
+            var oldLambdaSymbol = oldModel.GetEnclosingSymbol<IMethodSymbol>(oldLambdaBody.SpanStart, default(CancellationToken));
+            var newLambdaSymbol = newModel.GetEnclosingSymbol<IMethodSymbol>(newLambdaBody.SpanStart, default(CancellationToken));
 
             RudeEditKind rudeEdit;
 

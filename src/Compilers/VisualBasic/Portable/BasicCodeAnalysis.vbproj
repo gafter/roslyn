@@ -344,7 +344,7 @@
     <Compile Include="Compilation\OverloadResolutionResult.vb" />
     <Compile Include="Compilation\PreprocessingSymbolInfo.vb" />
     <Compile Include="Compilation\QuerySymbolInfo.vb" />
-    <Compile Include="Compilation\SemanticModel.vb" />
+    <Compile Include="Compilation\VBSemanticModel.vb" />
     <Compile Include="Compilation\SpeculativeSyntaxTreeSemanticModel.vb" />
     <Compile Include="Compilation\SymbolInfo.vb" />
     <Compile Include="Compilation\SyntaxTreeSemanticModel.vb" />

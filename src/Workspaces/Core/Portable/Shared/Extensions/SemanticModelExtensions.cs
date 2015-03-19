@@ -30,15 +30,16 @@ namespace Microsoft.CodeAnalysis.Shared.Extensions
         }
 
         public static TSymbol GetEnclosingSymbol<TSymbol>(this SemanticModel semanticModel, int position, CancellationToken cancellationToken)
-            where TSymbol : ISymbol
+            where TSymbol : class, ISymbol
         {
             for (var symbol = semanticModel.GetEnclosingSymbol(position, cancellationToken);
                  symbol != null;
                  symbol = symbol.ContainingSymbol)
             {
-                if (symbol is TSymbol)
+                var s = symbol as TSymbol;
+                if ((object)s != null)
                 {
-                    return (TSymbol)symbol;
+                    return s;
                 }
             }
 

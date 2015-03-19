@@ -4171,15 +4171,49 @@ namespace Microsoft.CodeAnalysis.CSharp
 
         /// <summary>
         /// Given a position in the SyntaxTree for this SemanticModel returns the innermost
-        /// NamedType that the position is considered inside of.
+        /// symbol that the position is considered inside of.
         /// </summary>
         public new ISymbol GetEnclosingSymbol(
             int position,
             CancellationToken cancellationToken = default(CancellationToken))
         {
-            position = CheckAndAdjustPosition(position);
-            var binder = GetEnclosingBinder(position);
-            return binder == null ? null : binder.ContainingMemberOrLambda;
+            // We do not use
+            // this.GetEnclosingBinder(CheckAndAdjustPosition(position))?.ContainingMemberOrLambda
+            // to get the enclosing symbol, as not all symbols have distinct binders.
+            var oldResult = this.GetEnclosingBinder(CheckAndAdjustPosition(position))?.ContainingMemberOrLambda;
+            var parentModel = this.ParentModel?.SyntaxTree == SyntaxTree ? ParentModel : this;
+            for (var node = Root.FindToken(position).Parent; node != null; node = node.Parent)
+            {
+                switch (node.Kind())
+                {
+                    case SyntaxKind.ParenthesizedLambdaExpression:
+                    case SyntaxKind.SimpleLambdaExpression:
+                    case SyntaxKind.AnonymousMethodExpression:
+                    case SyntaxKind.FromClause:
+                    case SyntaxKind.GroupClause:
+                    case SyntaxKind.JoinClause:
+                    case SyntaxKind.JoinIntoClause:
+                    case SyntaxKind.LetClause:
+                    case SyntaxKind.OrderByClause:
+                    case SyntaxKind.SelectClause:
+                    case SyntaxKind.WhereClause:
+                        return this.GetEnclosingBinder(node.Span.Start)?.ContainingMemberOrLambda;
+                    default:
+                        var sym = parentModel.GetDeclaredSymbolCore(node, cancellationToken);
+                        if ((object)sym != null)
+                        {
+                            if ((object)oldResult != sym)
+                            {
+                            }
+                            return sym;
+                        }
+                        continue;
+                }
+            }
+
+            // We might return this.Compilation.GlobalNamespace as all source files are implicitly in the global namespace
+            // However in error situations this may give a more refined result
+            return this.GetEnclosingBinder(CheckAndAdjustPosition(position))?.ContainingMemberOrLambda;
         }
 
         #region SemanticModel Members

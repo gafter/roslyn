@@ -3664,7 +3664,7 @@ End Module
             Dim semanticModel = compilation.GetSemanticModel(tree)
             Dim node = tree.GetCompilationUnitRoot().FindToken(tree.GetCompilationUnitRoot().ToString().IndexOf("By", StringComparison.Ordinal)).Parent.Parent.DescendantNodes().OfType(Of IdentifierNameSyntax)().First()
 
-            Dim containingSymbol = DirectCast(semanticModel, SemanticModel).GetEnclosingSymbol(node.SpanStart)
+            Dim containingSymbol = semanticModel.GetEnclosingSymbol(node.SpanStart).ContainingSymbol
 
             Assert.Equal("Function (z As System.Int32) As <anonymous type: Key z As System.Int32, Key Group As ?>", DirectCast(containingSymbol, Symbol).ToTestDisplayString())
         End Sub
