@@ -1529,7 +1529,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                     var inMethodBinder = factory.GetBinder(blockSyntax);
 
                     var binder = new ExecutableCodeBinder(blockSyntax, sourceMethod, inMethodBinder);
-                    body = binder.BindBlock(blockSyntax, diagnostics);
+                    body = (BoundBlock)binder.BindEmbeddedBlock(blockSyntax, diagnostics);
                     importChain = binder.ImportChain;
 
                     foreach (var iterator in binder.MethodSymbolsWithYield)
@@ -1723,7 +1723,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                 outerBinder = compilation.GetBinderFactory(sourceConstructor.SyntaxTree).GetBinder(initializerArgumentListOpt);
             }
 
-            //wrap in ConstructorInitializerBinder for appropriate errors
+            // wrap in ConstructorInitializerBinder for appropriate errors
             Binder initializerBinder = outerBinder.WithAdditionalFlagsAndContainingMemberOrLambda(BinderFlags.ConstructorInitializer, constructor);
 
             return initializerBinder.BindConstructorInitializer(initializerArgumentListOpt, constructor, diagnostics);

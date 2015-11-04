@@ -1016,6 +1016,16 @@ namespace Microsoft.CodeAnalysis.CSharp
         {
             switch (node.Kind)
             {
+                case BoundKind.DeclarationPattern:
+                    {
+                        var local = (BoundDeclarationPattern)node;
+                        LocalSymbol symbol = local.LocalSymbol;
+                        int slot = GetOrCreateSlot(symbol);
+                        SetSlotState(slot, assigned: written || !this.State.Reachable);
+                        if (written) NoteWrite(symbol, value, read);
+                        break;
+                    }
+
                 case BoundKind.LocalDeclaration:
                     {
                         var local = (BoundLocalDeclaration)node;
@@ -1299,6 +1309,35 @@ namespace Microsoft.CodeAnalysis.CSharp
 
         #region Visitors
 
+        public override BoundNode VisitIsPatternExpression(BoundIsPatternExpression node)
+        {
+            VisitRvalue(node.Expression);
+            var stateWhenFalse = this.State.Clone();
+            VisitPattern(node.Pattern);
+            SetConditionalState(this.State, stateWhenFalse);
+            return null;
+        }
+
+        public override void VisitPattern(BoundPattern pattern)
+        {
+            foreach (BoundDeclarationPattern p in PatternFinder.DeclarationPatternsIn(pattern))
+            {
+                var patternVariable = p.LocalSymbol;
+                Assign(p, null, RefKind.None, false);
+            }
+        }
+
+        class PatternFinder // : BoundTreeVisitor
+        {
+            // eventually, when patterns are recursive, this will have to be recursive too.
+            internal static IEnumerable<BoundDeclarationPattern> DeclarationPatternsIn(BoundPattern pattern)
+            {
+                var p = pattern as BoundDeclarationPattern;
+                if (p != null) yield return p;
+                yield break;
+            }
+        }
+
         public override BoundNode VisitBlock(BoundBlock node)
         {
             DeclareVariables(node.Locals);
@@ -1315,6 +1354,57 @@ namespace Microsoft.CodeAnalysis.CSharp
             ReportUnusedVariables(node.InnerLocals);
             ReportUnusedVariables(node.InnerLocalFunctions);
             return result;
+        }
+
+        public override BoundNode VisitPatternSwitchStatement(BoundPatternSwitchStatement node)
+        {
+            DeclareVariables(node.InnerLocals);
+            var result = base.VisitPatternSwitchStatement(node);
+            ReportUnusedVariables(node.InnerLocals);
+            ReportUnusedVariables(node.InnerLocalFunctions);
+            return result;
+        }
+
+        protected override void VisitPatternSwitchSection(BoundPatternSwitchSection node, bool isLastSection)
+        {
+            // TODO: this an probably depend more heavily on the base class implementation.
+            DeclareVariables(node.Locals);
+            base.VisitPatternSwitchSection(node, isLastSection);
+        }
+
+        private void AssignPatternVariables(BoundPattern pattern)
+        {
+            switch (pattern.Kind)
+            {
+                case BoundKind.DeclarationPattern:
+                    {
+                        Assign(pattern, null);
+                        break;
+                    }
+                case BoundKind.PropertyPattern:
+                    {
+                        var pat = (BoundPropertyPattern)pattern;
+                        foreach (var prop in pat.Patterns)
+                        {
+                            AssignPatternVariables(prop);
+                        }
+                        break;
+                    }
+                case BoundKind.RecursivePattern:
+                    {
+                        var pat = (BoundRecursivePattern)pattern;
+                        foreach (var prop in pat.Patterns)
+                        {
+                            AssignPatternVariables(prop);
+                        }
+                        break;
+                    }
+
+                case BoundKind.WildcardPattern:
+                case BoundKind.ConstantPattern:
+                default:
+                    break;
+            }
         }
 
         public override BoundNode VisitForStatement(BoundForStatement node)
@@ -1473,7 +1563,7 @@ namespace Microsoft.CodeAnalysis.CSharp
         {
             if (!_usedVariables.Contains(symbol))
             {
-                if (!string.IsNullOrEmpty(symbol.Name)) // avoid diagnostics for parser-inserted names
+                if (symbol.DeclarationKind != LocalDeclarationKind.PatternVariable && !string.IsNullOrEmpty(symbol.Name)) // avoid diagnostics for parser-inserted names
                 {
                     Diagnostics.Add(assigned && _writtenVariables.Contains(symbol) ? ErrorCode.WRN_UnreferencedVarAssg : ErrorCode.WRN_UnreferencedVar, symbol.Locations[0], symbol.Name);
                 }

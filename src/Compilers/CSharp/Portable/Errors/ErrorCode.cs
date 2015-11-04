@@ -1284,7 +1284,8 @@ namespace Microsoft.CodeAnalysis.CSharp
         ERR_BlockBodyAndExpressionBody = 8057,
         ERR_FeatureIsExperimental = 8058,
         ERR_FeatureNotAvailableInVersion6 = 8059,
-        // available 8060-8069
+        ERR_FeatureIsUnimplemented = 8060,
+        // available 8061-8069
         ERR_SwitchFallOut = 8070,
         // ERR_UnexpectedBoundGenericName = 8071, // for nameof - used in an early prototype
         ERR_NullPropagatingOpInExpressionTree = 8072,
@@ -1320,6 +1321,11 @@ namespace Microsoft.CodeAnalysis.CSharp
         ERR_ExpressionTreeContainsLocalFunction = 8102,
         ERR_ReturnTypesDontMatch = 8103,
         ERR_DynamicLocalFunctionParameter = 8104,
-        ERR_CantInferVoid = 8105
+        ERR_CantInferVoid = 8105,
+        ERR_PatternNullableType = 8106,
+        ERR_BadIsPatternExpression = 8107,
+        ERR_AmbigMatch0 = 8108,
+        ERR_AmbigMatch1 = 8109,
+        ERR_ThrowMisplaced = 8110,
     }
 }

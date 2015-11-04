@@ -97,6 +97,7 @@
     <Compile Include="Binder\Binder_Lookup.cs" />
     <Compile Include="Binder\Binder_NameConflicts.cs" />
     <Compile Include="Binder\Binder_Operators.cs" />
+    <Compile Include="Binder\Binder_Patterns.cs" />
     <Compile Include="Binder\Binder_Query.cs" />
     <Compile Include="Binder\Binder_QueryErrors.cs" />
     <Compile Include="Binder\Binder_Statements.cs" />
@@ -142,6 +143,7 @@
     <Compile Include="Binder\NameofBinder.cs" />
     <Compile Include="Binder\NamespaceOrTypeAndUsingDirective.cs" />
     <Compile Include="Binder\ScriptLocalScopeBinder.cs" />
+    <Compile Include="Binder\PatternVariableBinder.cs" />
     <Compile Include="Binder\Semantics\AccessCheck.cs" />
     <Compile Include="Binder\Semantics\BestTypeInferrer.cs" />
     <Compile Include="Binder\Semantics\Conversions\BestIndex.cs" />
@@ -187,6 +189,7 @@
     <Compile Include="Binder\SingleLookupResult.cs" />
     <Compile Include="Binder\SwitchBinder.cs" />
     <Compile Include="Binder\SimpleLocalScopeBinder.cs" />
+    <Compile Include="Binder\SwitchBinder_BindPatternSwitch.cs" />
     <Compile Include="Binder\TypeofBinder.cs" />
     <Compile Include="Binder\UsingStatementBinder.cs" />
     <Compile Include="Binder\WhileBinder.cs" />
@@ -368,6 +371,7 @@
     <Compile Include="FlowAnalysis\FlowAnalysisPass.cs" />
     <Compile Include="FlowAnalysis\PreciseAbstractFlowPass.AbstractLocalState.cs" />
     <Compile Include="FlowAnalysis\PreciseAbstractFlowPass.cs" />
+    <Compile Include="FlowAnalysis\PreciseAbstractFlowPass_Switch.cs" />
     <Compile Include="FlowAnalysis\ReadWriteWalker.cs" />
     <Compile Include="FlowAnalysis\RegionAnalysisContext.cs" />
     <Compile Include="FlowAnalysis\RegionReachableWalker.cs" />
@@ -433,10 +437,12 @@
     <Compile Include="Lowering\LocalRewriter\LocalRewriter_Literal.cs" />
     <Compile Include="Lowering\LocalRewriter\LocalRewriter_LocalDeclaration.cs" />
     <Compile Include="Lowering\LocalRewriter\LocalRewriter_LockStatement.cs" />
+    <Compile Include="Lowering\LocalRewriter\LocalRewriter_MatchStatement.cs" />
     <Compile Include="Lowering\LocalRewriter\LocalRewriter_MultipleLocalDeclarations.cs" />
     <Compile Include="Lowering\LocalRewriter\LocalRewriter_NullCoalescingOperator.cs" />
     <Compile Include="Lowering\LocalRewriter\LocalRewriter_ObjectCreationExpression.cs" />
     <Compile Include="Lowering\LocalRewriter\LocalRewriter_ObjectOrCollectionInitializerExpression.cs" />
+    <Compile Include="Lowering\LocalRewriter\LocalRewriter_Patterns.cs" />
     <Compile Include="Lowering\LocalRewriter\LocalRewriter_PointerElementAccess.cs" />
     <Compile Include="Lowering\LocalRewriter\LocalRewriter_PreviousSubmissionReference.cs" />
     <Compile Include="Lowering\LocalRewriter\LocalRewriter_PropertyAccess.cs" />
@@ -479,6 +485,7 @@
     <Compile Include="Parser\Directives.cs" />
     <Compile Include="Parser\DocumentationCommentParser.cs" />
     <Compile Include="Parser\DocumentationCommentXmlTokens.cs" />
+    <Compile Include="Parser\LanguageParser_Patterns.cs" />
     <Compile Include="Parser\LanguageParser.cs" />
     <Compile Include="Parser\LanguageParser_InterpolatedString.cs" />
     <Compile Include="Parser\Lexer.cs" />

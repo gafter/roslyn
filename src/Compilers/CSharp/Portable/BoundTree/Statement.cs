@@ -1,5 +1,6 @@
 ﻿// Copyright (c) Microsoft.  All Rights Reserved.  Licensed under the Apache License, Version 2.0.  See License.txt in the project root for license information.
 
+using System;
 using System.Collections.Immutable;
 using Microsoft.CodeAnalysis.Semantics;
 
@@ -142,7 +143,7 @@ namespace Microsoft.CodeAnalysis.CSharp
 
     partial class BoundSwitchStatement: ISwitchStatement
     {
-        IExpression ISwitchStatement.Value => this.BoundExpression;
+        IExpression ISwitchStatement.Value => this.Expression;
 
         ImmutableArray<ICase> ISwitchStatement.Cases => this.SwitchSections.As<ICase>();
 
@@ -151,7 +152,7 @@ namespace Microsoft.CodeAnalysis.CSharp
 
     partial class BoundSwitchSection : ICase
     {
-        ImmutableArray<ICaseClause> ICase.Clauses => this.BoundSwitchLabels.As<ICaseClause>();
+        ImmutableArray<ICaseClause> ICase.Clauses => this.SwitchLabels.As<ICaseClause>();
 
         ImmutableArray<IStatement> ICase.Body => this.Statements.As<IStatement>();
     }
@@ -350,5 +351,11 @@ namespace Microsoft.CodeAnalysis.CSharp
     partial class BoundLocalFunctionStatement
     {
         protected override OperationKind StatementKind => OperationKind.LocalFunctionStatement;
+    }
+
+    partial class BoundPatternSwitchStatement
+    {
+        // TODO: this may need its own OperationKind.
+        protected override OperationKind StatementKind => OperationKind.SwitchStatement;
     }
 }
