@@ -75,7 +75,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                     // We should report this as an error of some sort.
                     // TODO: DevDiv #737822 - reword error message and add test.
                     var info = new CSDiagnosticInfo(ErrorCode.ERR_UnsupportedTransparentIdentifierAccess, name, receiver.ExpressionSymbol ?? receiverType);
-                    Error(diagnostics, info, node);
+                    if (receiver.Type?.IsErrorType() != true) Error(diagnostics, info, node);
                     return new BoundBadExpression(
                         node,
                         LookupResultKind.Empty,
