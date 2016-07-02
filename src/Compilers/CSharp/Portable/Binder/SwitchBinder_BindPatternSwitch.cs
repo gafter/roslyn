@@ -26,9 +26,7 @@ namespace Microsoft.CodeAnalysis.CSharp
         {
             _switchSyntax = switchSyntax;
             _breakLabel = new GeneratedLabelSymbol("break");
-            // PROTOTYPE(typeswitch): until we generate compatible code using the new binder, we only
-            // bind using the new binder if either the feature flag is set, or the syntax requires
-            // we use the new binder.
+            // Is this a new (C#7 and later) switch statement (as opposed to a C#6 and earlier one)?
             _isPatternSwitch = ((CSharpParseOptions)switchSyntax.SyntaxTree.Options).IsFeatureEnabled(MessageID.IDS_FeaturePatternMatching);
         }
 
@@ -72,7 +70,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             // Invalid case labels (with null constant value) are indexed on the label syntax.
 
             object key;
-            if (constantValue != (object)null)
+            if (constantValue != (object)null && !constantValue.IsBad)
             {
                 key = KeyForConstant(constantValue);
             }
@@ -136,7 +134,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                 {
                     object key;
                     var constantValue = label.SwitchCaseLabelConstant;
-                    if (constantValue != (object)null)
+                    if (constantValue != (object)null && !constantValue.IsBad)
                     {
                         // Case labels with a non-null constant value are indexed on their ConstantValue.
                         key = KeyForConstant(constantValue);
@@ -149,7 +147,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                     else
                     {
                         // Invalid case labels with null constant value are indexed on the labelName.
-                        key = label.Name;
+                        key = label.IdentifierNodeOrToken.AsNode();
                     }
 
                     if (!map.ContainsKey(key))
