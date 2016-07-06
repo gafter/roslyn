@@ -101,104 +101,6 @@ namespace Microsoft.CodeAnalysis.CSharp
             }
         }
 
-        /// <summary>
-        /// If the target branch is computed at compile-time, the corresponding label. Otherwise null.
-        /// </summary>
-        public LabelSymbol ConstantTargetOpt
-        {
-            get
-            {
-                EnsureDecisionTree();
-
-                // Switch expression might be a constant expression.
-                // For this scenario we can determine the target label of the switch statement
-                // at compile time.
-                if (!SwitchSections.Any())
-                {
-                    // empty switch block, set the break label as target
-                    return this.BreakLabel;
-                }
-
-                return BindConstantTarget(_decisionTree);
-            }
-        }
-
-        /// <summary>
-        /// Used to compute the only target label when it can be computed at compile-time.
-        /// This does not use the same logic as handling "goto case n" because that
-        /// always goes to "case n" even if there is a preceding "case n when something".
-        /// However, the initial dispatch always obeys the switch statement sequentual
-        /// semantics. We simulate that here.
-        /// </summary>
-        private LabelSymbol BindConstantTarget(DecisionTree decisionTree)
-        {
-            var expression = decisionTree.Expression;
-
-            switch (decisionTree.Kind)
-            {
-                case DecisionTree.DecisionKind.ByType:
-                    {
-                        var byType = (DecisionTree.ByType)decisionTree;
-                        if (expression.ConstantValue?.IsNull == true)
-                        {
-                            if (byType.WhenNull != null) return BindConstantTarget(byType.WhenNull);
-                        }
-                        if (expression.ConstantValue?.IsNull != true)
-                        {
-                            foreach (var td in byType.TypeAndDecision)
-                            {
-                                var type = td.Key;
-                                var decision = td.Value;
-                                switch (Binder.Conversions.ExpressionOfTypeMatchesPatternType(expression.Type.TupleUnderlyingTypeOrSelf(), type))
-                                {
-                                    case null:
-                                        return null; // we don't know if this matches the input
-                                    case true:
-                                        if (expression.Type.CanBeAssignedNull() && expression.ConstantValue == null)
-                                        {
-                                            return null; // we don't know if the input is null; unknown result
-                                        }
-                                        else
-                                        {
-                                            return BindConstantTarget(decision);
-                                        }
-                                    case false:
-                                        continue;
-                                }
-                            }
-                        }
-                        return (byType.Default != null) ? BindConstantTarget(byType.Default) : null;
-                    }
-                case DecisionTree.DecisionKind.ByValue:
-                    {
-                        var byValue = (DecisionTree.ByValue)decisionTree;
-                        var byValueConstant = byValue.Expression.ConstantValue;
-                        if (byValueConstant == null)
-                        {
-                            if (byValue.ValueAndDecision.Count != 0) return null; // can't tell which decision to take
-                        }
-                        else
-                        {
-                            var input = byValueConstant.Value;
-                            foreach (var vd in byValue.ValueAndDecision)
-                            {
-                                var value = vd.Key;
-                                var decision = vd.Value;
-                                if (Equals(input, value)) return BindConstantTarget(decision);
-                            }
-                        }
-                        return (byValue.Default != null) ? BindConstantTarget(byValue.Default) : null;
-                    }
-                case DecisionTree.DecisionKind.Guarded:
-                    {
-                        var guarded = (DecisionTree.Guarded)decisionTree;
-                        return (guarded.Guard == null || guarded.Guard.ConstantValue == ConstantValue.True) ? guarded.Label.Label : null;
-                    }
-                default:
-                    throw ExceptionUtilities.UnexpectedValue(decisionTree.Kind);
-            }
-        }
-
         private void EnsureDecisionTree()
         {
             if (_decisionTree == null)
@@ -951,7 +853,7 @@ namespace Microsoft.CodeAnalysis.CSharp
         {
             Debug.Assert(expression.Type == type);
             LocalSymbol temp = null;
-            if (expression.ConstantValue != null)
+            if (expression.ConstantValue == null)
             {
                 // Unless it is a constant, the decision tree acts on a copy of the input expression.
                 // We create a temp to represent that copy. Lowering will assign into this temp.

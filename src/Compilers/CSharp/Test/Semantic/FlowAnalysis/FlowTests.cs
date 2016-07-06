@@ -508,6 +508,7 @@ public class DATest : DATestBase {
                 // (118,15): error CS0165: Use of unassigned local variable 'a'
                 //             F(a); // Error - BUG? The cases are exhaustive.
                 Diagnostic(ErrorCode.ERR_UseDefViolation, "a").WithArguments("a").WithLocation(118, 15)
+                );
         }
 
         [Fact]
