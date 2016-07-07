@@ -745,7 +745,10 @@ class Program
         }
     }
 }";
-            CreateCompilationWithMscorlib45(source, options: TestOptions.DebugExe, parseOptions: s_patternParseOptions).VerifyDiagnostics(
+            CreateCompilationWithMscorlib45(source, options: TestOptions.DebugExe, parseOptions: TestOptions.Regular6).VerifyDiagnostics(
+                // (18,13): error CS8059: Feature 'pattern matching' is not available in C# 6.  Please use language version 7 or greater.
+                //             case Color x when false:
+                Diagnostic(ErrorCode.ERR_FeatureNotAvailableInVersion6, "case Color x when false:").WithArguments("pattern matching", "7").WithLocation(18, 13),
                 // (11,17): warning CS0469: The 'goto case' value is not implicitly convertible to type 'Color'
                 //                 goto case 1; // warning CS0469: The 'goto case' value is not implicitly convertible to type 'Color'
                 Diagnostic(ErrorCode.WRN_GotoCaseShouldConvert, "goto case 1;").WithArguments("Color").WithLocation(11, 17),
@@ -760,12 +763,20 @@ class Program
                 Diagnostic(ErrorCode.ERR_LabelNotFound, "goto case 3;").WithArguments("case 3:").WithLocation(15, 17)
                 );
             var compilation = CreateCompilationWithMscorlib45(source, options: TestOptions.DebugExe, parseOptions: s_patternParseOptions);
-            compilation.VerifyDiagnostics();
-            var expectedOutput =
-@"True
-False
-null";
-            var comp = CompileAndVerify(compilation, expectedOutput: expectedOutput);
+            compilation.VerifyDiagnostics(
+                // (11,17): warning CS0469: The 'goto case' value is not implicitly convertible to type 'Color'
+                //                 goto case 1; // warning CS0469: The 'goto case' value is not implicitly convertible to type 'Color'
+                Diagnostic(ErrorCode.WRN_GotoCaseShouldConvert, "goto case 1;").WithArguments("Color").WithLocation(11, 17),
+                // (14,18): error CS0266: Cannot implicitly convert type 'int' to 'Color'. An explicit conversion exists (are you missing a cast?)
+                //             case 2:          // error CS0266: Cannot implicitly convert type 'int' to 'Color'. An explicit conversion exists (are you missing a cast?)
+                Diagnostic(ErrorCode.ERR_NoImplicitConvCast, "2").WithArguments("int", "Color").WithLocation(14, 18),
+                // (15,17): warning CS0469: The 'goto case' value is not implicitly convertible to type 'Color'
+                //                 goto case 3; // warning CS0469: The 'goto case' value is not implicitly convertible to type 'Color'
+                Diagnostic(ErrorCode.WRN_GotoCaseShouldConvert, "goto case 3;").WithArguments("Color").WithLocation(15, 17),
+                // (15,17): error CS0159: No such label 'case 3:' within the scope of the goto statement
+                //                 goto case 3; // warning CS0469: The 'goto case' value is not implicitly convertible to type 'Color'
+                Diagnostic(ErrorCode.ERR_LabelNotFound, "goto case 3;").WithArguments("case 3:").WithLocation(15, 17)
+                );
         }
 
         [Fact]
@@ -784,22 +795,24 @@ class Program
         switch (color)
         {
             case Color.Red:
-                Console.WriteLine(""done"");
-                break;
+                goto default;
             case Color.Blue:
                 goto case 0;
             case Color.Green:
                 goto case 1;
             case Color.Mauve when true:
                 break;
+            default:
+                Console.WriteLine(""done"");
+                break;
         }
     }
 }";
             var compilation = CreateCompilationWithMscorlib45(source, options: TestOptions.DebugExe, parseOptions: s_patternParseOptions);
             compilation.VerifyDiagnostics(
-                // (18,17): warning CS0469: The 'goto case' value is not implicitly convertible to type 'Color'
+                // (17,17): warning CS0469: The 'goto case' value is not implicitly convertible to type 'Color'
                 //                 goto case 1;
-                Diagnostic(ErrorCode.WRN_GotoCaseShouldConvert, "goto case 1;").WithArguments("Color").WithLocation(18, 17)
+                Diagnostic(ErrorCode.WRN_GotoCaseShouldConvert, "goto case 1;").WithArguments("Color").WithLocation(17, 17)
                 );
             var expectedOutput = @"done";
             var comp = CompileAndVerify(compilation, expectedOutput: expectedOutput);

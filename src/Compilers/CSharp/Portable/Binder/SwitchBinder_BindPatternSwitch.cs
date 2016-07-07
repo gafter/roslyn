@@ -14,30 +14,61 @@ namespace Microsoft.CodeAnalysis.CSharp
     // a totally compatible implementation of switch that also accepts pattern-matching constructs.
     internal partial class PatternSwitchBinder : SwitchBinder
     {
-        // Even though these fields exist in the base class, we record them again here.
-        // Our ultimate intent is to remove the type SwitchBinder and have the fully functional
-        // switch binding implementation present in this class.
-        private readonly SwitchStatementSyntax _switchSyntax;
-        private TypeSymbol _switchGoverningType;
-        private readonly GeneratedLabelSymbol _breakLabel;
-        private readonly bool _isPatternSwitch;
+        private bool? _isPatternSwitch;
 
         internal PatternSwitchBinder(Binder next, SwitchStatementSyntax switchSyntax) : base(next, switchSyntax)
         {
-            _switchSyntax = switchSyntax;
-            _breakLabel = new GeneratedLabelSymbol("break");
-            // Is this a new (C#7 and later) switch statement (as opposed to a C#6 and earlier one)?
-            _isPatternSwitch = ((CSharpParseOptions)switchSyntax.SyntaxTree.Options).IsFeatureEnabled(MessageID.IDS_FeaturePatternMatching);
+        }
+
+        private bool IsPatternSwitch
+        {
+            get
+            {
+                if (_isPatternSwitch == null)
+                {
+                    var parseOptions = _switchSyntax?.SyntaxTree?.Options as CSharpParseOptions;
+                    _isPatternSwitch =
+                        (parseOptions?.IsFeatureEnabled(MessageID.IDS_FeaturePatternMatching) != false &&
+                        (parseOptions?.Features.ContainsKey("typeswitch") != false ||
+                         IsPatternSwitchSyntax(_switchSyntax) ||
+                         this.SwitchGoverningType.IsValidV6SwitchGoverningType()));
+                }
+
+                return _isPatternSwitch.GetValueOrDefault();
+            }
+        }
+
+
+
+        //// When pattern-matching is enabled, we use a completely different binder and binding
+        //// strategy for switch statements. Once we have confirmed that it is totally upward
+        //// compatible with the existing syntax and semantics, we will remove *this* binder
+        //// and use the new one for binding all switch statements. However, until we have
+        //// edit-and-continue working, we continue using the old binder when we can.
+
+        private static bool IsPatternSwitchSyntax(SwitchStatementSyntax switchSyntax)
+        {
+            foreach (var section in switchSyntax.Sections)
+            {
+                if (section.Labels.Any(SyntaxKind.CasePatternSwitchLabel))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         internal override BoundStatement BindSwitchExpressionAndSections(SwitchStatementSyntax node, Binder originalBinder, DiagnosticBag diagnostics)
         {
+            // If it is a valid C# 6 switch statement, we use the old binder to bind it.
+            if (!IsPatternSwitch) return base.BindSwitchExpressionAndSections(node, originalBinder, diagnostics);
+
             Debug.Assert(_switchSyntax.Equals(node));
 
             // Bind switch expression and set the switch governing type.
-            var localDiagnostics = DiagnosticBag.GetInstance();
-            var boundSwitchExpression = BindSwitchExpressionAndGoverningType(node.Expression, originalBinder, localDiagnostics);
-            diagnostics.AddRangeAndFree(localDiagnostics);
+            var boundSwitchExpression = SwitchGoverningExpression;
+            diagnostics.AddRange(SwitchGoverningDiagnostics);
 
             BoundPatternSwitchLabel defaultLabel;
             ImmutableArray<BoundPatternSwitchSection> switchSections = BindPatternSwitchSections(boundSwitchExpression, node.Sections, originalBinder, out defaultLabel, diagnostics);
@@ -283,54 +314,16 @@ namespace Microsoft.CodeAnalysis.CSharp
             }
         }
 
-        override protected ImmutableArray<LocalSymbol> BuildLocals()
-        {
-            var builder = ArrayBuilder<LocalSymbol>.GetInstance();
-
-            foreach (var section in _switchSyntax.Sections)
-            {
-                builder.AddRange(BuildLocals(section.Statements));
-            }
-
-            return builder.ToImmutableAndFree();
-        }
-
-        protected override ImmutableArray<LocalFunctionSymbol> BuildLocalFunctions()
-        {
-            var builder = ArrayBuilder<LocalFunctionSymbol>.GetInstance();
-
-            foreach (var section in _switchSyntax.Sections)
-            {
-                builder.AddRange(BuildLocalFunctions(section.Statements));
-            }
-
-            return builder.ToImmutableAndFree();
-        }
-
-        internal override bool IsLocalFunctionsScopeBinder
-        {
-            get
-            {
-                return true;
-            }
-        }
-
-        internal override GeneratedLabelSymbol BreakLabel
-        {
-            get
-            {
-                return _breakLabel;
-            }
-        }
-
         protected override ImmutableArray<LabelSymbol> BuildLabels()
         {
+            if (!IsPatternSwitch) return base.BuildLabels();
+
             // We bind the switch expression and the switch case label expressions so that the constant values can be
             // part of the label, but we do not report any diagnostics here. Diagnostics will be reported during binding.
 
-            ArrayBuilder<LabelSymbol> labels = ArrayBuilder<LabelSymbol>.GetInstance();
+            ArrayBuilder <LabelSymbol> labels = ArrayBuilder<LabelSymbol>.GetInstance();
             DiagnosticBag tempDiagnosticBag = DiagnosticBag.GetInstance();
-            TypeSymbol switchGoverningType = BindSwitchExpression(_switchSyntax.Expression, this, tempDiagnosticBag).Type;
+            TypeSymbol switchGoverningType = this.SwitchGoverningType;
             foreach (var section in _switchSyntax.Sections)
             {
                 // add switch case/default labels
@@ -403,119 +396,10 @@ namespace Microsoft.CodeAnalysis.CSharp
             return ConvertPatternExpression(switchGoverningType, node, caseExpression, ref constantValueOpt, diagnostics);
         }
 
-        internal override bool IsLabelsScopeBinder
-        {
-            get
-            {
-                return true;
-            }
-        }
-
-        // Bind the switch expression and set the switch governing type
-        private BoundExpression BindSwitchExpressionAndGoverningType(ExpressionSyntax node, Binder originalBinder, DiagnosticBag diagnostics)
-        {
-            var boundSwitchExpression = BindSwitchExpression(node, originalBinder, diagnostics);
-            Interlocked.CompareExchange(ref _switchGoverningType, boundSwitchExpression.Type, null);
-            return boundSwitchExpression;
-        }
-
-        // Bind the switch expression
-        private BoundExpression BindSwitchExpression(ExpressionSyntax node, Binder originalBinder, DiagnosticBag diagnostics)
-        {
-            // We are at present inside the switch binder, but the switch expression is not
-            // bound in the context of the switch binder; it's bound in the context of the
-            // enclosing binder. For example: 
-            // 
-            // class C { 
-            //   int x; 
-            //   void M() {
-            //     switch(x) {
-            //       case 1:
-            //         int x;
-            //
-            // The "x" in "switch(x)" refers to this.x, not the local x that is in scope inside the switch block.
-
-            Debug.Assert(node == _switchSyntax.Expression);
-            var binder = originalBinder.GetBinder(node);
-            Debug.Assert(binder != null);
-
-            var switchExpression = binder.BindValue(node, diagnostics, BindValueKind.RValue);
-
-            var switchGoverningType = switchExpression.Type;
-
-            if ((object)switchGoverningType != null && !switchGoverningType.IsErrorType())
-            {
-                // SPEC:    The governing type of a switch statement is established by the switch expression.
-                // SPEC:    1) If the type of the switch expression is sbyte, byte, short, ushort, int, uint,
-                // SPEC:       long, ulong, bool, char, string, or an enum-type, or if it is the nullable type
-                // SPEC:       corresponding to one of these types, then that is the governing type of the switch statement. 
-                // SPEC:    2) Otherwise if exactly one user-defined implicit conversion (§6.4) exists from the
-                // SPEC:       type of the switch expression to one of the following possible governing types:
-                // SPEC:       sbyte, byte, short, ushort, int, uint, long, ulong, char, string, or, a nullable type
-                // SPEC:       corresponding to one of those types, then the result is the switch governing type
-                // SPEC:    3) Otherwise (in C# 7 and later) the switch governing type is the type of the
-                // SPEC:       switch expression.
-
-                if (switchGoverningType.IsValidV6SwitchGoverningType())
-                {
-                    // Condition (1) satisfied
-
-                    // Note: dev11 actually checks the stripped type, but nullable was introduced at the same
-                    // time, so it doesn't really matter.
-                    if (switchGoverningType.SpecialType == SpecialType.System_Boolean && !_isPatternSwitch)
-                    {
-                        // GetLocation() so that it also works in speculative contexts.
-                        CheckFeatureAvailability(node.GetLocation(), MessageID.IDS_FeatureSwitchOnBool, diagnostics);
-                    }
-
-                    return switchExpression;
-                }
-                else
-                {
-                    TypeSymbol resultantGoverningType;
-                    HashSet<DiagnosticInfo> useSiteDiagnostics = null;
-                    Conversion conversion = binder.Conversions.ClassifyImplicitUserDefinedConversionForV6SwitchGoverningType(switchGoverningType, out resultantGoverningType, ref useSiteDiagnostics);
-                    diagnostics.Add(node, useSiteDiagnostics);
-                    if (conversion.IsValid)
-                    {
-                        // Condition (2) satisfied
-                        Debug.Assert(conversion.Kind == ConversionKind.ImplicitUserDefined);
-                        Debug.Assert(conversion.Method.IsUserDefinedConversion());
-                        Debug.Assert(conversion.UserDefinedToConversion.IsIdentity);
-                        Debug.Assert(resultantGoverningType.IsValidV6SwitchGoverningType(isTargetTypeOfUserDefinedOp: true));
-                        return binder.CreateConversion(node, switchExpression, conversion, false, resultantGoverningType, diagnostics);
-                    }
-                    else if (_isPatternSwitch && switchGoverningType.SpecialType != SpecialType.System_Void)
-                    {
-                        // Otherwsie (3) satisfied
-                        return switchExpression;
-                    }
-                    else
-                    {
-                        // We need to create an error type here as certain diagnostics generated during binding the switch case label expression and
-                        // goto case expression should be generated only if the switch expression type is a valid switch governing type.
-                        switchGoverningType = CreateErrorType(switchGoverningType.Name);
-                    }
-                }
-            }
-
-            if (!switchExpression.HasAnyErrors)
-            {
-                if (_isPatternSwitch)
-                {
-                    diagnostics.Add(ErrorCode.ERR_PatternValueExpected, node.Location, switchExpression.Display);
-                }
-                else
-                {
-                    diagnostics.Add(ErrorCode.ERR_V6SwitchGoverningTypeValueExpected, node.Location);
-                }
-            }
-
-            return new BoundBadExpression(node, LookupResultKind.Empty, ImmutableArray<Symbol>.Empty, ImmutableArray.Create<BoundNode>(switchExpression), switchGoverningType ?? CreateErrorType());
-        }
-
         internal override BoundStatement BindGotoCaseOrDefault(GotoStatementSyntax node, Binder gotoBinder, DiagnosticBag diagnostics)
         {
+            if (!IsPatternSwitch) return base.BindGotoCaseOrDefault(node, gotoBinder, diagnostics);
+
             Debug.Assert(node.Kind() == SyntaxKind.GotoCaseStatement || node.Kind() == SyntaxKind.GotoDefaultStatement);
             BoundExpression gotoCaseExpressionOpt = null;
 
@@ -523,7 +407,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             if (!node.HasErrors)
             {
                 ConstantValue gotoCaseExpressionConstant = null;
-                TypeSymbol switchGoverningType = GetSwitchGoverningType(diagnostics);
+                TypeSymbol switchGoverningType = SwitchGoverningType;
                 bool hasErrors = false;
                 SourceLabelSymbol matchedLabelSymbol;
 
@@ -590,18 +474,6 @@ namespace Microsoft.CodeAnalysis.CSharp
                 syntax: node,
                 childBoundNodes: gotoCaseExpressionOpt != null ? ImmutableArray.Create<BoundNode>(gotoCaseExpressionOpt) : ImmutableArray<BoundNode>.Empty,
                 hasErrors: true);
-        }
-
-        private TypeSymbol GetSwitchGoverningType(DiagnosticBag diagnostics)
-        {
-            if ((object)_switchGoverningType == null)
-            {
-                // Can reach here only when we are called from the Binding API
-                // Let us bind the switch expression and switch governing type
-                var discarded = BindSwitchExpressionAndGoverningType(_switchSyntax.Expression, this, diagnostics);
-                Debug.Assert((object)_switchGoverningType != null);
-            }
-            return _switchGoverningType;
         }
 
     }
