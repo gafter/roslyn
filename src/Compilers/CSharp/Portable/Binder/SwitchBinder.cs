@@ -27,16 +27,18 @@ namespace Microsoft.CodeAnalysis.CSharp
 
         internal static SwitchBinder Create(Binder next, SwitchStatementSyntax switchSyntax)
         {
-            // When pattern-matching is enabled, we use a completely different binder and binding
-            // strategy for switch statements. Once we have confirmed that it is totally upward
-            // compatible with the existing syntax and semantics, we will remove *this* binder
-            // and use the new one for binding all switch statements.
-            var parseOptions = switchSyntax?.SyntaxTree?.Options as CSharpParseOptions;
-            return
-                (parseOptions?.IsFeatureEnabled(MessageID.IDS_FeaturePatternMatching) != false &&
-                (parseOptions?.Features.ContainsKey("typeswitch") != false || IsPatternSwitch(switchSyntax)))
-                ? new PatternSwitchBinder(next, switchSyntax)
-                : new SwitchBinder(next, switchSyntax);
+            return new PatternSwitchBinder(next, switchSyntax);
+
+            //// When pattern-matching is enabled, we use a completely different binder and binding
+            //// strategy for switch statements. Once we have confirmed that it is totally upward
+            //// compatible with the existing syntax and semantics, we will remove *this* binder
+            //// and use the new one for binding all switch statements.
+            //var parseOptions = switchSyntax?.SyntaxTree?.Options as CSharpParseOptions;
+            //return
+            //    (parseOptions?.IsFeatureEnabled(MessageID.IDS_FeaturePatternMatching) != false &&
+            //    (parseOptions?.Features.ContainsKey("typeswitch") != false || IsPatternSwitch(switchSyntax)))
+            //    ? new PatternSwitchBinder(next, switchSyntax)
+            //    : new SwitchBinder(next, switchSyntax);
         }
 
         private static bool IsPatternSwitch(SwitchStatementSyntax switchSyntax)

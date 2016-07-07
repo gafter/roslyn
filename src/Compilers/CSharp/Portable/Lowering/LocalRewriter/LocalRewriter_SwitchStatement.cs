@@ -201,7 +201,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                 foreach (BoundSwitchLabel boundLabel in section.SwitchLabels)
                 {
                     var label = (SourceLabelSymbol)boundLabel.Label;
-                    var labelConstant = label.SwitchCaseLabelConstant;
+                    var labelConstant = boundLabel.ExpressionOpt?.ConstantValue;
 
                     if (labelConstant == ConstantValue.Null)
                     {
@@ -250,11 +250,10 @@ namespace Microsoft.CodeAnalysis.CSharp
             {
                 foreach (var boundLabel in section.SwitchLabels)
                 {
-                    if (boundLabel.Label.IdentifierNodeOrToken.Kind() == SyntaxKind.CaseSwitchLabel)
+                    if (boundLabel.ExpressionOpt != null)
                     {
-                        Debug.Assert(((SourceLabelSymbol)boundLabel.Label).SwitchCaseLabelConstant.IsString ||
-                            ((SourceLabelSymbol)boundLabel.Label).SwitchCaseLabelConstant.IsNull);
-
+                        var value = boundLabel.ExpressionOpt.ConstantValue;
+                        Debug.Assert(value.IsString || value.IsNull);
                         count++;
                     }
                 }

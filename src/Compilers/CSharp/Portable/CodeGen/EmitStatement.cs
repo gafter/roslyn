@@ -1084,17 +1084,17 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeGen
             {
                 foreach (BoundSwitchLabel boundLabel in section.SwitchLabels)
                 {
-                    var label = (SourceLabelSymbol)boundLabel.Label;
-                    if (label.IdentifierNodeOrToken.Kind() == SyntaxKind.DefaultSwitchLabel)
+                    var label = boundLabel.Label;
+                    if (boundLabel.ExpressionOpt == null)
                     {
                         fallThroughLabel = label;
                     }
                     else
                     {
-                        Debug.Assert(label.SwitchCaseLabelConstant != null
-                            && SwitchConstantValueHelper.IsValidSwitchCaseLabelConstant(label.SwitchCaseLabelConstant));
-
-                        labelsBuilder.Add(new KeyValuePair<ConstantValue, object>(label.SwitchCaseLabelConstant, label));
+                        var value = boundLabel.ExpressionOpt.ConstantValue;
+                        Debug.Assert(value != null
+                            && SwitchConstantValueHelper.IsValidSwitchCaseLabelConstant(value));
+                        labelsBuilder.Add(new KeyValuePair<ConstantValue, object>(value, label));
                     }
                 }
             }

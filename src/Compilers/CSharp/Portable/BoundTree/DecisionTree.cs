@@ -101,104 +101,6 @@ namespace Microsoft.CodeAnalysis.CSharp
             }
         }
 
-        /// <summary>
-        /// If the target branch is computed at compile-time, the corresponding label. Otherwise null.
-        /// </summary>
-        public LabelSymbol ConstantTargetOpt
-        {
-            get
-            {
-                EnsureDecisionTree();
-
-                // Switch expression might be a constant expression.
-                // For this scenario we can determine the target label of the switch statement
-                // at compile time.
-                if (!SwitchSections.Any())
-                {
-                    // empty switch block, set the break label as target
-                    return this.BreakLabel;
-                }
-
-                return BindConstantTarget(_decisionTree);
-            }
-        }
-
-        /// <summary>
-        /// Used to compute the only target label when it can be computed at compile-time.
-        /// This does not use the same logic as handling "goto case n" because that
-        /// always goes to "case n" even if there is a preceding "case n when something".
-        /// However, the initial dispatch always obeys the switch statement sequentual
-        /// semantics. We simulate that here.
-        /// </summary>
-        private LabelSymbol BindConstantTarget(DecisionTree decisionTree)
-        {
-            var expression = decisionTree.Expression;
-
-            switch (decisionTree.Kind)
-            {
-                case DecisionTree.DecisionKind.ByType:
-                    {
-                        var byType = (DecisionTree.ByType)decisionTree;
-                        if (expression.ConstantValue?.IsNull == true)
-                        {
-                            if (byType.WhenNull != null) return BindConstantTarget(byType.WhenNull);
-                        }
-                        if (expression.ConstantValue?.IsNull != true)
-                        {
-                            foreach (var td in byType.TypeAndDecision)
-                            {
-                                var type = td.Key;
-                                var decision = td.Value;
-                                switch (Binder.Conversions.ExpressionOfTypeMatchesPatternType(expression.Type.TupleUnderlyingTypeOrSelf(), type))
-                                {
-                                    case null:
-                                        return null; // we don't know if this matches the input
-                                    case true:
-                                        if (expression.Type.CanBeAssignedNull() && expression.ConstantValue == null)
-                                        {
-                                            return null; // we don't know if the input is null; unknown result
-                                        }
-                                        else
-                                        {
-                                            return BindConstantTarget(decision);
-                                        }
-                                    case false:
-                                        continue;
-                                }
-                            }
-                        }
-                        return (byType.Default != null) ? BindConstantTarget(byType.Default) : null;
-                    }
-                case DecisionTree.DecisionKind.ByValue:
-                    {
-                        var byValue = (DecisionTree.ByValue)decisionTree;
-                        var byValueConstant = byValue.Expression.ConstantValue;
-                        if (byValueConstant == null)
-                        {
-                            if (byValue.ValueAndDecision.Count != 0) return null; // can't tell which decision to take
-                        }
-                        else
-                        {
-                            var input = byValueConstant.Value;
-                            foreach (var vd in byValue.ValueAndDecision)
-                            {
-                                var value = vd.Key;
-                                var decision = vd.Value;
-                                if (Equals(input, value)) return BindConstantTarget(decision);
-                            }
-                        }
-                        return (byValue.Default != null) ? BindConstantTarget(byValue.Default) : null;
-                    }
-                case DecisionTree.DecisionKind.Guarded:
-                    {
-                        var guarded = (DecisionTree.Guarded)decisionTree;
-                        return (guarded.Guard == null || guarded.Guard.ConstantValue == ConstantValue.True) ? guarded.Label.Label : null;
-                    }
-                default:
-                    throw ExceptionUtilities.UnexpectedValue(decisionTree.Kind);
-            }
-        }
-
         private void EnsureDecisionTree()
         {
             if (_decisionTree == null)
@@ -250,7 +152,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                 var localSymbol = new SynthesizedLocal(_enclosingSymbol as MethodSymbol, expression.Type, SynthesizedLocalKind.PatternMatchingTemp, _switchStatement.Syntax, false, RefKind.None);
                 expression = new BoundLocal(expression.Syntax, localSymbol, null, expression.Type);
             }
-            var result = DecisionTree.Create(_switchStatement.Expression, _switchStatement.Expression.Type);
+            var result = DecisionTree.Create(_switchStatement.Expression, _switchStatement.Expression.Type, _enclosingSymbol);
             BoundPatternSwitchLabel defaultLabel = null;
             foreach (var section in _switchStatement.SwitchSections)
             {
@@ -536,7 +438,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             }
             else
             {
-                guarded.Default = new DecisionTree.ByValue(guarded.Expression, guarded.Type);
+                guarded.Default = new DecisionTree.ByValue(guarded.Expression, guarded.Type, null);
             }
 
             return AddByValue(guarded.Default, value, makeDecision, hasErrors);
@@ -635,7 +537,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                 var type = value.Type;
                 var localSymbol = new SynthesizedLocal(_enclosingSymbol as MethodSymbol, type, SynthesizedLocalKind.PatternMatchingTemp, _syntax, false, RefKind.None);
                 var narrowedExpression = new BoundLocal(_syntax, localSymbol, null, type);
-                forType = new DecisionTree.ByValue(narrowedExpression, value.Type.TupleUnderlyingTypeOrSelf());
+                forType = new DecisionTree.ByValue(narrowedExpression, value.Type.TupleUnderlyingTypeOrSelf(), localSymbol);
                 byType.TypeAndDecision.Add(new KeyValuePair<TypeSymbol, DecisionTree>(value.Type, forType));
             }
 
@@ -675,7 +577,7 @@ namespace Microsoft.CodeAnalysis.CSharp
         {
             if (guarded.Default == null)
             {
-                guarded.Default = new DecisionTree.ByType(guarded.Expression, guarded.Type);
+                guarded.Default = new DecisionTree.ByType(guarded.Expression, guarded.Type, null);
             }
 
             var result = AddByType(guarded.Default, type, makeDecision);
@@ -795,7 +697,7 @@ namespace Microsoft.CodeAnalysis.CSharp
         {
             if (guarded.Default == null)
             {
-                guarded.Default = new DecisionTree.ByType(guarded.Expression, guarded.Type);
+                guarded.Default = new DecisionTree.ByType(guarded.Expression, guarded.Type, null);
             }
 
             var result = AddByNull(guarded.Default, makeDecision);
@@ -923,6 +825,7 @@ namespace Microsoft.CodeAnalysis.CSharp
     {
         public readonly BoundExpression Expression;
         public readonly TypeSymbol Type;
+        public readonly LocalSymbol Temp;
         public bool MatchIsComplete;
 
         public enum DecisionKind { ByType, ByValue, Guarded }
@@ -937,28 +840,41 @@ namespace Microsoft.CodeAnalysis.CSharp
         }
         internal abstract void DumpInternal(StringBuilder builder, string indent);
 #endif
-        public DecisionTree(BoundExpression expression, TypeSymbol type)
+        public DecisionTree(BoundExpression expression, TypeSymbol type, LocalSymbol temp)
         {
             this.Expression = expression;
             this.Type = type;
+            this.Temp = temp;
             Debug.Assert(this.Expression != null);
             Debug.Assert(this.Type != null);
         }
 
-        public static DecisionTree Create(BoundExpression expression, TypeSymbol type)
+        public static DecisionTree Create(BoundExpression expression, TypeSymbol type, Symbol enclosingSymbol)
         {
             Debug.Assert(expression.Type == type);
+            LocalSymbol temp = null;
+            if (expression.ConstantValue == null)
+            {
+                // Unless it is a constant, the decision tree acts on a copy of the input expression.
+                // We create a temp to represent that copy. Lowering will assign into this temp.
+                temp = new SynthesizedLocal(enclosingSymbol as MethodSymbol, type, SynthesizedLocalKind.PatternMatchingTemp, expression.Syntax, false, RefKind.None);
+                expression = new BoundLocal(expression.Syntax, temp, null, type);
+            }
+
             if (expression.Type.CanBeAssignedNull())
             {
-                // we need the ByType decision tree to separate null from non-null values
-                return new ByType(expression, type);
+                // We need the ByType decision tree to separate null from non-null values.
+                // Note that, for the purpose of the decision tree (and subsumption), we
+                // ignore the fact that the input may be a constant, and therefore always
+                // or never null.
+                return new ByType(expression, type, temp);
             }
             else
             {
                 // If it is a (e.g. builtin) value type, we can switch on its (constant) values.
                 // If it isn't a builtin, in practice we will only use the Default part of the
-                // ByValue
-                return new ByValue(expression, type);
+                // ByValue.
+                return new ByValue(expression, type, temp);
             }
         }
 
@@ -969,7 +885,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                 new ArrayBuilder<KeyValuePair<TypeSymbol, DecisionTree>>();
             public DecisionTree Default;
             public override DecisionKind Kind => DecisionKind.ByType;
-            public ByType(BoundExpression expression, TypeSymbol type) : base(expression, type) { }
+            public ByType(BoundExpression expression, TypeSymbol type, LocalSymbol temp) : base(expression, type, temp) { }
 #if DEBUG
             internal override void DumpInternal(StringBuilder builder, string indent)
             {
@@ -999,7 +915,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                 new Dictionary<object, DecisionTree>();
             public DecisionTree Default;
             public override DecisionKind Kind => DecisionKind.ByValue;
-            public ByValue(BoundExpression expression, TypeSymbol type) : base(expression, type) { }
+            public ByValue(BoundExpression expression, TypeSymbol type, LocalSymbol temp) : base(expression, type, temp) { }
 #if DEBUG
             internal override void DumpInternal(StringBuilder builder, string indent)
             {
@@ -1033,11 +949,12 @@ namespace Microsoft.CodeAnalysis.CSharp
                 ImmutableArray<KeyValuePair<BoundExpression, LocalSymbol>> bindings,
                 BoundExpression guard,
                 BoundPatternSwitchLabel label)
-                : base(expression, type)
+                : base(expression, type, null)
             {
                 this.Guard = guard;
                 this.Label = label;
                 this.Bindings = bindings;
+                Debug.Assert(guard?.ConstantValue != ConstantValue.False);
                 base.MatchIsComplete =
                     (guard == null) || (guard.ConstantValue == ConstantValue.True);
             }
