@@ -189,15 +189,9 @@ public class A
                 // (11,13): error CS0152: The switch statement contains multiple cases with the label value '1'
                 //             case 1: break;   // CS0152
                 Diagnostic(ErrorCode.ERR_DuplicateCaseLabel, "case 1:").WithArguments("1").WithLocation(11, 13),
-                // (11,21): warning CS0162: Unreachable code detected
-                //             case 1: break;   // CS0152
-                Diagnostic(ErrorCode.WRN_UnreachableCode, "break").WithLocation(11, 21),
                 // (23,13): error CS0152: The switch statement contains multiple cases with the label value 'f'
                 //             case 'f':       // CS0152
-                Diagnostic(ErrorCode.ERR_DuplicateCaseLabel, "case 'f':").WithArguments("f").WithLocation(23, 13),
-                // (24,17): warning CS0162: Unreachable code detected
-                //                 break;
-                Diagnostic(ErrorCode.WRN_UnreachableCode, "break").WithLocation(24, 17)
+                Diagnostic(ErrorCode.ERR_DuplicateCaseLabel, "case 'f':").WithArguments("f").WithLocation(23, 13)
                 );
             CreateCompilationWithMscorlib(text, parseOptions: TestOptions.RegularWithPatterns).VerifyDiagnostics(
                 // (11,13): error CS0152: The switch statement contains multiple cases with the label value '1'
@@ -264,15 +258,9 @@ public class A
                 // (11,13): error CS0152: The switch statement contains multiple cases with the label value '1'
                 //             case 1: break;   // CS0152
                 Diagnostic(ErrorCode.ERR_DuplicateCaseLabel, "case 1:").WithArguments("1").WithLocation(11, 13),
-                // (11,21): warning CS0162: Unreachable code detected
-                //             case 1: break;   // CS0152
-                Diagnostic(ErrorCode.WRN_UnreachableCode, "break").WithLocation(11, 21),
                 // (23,13): error CS0152: The switch statement contains multiple cases with the label value '97'
                 //             case 97:       // CS0152
                 Diagnostic(ErrorCode.ERR_DuplicateCaseLabel, "case 97:").WithArguments("97").WithLocation(23, 13),
-                // (24,17): warning CS0162: Unreachable code detected
-                //                 break;            
-                Diagnostic(ErrorCode.WRN_UnreachableCode, "break").WithLocation(24, 17),
                 // (32,18): error CS0266: Cannot implicitly convert type 'float' to 'char'. An explicit conversion exists (are you missing a cast?)
                 //             case 97.0f:
                 Diagnostic(ErrorCode.ERR_NoImplicitConvCast, "97.0f").WithArguments("float", "char").WithLocation(32, 18),
@@ -331,9 +319,9 @@ public class TestClass
     }
 }";
             CreateCompilationWithMscorlib(text, parseOptions: TestOptions.Regular6).VerifyDiagnostics(
-                // (15,13): error CS0152: The switch statement contains multiple cases with the label value 'default'
+                // (15,13): error CS0152: The switch statement contains multiple cases with the label value 'default:'
                 //             default:            //CS0152
-                Diagnostic(ErrorCode.ERR_DuplicateCaseLabel, "default:").WithArguments("default").WithLocation(15, 13)
+                Diagnostic(ErrorCode.ERR_DuplicateCaseLabel, "default:").WithArguments("default:").WithLocation(15, 13)
                 );
             CreateCompilationWithMscorlib(text, parseOptions: TestOptions.RegularWithPatterns).VerifyDiagnostics(
                 // (15,13): error CS0152: The switch statement contains multiple cases with the label value 'default'
@@ -2107,6 +2095,9 @@ null");
             CompileAndVerify(text, parseOptions: TestOptions.Regular, expectedOutput:
 @"1
 null");
+            CompileAndVerify(text, parseOptions: TestOptions.RegularWithPatterns, expectedOutput:
+@"1
+null");
         }
 
         [WorkItem(4344, "https://github.com/dotnet/roslyn/issues/4344")]
@@ -2300,9 +2291,9 @@ switch (1)
                 // (4,5): error CS0163: Control cannot fall through from one case label ('default:') to another
                 //     default:
                 Diagnostic(ErrorCode.ERR_SwitchFallThrough, "default:").WithArguments("default:").WithLocation(4, 5),
-                // (7,9): warning CS0162: Unreachable code detected
-                //         Console.WriteLine(2);
-                Diagnostic(ErrorCode.WRN_UnreachableCode, "Console").WithLocation(7, 9)
+                // (6,5): error CS8070: Control cannot fall out of switch from final case label ('case 2:')
+                //     case 2:
+                Diagnostic(ErrorCode.ERR_SwitchFallOut, "case 2:").WithArguments("case 2:").WithLocation(6, 5)
                 );
         }
 

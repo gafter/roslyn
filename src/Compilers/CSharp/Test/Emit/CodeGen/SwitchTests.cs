@@ -24,12 +24,12 @@ public class Test
 {
     public static int Main(string [] args)
     {
-        int ret = 1;
-        switch (true) {
-        default:
-            ret = 0;
-            break;
-        }
+		int ret = 1;
+		switch (true) {
+		default:
+			ret = 0;
+			break;
+		}
 
         Console.Write(ret);
         return(ret);
@@ -114,12 +114,12 @@ public class Test
 {
     public static int Main(string [] args)
     {
-        int ret = 1;
-        switch (true) {
-        case true:
-            ret = 0;
-            break;
-        }
+		int ret = 1;
+		switch (true) {
+		case true:
+			ret = 0;
+			break;
+		}
 
         Console.Write(ret);
         return(ret);
@@ -194,14 +194,14 @@ public class Test
 {
     public static int Main(string [] args)
     {
-        int ret = 0;
-        int value = 1;
-        
-        switch (value) {
-        case 2:
-            ret = 1;
-            break;		
-        }
+		int ret = 0;
+		int value = 1;
+		
+		switch (value) {
+		case 2:
+			ret = 1;
+			break;		
+		}
 
         Console.Write(ret);
         return(ret);
@@ -240,48 +240,48 @@ public class Test
 {
     public static int Main(string [] args)
     {
-        int ret = 1;
+		int ret = 1;
 
-        int value = 23;
+		int value = 23;
 
-        switch (value) {
-        case kValue:
-            ret = 0;
-            break;
-        default:
-            ret = 1;
-            break;
-        }
+		switch (value) {
+		case kValue:
+			ret = 0;
+			break;
+		default:
+			ret = 1;
+       	    break;
+		}
 
         Console.Write(ret);
         return(ret);
     }
 
-    const int kValue = 23;
+	const int kValue = 23;
 }";
             var compVerifier = CompileAndVerify(text, expectedOutput: "0");
             compVerifier.VerifyIL("Test.Main", @"
                 {
-                  // Code size       24 (0x18)
-                  .maxstack  2
-                  .locals init (int V_0, //ret
-                                int V_1)
-                  IL_0000:  ldc.i4.1
-                  IL_0001:  stloc.0
-                  IL_0002:  ldc.i4.s   23
-                  IL_0004:  stloc.1
-                  IL_0005:  ldloc.1
-                  IL_0006:  ldc.i4.s   23
-                  IL_0008:  bne.un.s   IL_000e
-                  IL_000a:  ldc.i4.0
-                  IL_000b:  stloc.0
-                  IL_000c:  br.s       IL_0010
-                  IL_000e:  ldc.i4.1
-                  IL_000f:  stloc.0
-                  IL_0010:  ldloc.0
-                  IL_0011:  call       ""void System.Console.Write(int)""
-                  IL_0016:  ldloc.0
-                  IL_0017:  ret
+                    // Code size       24 (0x18)
+                    .maxstack  2
+                    .locals init (int V_0, //ret
+                    int V_1) //value
+                    IL_0000:  ldc.i4.1
+                    IL_0001:  stloc.0
+                    IL_0002:  ldc.i4.s   23
+                    IL_0004:  stloc.1
+                    IL_0005:  ldloc.1
+                    IL_0006:  ldc.i4.s   23
+                    IL_0008:  bne.un.s   IL_000e
+                    IL_000a:  ldc.i4.0
+                    IL_000b:  stloc.0
+                    IL_000c:  br.s       IL_0010
+                    IL_000e:  ldc.i4.1
+                    IL_000f:  stloc.0
+                    IL_0010:  ldloc.0
+                    IL_0011:  call       ""void System.Console.Write(int)""
+                    IL_0016:  ldloc.0
+                    IL_0017:  ret
                 }"
             );
         }
@@ -378,83 +378,78 @@ public class Test
 {
     public static int Main(string [] args)
     {
-        int ret = 0;
-        ret = DoByte();
+		int ret = 0;
+		ret = DoByte();
         return(ret);
     }
 
-    private static int DoByte()
-    {
-        int ret = 2;
-        byte b = 2;
+	private static int DoByte()
+	{
+		int ret = 2;
+		byte b = 2;
 
-        switch (b) {
-        case 1:
-        case 2:
-            ret--;
-            break;
-        case 3:
-            break;
-        default:
-            break;
-        }
+		switch (b) {
+		case 1:
+		case 2:
+			ret--;
+			break;
+		case 3:
+			break;
+		default:
+			break;
+		}
 
-        switch (b) {
-        case 1:
-        case 3:
-            break;
-        default:
-            ret--;
-            break;
-        }
+		switch (b) {
+		case 1:
+		case 3:
+			break;
+		default:
+			ret--;
+       	    break;
+		}
 
-        Console.Write(ret);
-        return(ret);
-    }
+		Console.Write(ret);
+		return(ret);
+	}
 }";
             var compVerifier = CompileAndVerify(text, expectedOutput: "0");
             compVerifier.VerifyIL("Test.DoByte",
 @"
 {
-  // Code size       54 (0x36)
+  // Code size       50 (0x32)
   .maxstack  2
   .locals init (int V_0, //ret
-                byte V_1, //b
-                byte V_2)
+  byte V_1) //b
   IL_0000:  ldc.i4.2
   IL_0001:  stloc.0
   IL_0002:  ldc.i4.2
   IL_0003:  stloc.1
   IL_0004:  ldloc.1
-  IL_0005:  stloc.2
-  IL_0006:  ldloc.2
-  IL_0007:  ldc.i4.1
-  IL_0008:  sub
-  IL_0009:  switch    (
-        IL_001c,
-        IL_001c,
-        IL_0020)
-  IL_001a:  br.s       IL_0020
-  IL_001c:  ldloc.0
-  IL_001d:  ldc.i4.1
-  IL_001e:  sub
-  IL_001f:  stloc.0
-  IL_0020:  ldloc.1
-  IL_0021:  stloc.2
-  IL_0022:  ldloc.2
-  IL_0023:  ldc.i4.1
-  IL_0024:  beq.s      IL_002e
-  IL_0026:  ldloc.2
-  IL_0027:  ldc.i4.3
-  IL_0028:  beq.s      IL_002e
+  IL_0005:  ldc.i4.1
+  IL_0006:  sub
+  IL_0007:  switch    (
+  IL_001a,
+  IL_001a,
+  IL_001e)
+  IL_0018:  br.s       IL_001e
+  IL_001a:  ldloc.0
+  IL_001b:  ldc.i4.1
+  IL_001c:  sub
+  IL_001d:  stloc.0
+  IL_001e:  ldloc.1
+  IL_001f:  ldc.i4.1
+  IL_0020:  beq.s      IL_002a
+  IL_0022:  ldloc.1
+  IL_0023:  ldc.i4.3
+  IL_0024:  beq.s      IL_002a
+  IL_0026:  ldloc.0
+  IL_0027:  ldc.i4.1
+  IL_0028:  sub
+  IL_0029:  stloc.0
   IL_002a:  ldloc.0
-  IL_002b:  ldc.i4.1
-  IL_002c:  sub
-  IL_002d:  stloc.0
-  IL_002e:  ldloc.0
-  IL_002f:  call       ""void System.Console.Write(int)""
-  IL_0034:  ldloc.0
-  IL_0035:  ret
+  IL_002b:  call       ""void System.Console.Write(int)""
+  IL_0030:  ldloc.0
+  IL_0031:  ret
 }
 "
             );
@@ -470,38 +465,38 @@ public class Test
 {
     public static void Main(string [] args)
     {
-        int ret = 0;
-        ret = DoLong(2);
+		int ret = 0;
+		ret = DoLong(2);
         Console.Write(ret);
-        ret = DoLong(4);
+		ret = DoLong(4);
         Console.Write(ret);
-        ret = DoLong(42);
+		ret = DoLong(42);
         Console.Write(ret);
     }
 
-    private static int DoLong(long b)
-    {
-        int ret = 2;
+	private static int DoLong(long b)
+	{
+		int ret = 2;
 
-        switch (b) {
-        case 1:
+		switch (b) {
+		case 1:
             ret++;
             break;            
-        case 2:
-            ret--;
+		case 2:
+			ret--;
+			break;
+		case 3:
+			break;
+		case 4:
+			ret += 7;
             break;
-        case 3:
+		default:
+			ret+=2;
             break;
-        case 4:
-            ret += 7;
-            break;
-        default:
-            ret+=2;
-            break;
-        }
+		}
 
-        return ret;
-    }
+		return ret;
+	}
 }
 ";
             var compVerifier = CompileAndVerify(text, expectedOutput: "194");
@@ -598,29 +593,26 @@ public class Test
             compVerifier.VerifyIL("Test.DoLong",
 @"
 {
-  // Code size       55 (0x37)
+  // Code size       53 (0x35)
   .maxstack  2
-  .locals init (long V_0)
   IL_0000:  ldarg.0
-  IL_0001:  stloc.0
-  IL_0002:  ldloc.0
-  IL_0003:  ldc.i8     0x8000000000000000
-  IL_000c:  beq.s      IL_002b
-  IL_000e:  ldloc.0
-  IL_000f:  ldc.i4.1
-  IL_0010:  conv.i8
-  IL_0011:  beq.s      IL_0025
-  IL_0013:  ldloc.0
-  IL_0014:  ldc.i8     0x7fffffffffffffff
-  IL_001d:  bne.un.s   IL_0031
-  IL_001f:  ldstr      ""max""
-  IL_0024:  ret
-  IL_0025:  ldstr      ""one""
-  IL_002a:  ret
-  IL_002b:  ldstr      ""min""
-  IL_0030:  ret
-  IL_0031:  ldstr      ""default""
-  IL_0036:  ret
+  IL_0001:  ldc.i8     0x8000000000000000
+  IL_000a:  beq.s      IL_0029
+  IL_000c:  ldarg.0
+  IL_000d:  ldc.i4.1
+  IL_000e:  conv.i8
+  IL_000f:  beq.s      IL_0023
+  IL_0011:  ldarg.0
+  IL_0012:  ldc.i8     0x7fffffffffffffff
+  IL_001b:  bne.un.s   IL_002f
+  IL_001d:  ldstr      ""max""
+  IL_0022:  ret
+  IL_0023:  ldstr      ""one""
+  IL_0028:  ret
+  IL_0029:  ldstr      ""min""
+  IL_002e:  ret
+  IL_002f:  ldstr      ""default""
+  IL_0034:  ret
 }
 "
             );
@@ -725,46 +717,46 @@ public class Test
 
 public class Test
 {
-    enum eTypes {
-        kFirst,
-        kSecond,
-        kThird,
-    };
+	enum eTypes {
+		kFirst,
+		kSecond,
+		kThird,
+	};
     public static int Main(string [] args)
     {
-        int ret = 0;
-        ret = DoEnum();
+		int ret = 0;
+		ret = DoEnum();
         return(ret);
     }
-    
-    private static int DoEnum()
-    {
-        int ret = 2;
+	
+	private static int DoEnum()
+	{
+	    int ret = 2;
         eTypes e = eTypes.kSecond;
 
-        switch (e) {
+	    switch (e) {
         case eTypes.kThird:
-        case eTypes.kSecond:
-            ret--;
-            break;
-        case (eTypes) (-1):
-            break;
-        default:
-            break;
-        }
+	    case eTypes.kSecond:
+        	ret--;
+	        break;
+	    case (eTypes) (-1):
+        	break;
+	    default:
+        	break;
+	    }
 
-        switch (e) {
+	    switch (e) {
         case (eTypes)100:
-        case (eTypes) (-1):
-            break;
-        default:
-            ret--;
-            break;
-        }
+	    case (eTypes) (-1):
+        	break;
+	    default:
+	        ret--;
+        	break;
+	    }
 
-        Console.Write(ret);
-        return(ret);
-    }
+	    Console.Write(ret);
+	    return(ret);
+	}
 }";
             var compVerifier = CompileAndVerify(text, expectedOutput: "0");
             compVerifier.VerifyIL("Test.DoEnum",
@@ -817,59 +809,59 @@ public class Test
 
 public class Test
 {
-    enum eTypes {
-        kFirst,
-        kSecond,
-        kThird,
-    };
+	enum eTypes {
+		kFirst,
+		kSecond,
+		kThird,
+	};
     public static int Main(string [] args)
     {
-        int ret = 0;
-        ret = DoEnum();
+		int ret = 0;
+		ret = DoEnum();
         return(ret);
     }
-    
-    private static int DoEnum()
-    {
-        int ret = 3;
+	
+	private static int DoEnum()
+	{
+	    int ret = 3;
         eTypes? e = eTypes.kSecond;
 
-        switch (e)
+	    switch (e)
         {
             case eTypes.kThird:
-            case eTypes.kSecond:
-                ret--;
-                break;
-            default:
-                break;
-        }
+	        case eTypes.kSecond:
+        	    ret--;
+	            break;
+	        default:
+        	    break;
+	    }
 
-        switch (e)
+	    switch (e)
         {
             case null:
-            case (eTypes) (-1):
-                break;
-            default:
-                ret--;
-                break;
-        }
+	        case (eTypes) (-1):
+        	    break;
+	        default:
+	            ret--;
+        	    break;
+	    }
         
         e = null;
         switch (e)
         {
             case null:
-                ret--;
-                break;
-            case (eTypes) (-1):
+	    	    ret--;
+        	    break;
+	        case (eTypes) (-1):
             case eTypes.kThird:
-            case eTypes.kSecond:
+	        case eTypes.kSecond:
             default:
-                break;
-        }
+	            break;
+	    }
 
-        Console.Write(ret);
-        return(ret);
-    }
+	    Console.Write(ret);
+	    return(ret);
+	}
 }";
 
             var compVerifier = CompileAndVerify(text, expectedOutput: "0");
@@ -1044,20 +1036,20 @@ public class Test
 {
     public static int Main(string [] args)
     {
-        int ret = 3;
+		int ret = 3;
 
-        for (int i = 0; i < 3; i++) {
-            switch (i) {
-            case 1:
-            case 0:
-            case 2:
-                ret--;
-                break;
-            default:
+		for (int i = 0; i < 3; i++) {
+			switch (i) {
+			case 1:
+			case 0:
+			case 2:
+				ret--;
+				break;
+			default:
                 Console.Write(1);
-                return(1);
-            }
-        }
+				return(1);
+			}
+		}
 
         Console.Write(ret);
         return(ret);
@@ -1299,48 +1291,48 @@ public class Test
 
     public static int M()
     {
-        int ret = 6;
+		int ret = 6;
 
-        switch (ret) {
-        case 0:
-            ret--; // 2
-            Console.Write(""case 0: "");
-            Console.WriteLine(ret);
-            goto case 9999;
-        case 2:
-            ret--; // 4
-            Console.Write(""case 2: "");
-            Console.WriteLine(ret);
-            goto case 255;
-        case 6:			// start here
-            ret--; // 5
-            Console.Write(""case 5: "");
-            Console.WriteLine(ret);
-            goto case 2;
-        case 9999:
-            ret--; // 1
-            Console.Write(""case 9999: "");
-            Console.WriteLine(ret);
-            goto default;
-        case 0xff:
-            ret--; // 3
-            Console.Write(""case 0xff: "");
-            Console.WriteLine(ret);
-            goto case 0;
-        default:
-            ret--;
-            Console.Write(""Default: "");
-            Console.WriteLine(ret);
-            if (ret > 0) {
-                goto case -1;
-            }
-            break;
-        case -1:
-            ret = 999;
-            Console.WriteLine(""case -1: "");
-            Console.Write(ret);
-            break;
-        }
+		switch (ret) {
+		case 0:
+			ret--; // 2
+			Console.Write(""case 0: "");
+			Console.WriteLine(ret);
+			goto case 9999;
+		case 2:
+			ret--; // 4
+			Console.Write(""case 2: "");
+			Console.WriteLine(ret);
+			goto case 255;
+		case 6:			// start here
+			ret--; // 5
+			Console.Write(""case 5: "");
+			Console.WriteLine(ret);
+			goto case 2;
+		case 9999:
+			ret--; // 1
+			Console.Write(""case 9999: "");
+			Console.WriteLine(ret);
+			goto default;
+		case 0xff:
+			ret--; // 3
+			Console.Write(""case 0xff: "");
+			Console.WriteLine(ret);
+			goto case 0;
+		default:
+			ret--;
+			Console.Write(""Default: "");
+			Console.WriteLine(ret);
+			if (ret > 0) {
+				goto case -1;
+			}
+			break;
+		case -1:
+			ret = 999;
+			Console.WriteLine(""case -1: "");
+			Console.Write(ret);
+			break;
+		}
 
         return(ret);
     }
@@ -1482,7 +1474,7 @@ public class Test
       case 1000:
       case 2010:
       case 2008:
-        return 3;
+	    return 3;
       case 2005:
       case 2009:
         return 2;
@@ -1571,7 +1563,7 @@ public class Test
       case 1000:
       case 2010:
       case 2008:
-        return 3;
+	    return 3;
       case 2009:
         return 2;
     }
@@ -2253,58 +2245,58 @@ public class Test
 
 class Test
 {
-    public static bool M(string test)
-    {
-        string	value = """";
+	public static bool M(string test)
+	{
+		string	value = """";
 
-        if (test != null && test.IndexOf(""C#"") != -1)
-            test = test.Remove(0, 2);
+		if (test != null && test.IndexOf(""C#"") != -1)
+			test = test.Remove(0, 2);
 
-        switch (test)
-        {
-            case null:
+		switch (test)
+		{
+			case null:
                 value = null;
                 break;
             case """":
                 break;
             case ""_"":
-                value = ""_"";
-                break;
-            case ""W"":
-                value = ""W"";
-                break;
-            case ""B"":
-                value = ""B"";
-                break;
-            case ""C"":
-                value = ""C"";
-                break;
-            case ""<"":
-                value = ""<"";
-                break;
-            case ""T"":
-                value = ""T"";
-                break;
-            case ""M"":
-                value = ""M"";
-                break;
-        }
+				value = ""_"";
+				break;
+			case ""W"":
+				value = ""W"";
+				break;
+			case ""B"":
+				value = ""B"";
+				break;
+			case ""C"":
+				value = ""C"";
+				break;
+			case ""<"":
+				value = ""<"";
+				break;
+			case ""T"":
+				value = ""T"";
+				break;
+			case ""M"":
+				value = ""M"";
+				break;
+		}
 
-        return (value == test);
-    }
-    public static void Main()
-    {
-        bool success = Test.M(""C#"");
-        success &= Test.M(""C#_"");
+		return (value == test);
+	}
+	public static void Main()
+	{
+		bool success = Test.M(""C#"");
+		success &= Test.M(""C#_"");
         success &= Test.M(""C#W"");
-        success &= Test.M(""C#B"");
-        success &= Test.M(""C#C"");
-        success &= Test.M(""C#<"");
-        success &= Test.M(""C#T"");
-        success &= Test.M(""C#M"");
+		success &= Test.M(""C#B"");
+		success &= Test.M(""C#C"");
+		success &= Test.M(""C#<"");
+		success &= Test.M(""C#T"");
+		success &= Test.M(""C#M"");
         success &= Test.M(null);
-        Console.WriteLine(success);
-    }
+		Console.WriteLine(success);
+	}
 }";
             var compVerifier = CompileAndVerify(text, options: TestOptions.ReleaseExe.WithModuleName("MODULE"), expectedOutput: "True");
 
@@ -2466,522 +2458,514 @@ using System.Text;
 
 class Test
 {
-    public static bool Switcheroo(string test)
-    {
-        string	value = """";
+	public static bool Switcheroo(string test)
+	{
+		string	value = """";
 
-        if (test.IndexOf(""C#"") != -1)
-            test = test.Remove(0, 2);
+		if (test.IndexOf(""C#"") != -1)
+			test = test.Remove(0, 2);
 
-        switch (test)
-        {
-            case ""N?_2hBEJa_klm0=BRoM]mBSY3l=Zm<Aj:mBNm9[9"":
-                value = ""N?_2hBEJa_klm0=BRoM]mBSY3l=Zm<Aj:mBNm9[9"";
-                break;
-            case ""emoYDC`E3JS]IU[X55VKF<e5CjkZb0S0VYQlcS]I"":
-                value = ""emoYDC`E3JS]IU[X55VKF<e5CjkZb0S0VYQlcS]I"";
-                break;
-            case ""Ye]@FRVZi8Rbn0;43c8lo5`W]1CK;cfa2485N45m"":
-                value = ""Ye]@FRVZi8Rbn0;43c8lo5`W]1CK;cfa2485N45m"";
-                break;
-            case ""[Q0V3M_N2;9jTP=79iBK6<edbYXh;`FcaEGD0RhD"":
-                value = ""[Q0V3M_N2;9jTP=79iBK6<edbYXh;`FcaEGD0RhD"";
-                break;
-            case ""<9Ria992H`W:DNX7lm]LV]9LUnJKDXcCo6Zd_FM]"":
-                value = ""<9Ria992H`W:DNX7lm]LV]9LUnJKDXcCo6Zd_FM]"";
-                break;
-            case ""[Z`j:cCFgh2cd3:>1Z@T0o<Q<0o_;11]nMd3bP9c"":
-                value = ""[Z`j:cCFgh2cd3:>1Z@T0o<Q<0o_;11]nMd3bP9c"";
-                break;
-            case ""d2U5RWR:j0RS9MZZP3[f@NPgKFS9mQi:na@4Z_G0"":
-                value = ""d2U5RWR:j0RS9MZZP3[f@NPgKFS9mQi:na@4Z_G0"";
-                break;
-            case ""n7AOl<DYj1]k>F7FaW^5b2Ki6UP0@=glIc@RE]3>"":
-                value = ""n7AOl<DYj1]k>F7FaW^5b2Ki6UP0@=glIc@RE]3>"";
-                break;
-            case ""H==7DT_M5125HT:m@`7cgg>WbZ4HAFg`Am:Ba:fF"":
-                value = ""H==7DT_M5125HT:m@`7cgg>WbZ4HAFg`Am:Ba:fF"";
-                break;
-            case ""iEj07Ik=?G35AfEf?8@5[@4OGYeXIHYH]CZlHY7:"":
-                value = ""iEj07Ik=?G35AfEf?8@5[@4OGYeXIHYH]CZlHY7:"";
-                break;
-            case "">AcFS3V9Y@g<55K`=QnYTS=B^CS@kg6:Hc_UaRTj"":
-                value = "">AcFS3V9Y@g<55K`=QnYTS=B^CS@kg6:Hc_UaRTj"";
-                break;
-            case ""d1QZgJ_jT]UeL^UF2XWS@I?Hdi1MTm9Z3mdV7]0:"":
-                value = ""d1QZgJ_jT]UeL^UF2XWS@I?Hdi1MTm9Z3mdV7]0:"";
-                break;
-            case ""fVObMkcK:_AQae0VY4N]bDXXI_KkoeNZ9ohT?gfU"":
-                value = ""fVObMkcK:_AQae0VY4N]bDXXI_KkoeNZ9ohT?gfU"";
-                break;
-            case ""9o4i04]a4g2PRLBl@`]OaoY]1<h3on[5=I3U[9RR"":
-                value = ""9o4i04]a4g2PRLBl@`]OaoY]1<h3on[5=I3U[9RR"";
-                break;
-            case ""A1>CNg1bZTYE64G<Adn;aE957eWjEcaXZUf<TlGj"":
-                value = ""A1>CNg1bZTYE64G<Adn;aE957eWjEcaXZUf<TlGj"";
-                break;
-            case ""SK`1T7]RZZR]lkZ`nFcm]k0RJlcF>eN5=jEi=A^k"":
-                value = ""SK`1T7]RZZR]lkZ`nFcm]k0RJlcF>eN5=jEi=A^k"";
-                break;
-            case ""0@U=MkSf3niYF;8aC0U]IX=X[Y]Kjmj<4CR5:4R4"":
-                value = ""0@U=MkSf3niYF;8aC0U]IX=X[Y]Kjmj<4CR5:4R4"";
-                break;
-            case ""4g1JY?VRdh5RYS[Z;ElS=5I`7?>OKlD3mF1;]M<O"":
-                value = ""4g1JY?VRdh5RYS[Z;ElS=5I`7?>OKlD3mF1;]M<O"";
-                break;
-            case ""EH=noQ6]]@Vj5PDW;KFeEE7j>I<Q>4243W`AGHAe"":
-                value = ""EH=noQ6]]@Vj5PDW;KFeEE7j>I<Q>4243W`AGHAe"";
-                break;
-            case ""?k3Amd3aFf3_4S<bJ9;UdR7WYVmbZLh[2ekHKdTM"":
-                value = ""?k3Amd3aFf3_4S<bJ9;UdR7WYVmbZLh[2ekHKdTM"";
-                break;
-            case ""HR9nATB9C[FY7B]9iI6IbodSencFWSVlhL879C:W"":
-                value = ""HR9nATB9C[FY7B]9iI6IbodSencFWSVlhL879C:W"";
-                break;
-            case ""XPTnWmDfL^AIH];Ek6l1AV9J020j<W:V6SU9VA@D"":
-                value = ""XPTnWmDfL^AIH];Ek6l1AV9J020j<W:V6SU9VA@D"";
-                break;
-            case ""MXO]7S@eM`o>LUXfLTk^m3eP2NbAj8N^[]J7PCh9"":
-                value = ""MXO]7S@eM`o>LUXfLTk^m3eP2NbAj8N^[]J7PCh9"";
-                break;
-            case ""L=FTZJ_V59eFjg_REMagg4n0Sng1]3mOgEAQ]EL4"":
-                value = ""L=FTZJ_V59eFjg_REMagg4n0Sng1]3mOgEAQ]EL4"";
-                break;
-        }
+		switch (test)
+		{
+			case ""N?_2hBEJa_klm0=BRoM]mBSY3l=Zm<Aj:mBNm9[9"":
+				value = ""N?_2hBEJa_klm0=BRoM]mBSY3l=Zm<Aj:mBNm9[9"";
+				break;
+			case ""emoYDC`E3JS]IU[X55VKF<e5CjkZb0S0VYQlcS]I"":
+				value = ""emoYDC`E3JS]IU[X55VKF<e5CjkZb0S0VYQlcS]I"";
+				break;
+			case ""Ye]@FRVZi8Rbn0;43c8lo5`W]1CK;cfa2485N45m"":
+				value = ""Ye]@FRVZi8Rbn0;43c8lo5`W]1CK;cfa2485N45m"";
+				break;
+			case ""[Q0V3M_N2;9jTP=79iBK6<edbYXh;`FcaEGD0RhD"":
+				value = ""[Q0V3M_N2;9jTP=79iBK6<edbYXh;`FcaEGD0RhD"";
+				break;
+			case ""<9Ria992H`W:DNX7lm]LV]9LUnJKDXcCo6Zd_FM]"":
+				value = ""<9Ria992H`W:DNX7lm]LV]9LUnJKDXcCo6Zd_FM]"";
+				break;
+			case ""[Z`j:cCFgh2cd3:>1Z@T0o<Q<0o_;11]nMd3bP9c"":
+				value = ""[Z`j:cCFgh2cd3:>1Z@T0o<Q<0o_;11]nMd3bP9c"";
+				break;
+			case ""d2U5RWR:j0RS9MZZP3[f@NPgKFS9mQi:na@4Z_G0"":
+				value = ""d2U5RWR:j0RS9MZZP3[f@NPgKFS9mQi:na@4Z_G0"";
+				break;
+			case ""n7AOl<DYj1]k>F7FaW^5b2Ki6UP0@=glIc@RE]3>"":
+				value = ""n7AOl<DYj1]k>F7FaW^5b2Ki6UP0@=glIc@RE]3>"";
+				break;
+			case ""H==7DT_M5125HT:m@`7cgg>WbZ4HAFg`Am:Ba:fF"":
+				value = ""H==7DT_M5125HT:m@`7cgg>WbZ4HAFg`Am:Ba:fF"";
+				break;
+			case ""iEj07Ik=?G35AfEf?8@5[@4OGYeXIHYH]CZlHY7:"":
+				value = ""iEj07Ik=?G35AfEf?8@5[@4OGYeXIHYH]CZlHY7:"";
+				break;
+			case "">AcFS3V9Y@g<55K`=QnYTS=B^CS@kg6:Hc_UaRTj"":
+				value = "">AcFS3V9Y@g<55K`=QnYTS=B^CS@kg6:Hc_UaRTj"";
+				break;
+			case ""d1QZgJ_jT]UeL^UF2XWS@I?Hdi1MTm9Z3mdV7]0:"":
+				value = ""d1QZgJ_jT]UeL^UF2XWS@I?Hdi1MTm9Z3mdV7]0:"";
+				break;
+			case ""fVObMkcK:_AQae0VY4N]bDXXI_KkoeNZ9ohT?gfU"":
+				value = ""fVObMkcK:_AQae0VY4N]bDXXI_KkoeNZ9ohT?gfU"";
+				break;
+			case ""9o4i04]a4g2PRLBl@`]OaoY]1<h3on[5=I3U[9RR"":
+				value = ""9o4i04]a4g2PRLBl@`]OaoY]1<h3on[5=I3U[9RR"";
+				break;
+			case ""A1>CNg1bZTYE64G<Adn;aE957eWjEcaXZUf<TlGj"":
+				value = ""A1>CNg1bZTYE64G<Adn;aE957eWjEcaXZUf<TlGj"";
+				break;
+			case ""SK`1T7]RZZR]lkZ`nFcm]k0RJlcF>eN5=jEi=A^k"":
+				value = ""SK`1T7]RZZR]lkZ`nFcm]k0RJlcF>eN5=jEi=A^k"";
+				break;
+			case ""0@U=MkSf3niYF;8aC0U]IX=X[Y]Kjmj<4CR5:4R4"":
+				value = ""0@U=MkSf3niYF;8aC0U]IX=X[Y]Kjmj<4CR5:4R4"";
+				break;
+			case ""4g1JY?VRdh5RYS[Z;ElS=5I`7?>OKlD3mF1;]M<O"":
+				value = ""4g1JY?VRdh5RYS[Z;ElS=5I`7?>OKlD3mF1;]M<O"";
+				break;
+			case ""EH=noQ6]]@Vj5PDW;KFeEE7j>I<Q>4243W`AGHAe"":
+				value = ""EH=noQ6]]@Vj5PDW;KFeEE7j>I<Q>4243W`AGHAe"";
+				break;
+			case ""?k3Amd3aFf3_4S<bJ9;UdR7WYVmbZLh[2ekHKdTM"":
+				value = ""?k3Amd3aFf3_4S<bJ9;UdR7WYVmbZLh[2ekHKdTM"";
+				break;
+			case ""HR9nATB9C[FY7B]9iI6IbodSencFWSVlhL879C:W"":
+				value = ""HR9nATB9C[FY7B]9iI6IbodSencFWSVlhL879C:W"";
+				break;
+			case ""XPTnWmDfL^AIH];Ek6l1AV9J020j<W:V6SU9VA@D"":
+				value = ""XPTnWmDfL^AIH];Ek6l1AV9J020j<W:V6SU9VA@D"";
+				break;
+			case ""MXO]7S@eM`o>LUXfLTk^m3eP2NbAj8N^[]J7PCh9"":
+				value = ""MXO]7S@eM`o>LUXfLTk^m3eP2NbAj8N^[]J7PCh9"";
+				break;
+			case ""L=FTZJ_V59eFjg_REMagg4n0Sng1]3mOgEAQ]EL4"":
+				value = ""L=FTZJ_V59eFjg_REMagg4n0Sng1]3mOgEAQ]EL4"";
+				break;
+		}
 
-        return (value == test);
-    }
-    public static void Main()
-    {
-        string status = ""PASS"";
-        bool retval;
-        retval = Test.Switcheroo(""C#N?_2hBEJa_klm0=BRoM]mBSY3l=Zm<Aj:mBNm9[9"");
-        if (!retval) status = ""FAIL"";
-        retval = Test.Switcheroo(""C#emoYDC`E3JS]IU[X55VKF<e5CjkZb0S0VYQlcS]I"");
-        if (!retval) status = ""FAIL"";
-        retval = Test.Switcheroo(""C#Ye]@FRVZi8Rbn0;43c8lo5`W]1CK;cfa2485N45m"");
-        if (!retval) status = ""FAIL"";
-        retval = Test.Switcheroo(""C#[Q0V3M_N2;9jTP=79iBK6<edbYXh;`FcaEGD0RhD"");
-        if (!retval) status = ""FAIL"";
-        retval = Test.Switcheroo(""C#<9Ria992H`W:DNX7lm]LV]9LUnJKDXcCo6Zd_FM]"");
-        if (!retval) status = ""FAIL"";
-        retval = Test.Switcheroo(""C#[Z`j:cCFgh2cd3:>1Z@T0o<Q<0o_;11]nMd3bP9c"");
-        if (!retval) status = ""FAIL"";
-        retval = Test.Switcheroo(""C#d2U5RWR:j0RS9MZZP3[f@NPgKFS9mQi:na@4Z_G0"");
-        if (!retval) status = ""FAIL"";
-        retval = Test.Switcheroo(""C#n7AOl<DYj1]k>F7FaW^5b2Ki6UP0@=glIc@RE]3>"");
-        if (!retval) status = ""FAIL"";
-        retval = Test.Switcheroo(""C#H==7DT_M5125HT:m@`7cgg>WbZ4HAFg`Am:Ba:fF"");
-        if (!retval) status = ""FAIL"";
-        retval = Test.Switcheroo(""C#iEj07Ik=?G35AfEf?8@5[@4OGYeXIHYH]CZlHY7:"");
-        if (!retval) status = ""FAIL"";
-        retval = Test.Switcheroo(""C#>AcFS3V9Y@g<55K`=QnYTS=B^CS@kg6:Hc_UaRTj"");
-        if (!retval) status = ""FAIL"";
-        retval = Test.Switcheroo(""C#d1QZgJ_jT]UeL^UF2XWS@I?Hdi1MTm9Z3mdV7]0:"");
-        if (!retval) status = ""FAIL"";
-        retval = Test.Switcheroo(""C#fVObMkcK:_AQae0VY4N]bDXXI_KkoeNZ9ohT?gfU"");
-        if (!retval) status = ""FAIL"";
-        retval = Test.Switcheroo(""C#9o4i04]a4g2PRLBl@`]OaoY]1<h3on[5=I3U[9RR"");
-        if (!retval) status = ""FAIL"";
-        retval = Test.Switcheroo(""C#A1>CNg1bZTYE64G<Adn;aE957eWjEcaXZUf<TlGj"");
-        if (!retval) status = ""FAIL"";
-        retval = Test.Switcheroo(""C#SK`1T7]RZZR]lkZ`nFcm]k0RJlcF>eN5=jEi=A^k"");
-        if (!retval) status = ""FAIL"";
-        retval = Test.Switcheroo(""C#0@U=MkSf3niYF;8aC0U]IX=X[Y]Kjmj<4CR5:4R4"");
-        if (!retval) status = ""FAIL"";
-        retval = Test.Switcheroo(""C#4g1JY?VRdh5RYS[Z;ElS=5I`7?>OKlD3mF1;]M<O"");
-        if (!retval) status = ""FAIL"";
-        retval = Test.Switcheroo(""C#EH=noQ6]]@Vj5PDW;KFeEE7j>I<Q>4243W`AGHAe"");
-        if (!retval) status = ""FAIL"";
-        retval = Test.Switcheroo(""C#?k3Amd3aFf3_4S<bJ9;UdR7WYVmbZLh[2ekHKdTM"");
-        if (!retval) status = ""FAIL"";
-        retval = Test.Switcheroo(""C#HR9nATB9C[FY7B]9iI6IbodSencFWSVlhL879C:W"");
-        if (!retval) status = ""FAIL"";
-        retval = Test.Switcheroo(""C#XPTnWmDfL^AIH];Ek6l1AV9J020j<W:V6SU9VA@D"");
-        if (!retval) status = ""FAIL"";
-        retval = Test.Switcheroo(""C#MXO]7S@eM`o>LUXfLTk^m3eP2NbAj8N^[]J7PCh9"");
-        if (!retval) status = ""FAIL"";
-        retval = Test.Switcheroo(""C#L=FTZJ_V59eFjg_REMagg4n0Sng1]3mOgEAQ]EL4"");
-        if (!retval) status = ""FAIL"";
-        retval = Test.Switcheroo(""C#a@=FkgImdk5<Wn0DRYa?m0<F0JT4kha;H:HIZ;6C"");
-        if (retval) status = ""FAIL"";
-        retval = Test.Switcheroo(""C#Zbk^]59O<<GHe8MjRMOh4]c3@RQ?hU>^G81cOMW:"");
-        if (retval) status = ""FAIL"";
-        retval = Test.Switcheroo(""C#hP<l25H@W60UF4bYYDU]0AjIE6oCQ^k66F9gNJ`Q"");
-        if (retval) status = ""FAIL"";
-        retval = Test.Switcheroo(""C#XS9dCIb;9T`;JJ1Jmimba@@0[l[B=BgDhKZ05DO2"");
-        if (retval) status = ""FAIL"";
-        retval = Test.Switcheroo(""C#JbMbko?;e@1XLU>:=c_Vg>0YTJ7Qd]6KLh26miBV"");
-        if (retval) status = ""FAIL"";
-        retval = Test.Switcheroo(""C#IW3:>L<H<kf:AS2ZYDGaE`?^HZY_D]cRO[lNjd4;"");
-        if (retval) status = ""FAIL"";
-        retval = Test.Switcheroo(""C#NC>J^E3;VJ`nKSjVbJ_Il^^@0Xof9CFA2I1I^9c>"");
-        if (retval) status = ""FAIL"";
-        retval = Test.Switcheroo(""C#TfjQOCnAhM8[T3JUbLlQMS=`F=?:FPT3=X0Q]aj:"");
-        if (retval) status = ""FAIL"";
-        retval = Test.Switcheroo(""C#H_6fHA8OKO><TYDXiIg[Qed<=71KC>^6cTMOjT]d"");
-        if (retval) status = ""FAIL"";
-        retval = Test.Switcheroo(""C#jN>cSCF0?I<1RSQ^g^HnBABPhUc>5Y`ahlY9HS]5"");
-        if (retval) status = ""FAIL"";
-        retval = Test.Switcheroo(""C#V;`Q_kEGIX=Mh9=UVF[Q@Q=QTT@oC]IRF]<bA1R9"");
-        if (retval) status = ""FAIL"";
-        retval = Test.Switcheroo(""C#7DKT?2VIk2^XUJ>C]G_IDe?299DJTD>1RO18Ql>F"");
-        if (retval) status = ""FAIL"";
-        retval = Test.Switcheroo(""C#U`^]IeJC;o^90V=5<ToV<Gj26hnZLolffohc8iZX"");
-        if (retval) status = ""FAIL"";
-        retval = Test.Switcheroo(""C#9S?>A?E>gBl_dC[iCiiNnW7<BP;eGHf>8ceTGZ6C"");
-        if (retval) status = ""FAIL"";
-        retval = Test.Switcheroo(""C#ALLhjN7]XVBBA=VcYM8iWg^FGiG[QG03dlKYnIAe"");
-        if (retval) status = ""FAIL"";
-        retval = Test.Switcheroo(""C#6<]i]EllPZf6mnAM0D1;0eP6_G1HmRSi?`1o[a_a"");
-        if (retval) status = ""FAIL"";
-        retval = Test.Switcheroo(""C#]5Tb^6:NB]>ahEoWI5U9N5beS<?da]A]fL08AelQ"");
-        if (retval) status = ""FAIL"";
-        retval = Test.Switcheroo(""C#KhPBV8=H?G^Hmaaf^n<GcoI8eC1O_0]579;MY=81"");
-        if (retval) status = ""FAIL"";
-        retval = Test.Switcheroo(""C#A8iN_OFUPIcWac0^LU1;^HaEX[_E]<8h3N:Hm_XX"");
-        if (retval) status = ""FAIL"";
-        retval = Test.Switcheroo(""C#Y811aKWEJYcX6Y1aj_I]O7TXP5j_lo;71kAiB:;:"");
-        if (retval) status = ""FAIL"";
-        retval = Test.Switcheroo(""C#P@ok2DgbUDeLVA:POd`B_S@2Ocg99VQBZ<LI<gd1"");
-        if (retval) status = ""FAIL"";
-        retval = Test.Switcheroo(""C#9V84FSRoD9453VdERM86a6B12VeN]hNNU:]XE`W9"");
-        if (retval) status = ""FAIL"";
-        retval = Test.Switcheroo(""C#Tegah0mKcWmFhaH0K0oSjKGkmH8gDEF3SBVd2H1P"");
-        if (retval) status = ""FAIL"";
-        retval = Test.Switcheroo(""C#=II;VADkVKf7JV55ca5oUjkPaWSY7`LXTlgTV4^W"");
-        if (retval) status = ""FAIL"";
-        retval = Test.Switcheroo(""C#k7XPoXNhd8P0V7@Sd5ohO>h7io3Pl[J[8g:[_da^"");
-        if (retval) status = ""FAIL"";
-        Console.Write(status);
-    }
+		return (value == test);
+	}
+	public static void Main()
+	{
+		string status = ""PASS"";
+		bool retval;
+		retval = Test.Switcheroo(""C#N?_2hBEJa_klm0=BRoM]mBSY3l=Zm<Aj:mBNm9[9"");
+		if (!retval) status = ""FAIL"";
+		retval = Test.Switcheroo(""C#emoYDC`E3JS]IU[X55VKF<e5CjkZb0S0VYQlcS]I"");
+		if (!retval) status = ""FAIL"";
+		retval = Test.Switcheroo(""C#Ye]@FRVZi8Rbn0;43c8lo5`W]1CK;cfa2485N45m"");
+		if (!retval) status = ""FAIL"";
+		retval = Test.Switcheroo(""C#[Q0V3M_N2;9jTP=79iBK6<edbYXh;`FcaEGD0RhD"");
+		if (!retval) status = ""FAIL"";
+		retval = Test.Switcheroo(""C#<9Ria992H`W:DNX7lm]LV]9LUnJKDXcCo6Zd_FM]"");
+		if (!retval) status = ""FAIL"";
+		retval = Test.Switcheroo(""C#[Z`j:cCFgh2cd3:>1Z@T0o<Q<0o_;11]nMd3bP9c"");
+		if (!retval) status = ""FAIL"";
+		retval = Test.Switcheroo(""C#d2U5RWR:j0RS9MZZP3[f@NPgKFS9mQi:na@4Z_G0"");
+		if (!retval) status = ""FAIL"";
+		retval = Test.Switcheroo(""C#n7AOl<DYj1]k>F7FaW^5b2Ki6UP0@=glIc@RE]3>"");
+		if (!retval) status = ""FAIL"";
+		retval = Test.Switcheroo(""C#H==7DT_M5125HT:m@`7cgg>WbZ4HAFg`Am:Ba:fF"");
+		if (!retval) status = ""FAIL"";
+		retval = Test.Switcheroo(""C#iEj07Ik=?G35AfEf?8@5[@4OGYeXIHYH]CZlHY7:"");
+		if (!retval) status = ""FAIL"";
+		retval = Test.Switcheroo(""C#>AcFS3V9Y@g<55K`=QnYTS=B^CS@kg6:Hc_UaRTj"");
+		if (!retval) status = ""FAIL"";
+		retval = Test.Switcheroo(""C#d1QZgJ_jT]UeL^UF2XWS@I?Hdi1MTm9Z3mdV7]0:"");
+		if (!retval) status = ""FAIL"";
+		retval = Test.Switcheroo(""C#fVObMkcK:_AQae0VY4N]bDXXI_KkoeNZ9ohT?gfU"");
+		if (!retval) status = ""FAIL"";
+		retval = Test.Switcheroo(""C#9o4i04]a4g2PRLBl@`]OaoY]1<h3on[5=I3U[9RR"");
+		if (!retval) status = ""FAIL"";
+		retval = Test.Switcheroo(""C#A1>CNg1bZTYE64G<Adn;aE957eWjEcaXZUf<TlGj"");
+		if (!retval) status = ""FAIL"";
+		retval = Test.Switcheroo(""C#SK`1T7]RZZR]lkZ`nFcm]k0RJlcF>eN5=jEi=A^k"");
+		if (!retval) status = ""FAIL"";
+		retval = Test.Switcheroo(""C#0@U=MkSf3niYF;8aC0U]IX=X[Y]Kjmj<4CR5:4R4"");
+		if (!retval) status = ""FAIL"";
+		retval = Test.Switcheroo(""C#4g1JY?VRdh5RYS[Z;ElS=5I`7?>OKlD3mF1;]M<O"");
+		if (!retval) status = ""FAIL"";
+		retval = Test.Switcheroo(""C#EH=noQ6]]@Vj5PDW;KFeEE7j>I<Q>4243W`AGHAe"");
+		if (!retval) status = ""FAIL"";
+		retval = Test.Switcheroo(""C#?k3Amd3aFf3_4S<bJ9;UdR7WYVmbZLh[2ekHKdTM"");
+		if (!retval) status = ""FAIL"";
+		retval = Test.Switcheroo(""C#HR9nATB9C[FY7B]9iI6IbodSencFWSVlhL879C:W"");
+		if (!retval) status = ""FAIL"";
+		retval = Test.Switcheroo(""C#XPTnWmDfL^AIH];Ek6l1AV9J020j<W:V6SU9VA@D"");
+		if (!retval) status = ""FAIL"";
+		retval = Test.Switcheroo(""C#MXO]7S@eM`o>LUXfLTk^m3eP2NbAj8N^[]J7PCh9"");
+		if (!retval) status = ""FAIL"";
+		retval = Test.Switcheroo(""C#L=FTZJ_V59eFjg_REMagg4n0Sng1]3mOgEAQ]EL4"");
+		if (!retval) status = ""FAIL"";
+		retval = Test.Switcheroo(""C#a@=FkgImdk5<Wn0DRYa?m0<F0JT4kha;H:HIZ;6C"");
+		if (retval) status = ""FAIL"";
+		retval = Test.Switcheroo(""C#Zbk^]59O<<GHe8MjRMOh4]c3@RQ?hU>^G81cOMW:"");
+		if (retval) status = ""FAIL"";
+		retval = Test.Switcheroo(""C#hP<l25H@W60UF4bYYDU]0AjIE6oCQ^k66F9gNJ`Q"");
+		if (retval) status = ""FAIL"";
+		retval = Test.Switcheroo(""C#XS9dCIb;9T`;JJ1Jmimba@@0[l[B=BgDhKZ05DO2"");
+		if (retval) status = ""FAIL"";
+		retval = Test.Switcheroo(""C#JbMbko?;e@1XLU>:=c_Vg>0YTJ7Qd]6KLh26miBV"");
+		if (retval) status = ""FAIL"";
+		retval = Test.Switcheroo(""C#IW3:>L<H<kf:AS2ZYDGaE`?^HZY_D]cRO[lNjd4;"");
+		if (retval) status = ""FAIL"";
+		retval = Test.Switcheroo(""C#NC>J^E3;VJ`nKSjVbJ_Il^^@0Xof9CFA2I1I^9c>"");
+		if (retval) status = ""FAIL"";
+		retval = Test.Switcheroo(""C#TfjQOCnAhM8[T3JUbLlQMS=`F=?:FPT3=X0Q]aj:"");
+		if (retval) status = ""FAIL"";
+		retval = Test.Switcheroo(""C#H_6fHA8OKO><TYDXiIg[Qed<=71KC>^6cTMOjT]d"");
+		if (retval) status = ""FAIL"";
+		retval = Test.Switcheroo(""C#jN>cSCF0?I<1RSQ^g^HnBABPhUc>5Y`ahlY9HS]5"");
+		if (retval) status = ""FAIL"";
+		retval = Test.Switcheroo(""C#V;`Q_kEGIX=Mh9=UVF[Q@Q=QTT@oC]IRF]<bA1R9"");
+		if (retval) status = ""FAIL"";
+		retval = Test.Switcheroo(""C#7DKT?2VIk2^XUJ>C]G_IDe?299DJTD>1RO18Ql>F"");
+		if (retval) status = ""FAIL"";
+		retval = Test.Switcheroo(""C#U`^]IeJC;o^90V=5<ToV<Gj26hnZLolffohc8iZX"");
+		if (retval) status = ""FAIL"";
+		retval = Test.Switcheroo(""C#9S?>A?E>gBl_dC[iCiiNnW7<BP;eGHf>8ceTGZ6C"");
+		if (retval) status = ""FAIL"";
+		retval = Test.Switcheroo(""C#ALLhjN7]XVBBA=VcYM8iWg^FGiG[QG03dlKYnIAe"");
+		if (retval) status = ""FAIL"";
+		retval = Test.Switcheroo(""C#6<]i]EllPZf6mnAM0D1;0eP6_G1HmRSi?`1o[a_a"");
+		if (retval) status = ""FAIL"";
+		retval = Test.Switcheroo(""C#]5Tb^6:NB]>ahEoWI5U9N5beS<?da]A]fL08AelQ"");
+		if (retval) status = ""FAIL"";
+		retval = Test.Switcheroo(""C#KhPBV8=H?G^Hmaaf^n<GcoI8eC1O_0]579;MY=81"");
+		if (retval) status = ""FAIL"";
+		retval = Test.Switcheroo(""C#A8iN_OFUPIcWac0^LU1;^HaEX[_E]<8h3N:Hm_XX"");
+		if (retval) status = ""FAIL"";
+		retval = Test.Switcheroo(""C#Y811aKWEJYcX6Y1aj_I]O7TXP5j_lo;71kAiB:;:"");
+		if (retval) status = ""FAIL"";
+		retval = Test.Switcheroo(""C#P@ok2DgbUDeLVA:POd`B_S@2Ocg99VQBZ<LI<gd1"");
+		if (retval) status = ""FAIL"";
+		retval = Test.Switcheroo(""C#9V84FSRoD9453VdERM86a6B12VeN]hNNU:]XE`W9"");
+		if (retval) status = ""FAIL"";
+		retval = Test.Switcheroo(""C#Tegah0mKcWmFhaH0K0oSjKGkmH8gDEF3SBVd2H1P"");
+		if (retval) status = ""FAIL"";
+		retval = Test.Switcheroo(""C#=II;VADkVKf7JV55ca5oUjkPaWSY7`LXTlgTV4^W"");
+		if (retval) status = ""FAIL"";
+		retval = Test.Switcheroo(""C#k7XPoXNhd8P0V7@Sd5ohO>h7io3Pl[J[8g:[_da^"");
+		if (retval) status = ""FAIL"";
+		Console.Write(status);
+	}
 }";
             var compVerifier = CompileAndVerify(text, options: TestOptions.ReleaseExe.WithModuleName("MODULE"), expectedOutput: "PASS");
 
             compVerifier.VerifyIL("Test.Switcheroo", @"
 {
-  // Code size     1125 (0x465)
+  // Code size     1115 (0x45b)
   .maxstack  3
   .locals init (string V_0, //value
-                string V_1,
-                string V_2,
-                uint V_3)
+           uint V_1)
   IL_0000:  ldstr      """"
-  IL_0005:  stloc.0
-  IL_0006:  ldarg.0
+  IL_0005:  stloc.0   
+  IL_0006:  ldarg.0   
   IL_0007:  ldstr      ""C#""
   IL_000c:  callvirt   ""int string.IndexOf(string)""
-  IL_0011:  ldc.i4.m1
+  IL_0011:  ldc.i4.m1 
   IL_0012:  beq.s      IL_001e
-  IL_0014:  ldarg.0
-  IL_0015:  ldc.i4.0
-  IL_0016:  ldc.i4.2
+  IL_0014:  ldarg.0   
+  IL_0015:  ldc.i4.0  
+  IL_0016:  ldc.i4.2  
   IL_0017:  callvirt   ""string string.Remove(int, int)""
   IL_001c:  starg.s    V_0
-  IL_001e:  ldarg.0
-  IL_001f:  stloc.1
-  IL_0020:  ldloc.1
-  IL_0021:  brfalse    IL_045d
-  IL_0026:  ldloc.1
-  IL_0027:  stloc.2
-  IL_0028:  ldloc.2
-  IL_0029:  call       ""ComputeStringHash""
-  IL_002e:  stloc.3
-  IL_002f:  ldloc.3
-  IL_0030:  ldc.i4     0xb2f29419
-  IL_0035:  bgt.un     IL_00ea
-  IL_003a:  ldloc.3
-  IL_003b:  ldc.i4     0x619348d8
-  IL_0040:  bgt.un.s   IL_0096
-  IL_0042:  ldloc.3
-  IL_0043:  ldc.i4     0x36758e37
-  IL_0048:  bgt.un.s   IL_0070
-  IL_004a:  ldloc.3
-  IL_004b:  ldc.i4     0x144fd20d
-  IL_0050:  beq        IL_02b8
-  IL_0055:  ldloc.3
-  IL_0056:  ldc.i4     0x14ca99e2
-  IL_005b:  beq        IL_0264
-  IL_0060:  ldloc.3
-  IL_0061:  ldc.i4     0x36758e37
-  IL_0066:  beq        IL_0210
-  IL_006b:  br         IL_045d
-  IL_0070:  ldloc.3
-  IL_0071:  ldc.i4     0x5398a778
-  IL_0076:  beq        IL_0225
-  IL_007b:  ldloc.3
-  IL_007c:  ldc.i4     0x616477cf
-  IL_0081:  beq        IL_01bc
-  IL_0086:  ldloc.3
-  IL_0087:  ldc.i4     0x619348d8
-  IL_008c:  beq        IL_02f7
-  IL_0091:  br         IL_045d
-  IL_0096:  ldloc.3
-  IL_0097:  ldc.i4     0x78a826a8
-  IL_009c:  bgt.un.s   IL_00c4
-  IL_009e:  ldloc.3
-  IL_009f:  ldc.i4     0x65b3e3e5
-  IL_00a4:  beq        IL_02cd
-  IL_00a9:  ldloc.3
-  IL_00aa:  ldc.i4     0x7822b5bc
-  IL_00af:  beq        IL_028e
-  IL_00b4:  ldloc.3
-  IL_00b5:  ldc.i4     0x78a826a8
-  IL_00ba:  beq        IL_01e6
-  IL_00bf:  br         IL_045d
-  IL_00c4:  ldloc.3
-  IL_00c5:  ldc.i4     0x7f66da4e
-  IL_00ca:  beq        IL_0360
-  IL_00cf:  ldloc.3
-  IL_00d0:  ldc.i4     0xb13d374d
-  IL_00d5:  beq        IL_0336
-  IL_00da:  ldloc.3
-  IL_00db:  ldc.i4     0xb2f29419
-  IL_00e0:  beq        IL_030c
-  IL_00e5:  br         IL_045d
-  IL_00ea:  ldloc.3
-  IL_00eb:  ldc.i4     0xd59864f4
-  IL_00f0:  bgt.un.s   IL_0146
-  IL_00f2:  ldloc.3
-  IL_00f3:  ldc.i4     0xbf4a9f8e
-  IL_00f8:  bgt.un.s   IL_0120
-  IL_00fa:  ldloc.3
-  IL_00fb:  ldc.i4     0xb6e02d3a
-  IL_0100:  beq        IL_02a3
-  IL_0105:  ldloc.3
-  IL_0106:  ldc.i4     0xbaed3db3
-  IL_010b:  beq        IL_0321
-  IL_0110:  ldloc.3
-  IL_0111:  ldc.i4     0xbf4a9f8e
-  IL_0116:  beq        IL_023a
-  IL_011b:  br         IL_045d
-  IL_0120:  ldloc.3
-  IL_0121:  ldc.i4     0xc6284d42
-  IL_0126:  beq        IL_01fb
-  IL_012b:  ldloc.3
-  IL_012c:  ldc.i4     0xd1761402
-  IL_0131:  beq        IL_01d1
-  IL_0136:  ldloc.3
-  IL_0137:  ldc.i4     0xd59864f4
-  IL_013c:  beq        IL_0279
-  IL_0141:  br         IL_045d
-  IL_0146:  ldloc.3
-  IL_0147:  ldc.i4     0xeb323c73
-  IL_014c:  bgt.un.s   IL_0174
-  IL_014e:  ldloc.3
-  IL_014f:  ldc.i4     0xdca4b248
-  IL_0154:  beq        IL_024f
-  IL_0159:  ldloc.3
-  IL_015a:  ldc.i4     0xe926f470
-  IL_015f:  beq        IL_0375
-  IL_0164:  ldloc.3
-  IL_0165:  ldc.i4     0xeb323c73
-  IL_016a:  beq        IL_02e2
-  IL_016f:  br         IL_045d
-  IL_0174:  ldloc.3
-  IL_0175:  ldc.i4     0xf1ea0ad5
-  IL_017a:  beq        IL_034b
-  IL_017f:  ldloc.3
-  IL_0180:  ldc.i4     0xfa67b44d
-  IL_0185:  beq.s      IL_01a7
-  IL_0187:  ldloc.3
-  IL_0188:  ldc.i4     0xfea21584
-  IL_018d:  bne.un     IL_045d
-  IL_0192:  ldloc.2
-  IL_0193:  ldstr      ""N?_2hBEJa_klm0=BRoM]mBSY3l=Zm<Aj:mBNm9[9""
-  IL_0198:  call       ""bool string.op_Equality(string, string)""
-  IL_019d:  brtrue     IL_038a
-  IL_01a2:  br         IL_045d
-  IL_01a7:  ldloc.2
-  IL_01a8:  ldstr      ""emoYDC`E3JS]IU[X55VKF<e5CjkZb0S0VYQlcS]I""
-  IL_01ad:  call       ""bool string.op_Equality(string, string)""
-  IL_01b2:  brtrue     IL_0395
-  IL_01b7:  br         IL_045d
-  IL_01bc:  ldloc.2
-  IL_01bd:  ldstr      ""Ye]@FRVZi8Rbn0;43c8lo5`W]1CK;cfa2485N45m""
-  IL_01c2:  call       ""bool string.op_Equality(string, string)""
-  IL_01c7:  brtrue     IL_03a0
-  IL_01cc:  br         IL_045d
-  IL_01d1:  ldloc.2
-  IL_01d2:  ldstr      ""[Q0V3M_N2;9jTP=79iBK6<edbYXh;`FcaEGD0RhD""
-  IL_01d7:  call       ""bool string.op_Equality(string, string)""
-  IL_01dc:  brtrue     IL_03ab
-  IL_01e1:  br         IL_045d
-  IL_01e6:  ldloc.2
-  IL_01e7:  ldstr      ""<9Ria992H`W:DNX7lm]LV]9LUnJKDXcCo6Zd_FM]""
-  IL_01ec:  call       ""bool string.op_Equality(string, string)""
-  IL_01f1:  brtrue     IL_03b6
-  IL_01f6:  br         IL_045d
-  IL_01fb:  ldloc.2
-  IL_01fc:  ldstr      ""[Z`j:cCFgh2cd3:>1Z@T0o<Q<0o_;11]nMd3bP9c""
-  IL_0201:  call       ""bool string.op_Equality(string, string)""
-  IL_0206:  brtrue     IL_03c1
-  IL_020b:  br         IL_045d
-  IL_0210:  ldloc.2
-  IL_0211:  ldstr      ""d2U5RWR:j0RS9MZZP3[f@NPgKFS9mQi:na@4Z_G0""
-  IL_0216:  call       ""bool string.op_Equality(string, string)""
-  IL_021b:  brtrue     IL_03cc
-  IL_0220:  br         IL_045d
-  IL_0225:  ldloc.2
-  IL_0226:  ldstr      ""n7AOl<DYj1]k>F7FaW^5b2Ki6UP0@=glIc@RE]3>""
-  IL_022b:  call       ""bool string.op_Equality(string, string)""
-  IL_0230:  brtrue     IL_03d7
-  IL_0235:  br         IL_045d
-  IL_023a:  ldloc.2
-  IL_023b:  ldstr      ""H==7DT_M5125HT:m@`7cgg>WbZ4HAFg`Am:Ba:fF""
-  IL_0240:  call       ""bool string.op_Equality(string, string)""
-  IL_0245:  brtrue     IL_03df
-  IL_024a:  br         IL_045d
-  IL_024f:  ldloc.2
-  IL_0250:  ldstr      ""iEj07Ik=?G35AfEf?8@5[@4OGYeXIHYH]CZlHY7:""
-  IL_0255:  call       ""bool string.op_Equality(string, string)""
-  IL_025a:  brtrue     IL_03e7
-  IL_025f:  br         IL_045d
-  IL_0264:  ldloc.2
-  IL_0265:  ldstr      "">AcFS3V9Y@g<55K`=QnYTS=B^CS@kg6:Hc_UaRTj""
-  IL_026a:  call       ""bool string.op_Equality(string, string)""
-  IL_026f:  brtrue     IL_03ef
-  IL_0274:  br         IL_045d
-  IL_0279:  ldloc.2
-  IL_027a:  ldstr      ""d1QZgJ_jT]UeL^UF2XWS@I?Hdi1MTm9Z3mdV7]0:""
-  IL_027f:  call       ""bool string.op_Equality(string, string)""
-  IL_0284:  brtrue     IL_03f7
-  IL_0289:  br         IL_045d
-  IL_028e:  ldloc.2
-  IL_028f:  ldstr      ""fVObMkcK:_AQae0VY4N]bDXXI_KkoeNZ9ohT?gfU""
-  IL_0294:  call       ""bool string.op_Equality(string, string)""
-  IL_0299:  brtrue     IL_03ff
-  IL_029e:  br         IL_045d
-  IL_02a3:  ldloc.2
-  IL_02a4:  ldstr      ""9o4i04]a4g2PRLBl@`]OaoY]1<h3on[5=I3U[9RR""
-  IL_02a9:  call       ""bool string.op_Equality(string, string)""
-  IL_02ae:  brtrue     IL_0407
-  IL_02b3:  br         IL_045d
-  IL_02b8:  ldloc.2
-  IL_02b9:  ldstr      ""A1>CNg1bZTYE64G<Adn;aE957eWjEcaXZUf<TlGj""
-  IL_02be:  call       ""bool string.op_Equality(string, string)""
-  IL_02c3:  brtrue     IL_040f
-  IL_02c8:  br         IL_045d
-  IL_02cd:  ldloc.2
-  IL_02ce:  ldstr      ""SK`1T7]RZZR]lkZ`nFcm]k0RJlcF>eN5=jEi=A^k""
-  IL_02d3:  call       ""bool string.op_Equality(string, string)""
-  IL_02d8:  brtrue     IL_0417
-  IL_02dd:  br         IL_045d
-  IL_02e2:  ldloc.2
-  IL_02e3:  ldstr      ""0@U=MkSf3niYF;8aC0U]IX=X[Y]Kjmj<4CR5:4R4""
-  IL_02e8:  call       ""bool string.op_Equality(string, string)""
-  IL_02ed:  brtrue     IL_041f
-  IL_02f2:  br         IL_045d
-  IL_02f7:  ldloc.2
-  IL_02f8:  ldstr      ""4g1JY?VRdh5RYS[Z;ElS=5I`7?>OKlD3mF1;]M<O""
-  IL_02fd:  call       ""bool string.op_Equality(string, string)""
-  IL_0302:  brtrue     IL_0427
-  IL_0307:  br         IL_045d
-  IL_030c:  ldloc.2
-  IL_030d:  ldstr      ""EH=noQ6]]@Vj5PDW;KFeEE7j>I<Q>4243W`AGHAe""
-  IL_0312:  call       ""bool string.op_Equality(string, string)""
-  IL_0317:  brtrue     IL_042f
-  IL_031c:  br         IL_045d
-  IL_0321:  ldloc.2
-  IL_0322:  ldstr      ""?k3Amd3aFf3_4S<bJ9;UdR7WYVmbZLh[2ekHKdTM""
-  IL_0327:  call       ""bool string.op_Equality(string, string)""
-  IL_032c:  brtrue     IL_0437
-  IL_0331:  br         IL_045d
-  IL_0336:  ldloc.2
-  IL_0337:  ldstr      ""HR9nATB9C[FY7B]9iI6IbodSencFWSVlhL879C:W""
-  IL_033c:  call       ""bool string.op_Equality(string, string)""
-  IL_0341:  brtrue     IL_043f
-  IL_0346:  br         IL_045d
-  IL_034b:  ldloc.2
-  IL_034c:  ldstr      ""XPTnWmDfL^AIH];Ek6l1AV9J020j<W:V6SU9VA@D""
-  IL_0351:  call       ""bool string.op_Equality(string, string)""
-  IL_0356:  brtrue     IL_0447
-  IL_035b:  br         IL_045d
-  IL_0360:  ldloc.2
-  IL_0361:  ldstr      ""MXO]7S@eM`o>LUXfLTk^m3eP2NbAj8N^[]J7PCh9""
-  IL_0366:  call       ""bool string.op_Equality(string, string)""
-  IL_036b:  brtrue     IL_044f
-  IL_0370:  br         IL_045d
-  IL_0375:  ldloc.2
-  IL_0376:  ldstr      ""L=FTZJ_V59eFjg_REMagg4n0Sng1]3mOgEAQ]EL4""
-  IL_037b:  call       ""bool string.op_Equality(string, string)""
-  IL_0380:  brtrue     IL_0457
-  IL_0385:  br         IL_045d
-  IL_038a:  ldstr      ""N?_2hBEJa_klm0=BRoM]mBSY3l=Zm<Aj:mBNm9[9""
-  IL_038f:  stloc.0
-  IL_0390:  br         IL_045d
-  IL_0395:  ldstr      ""emoYDC`E3JS]IU[X55VKF<e5CjkZb0S0VYQlcS]I""
-  IL_039a:  stloc.0
-  IL_039b:  br         IL_045d
-  IL_03a0:  ldstr      ""Ye]@FRVZi8Rbn0;43c8lo5`W]1CK;cfa2485N45m""
-  IL_03a5:  stloc.0
-  IL_03a6:  br         IL_045d
-  IL_03ab:  ldstr      ""[Q0V3M_N2;9jTP=79iBK6<edbYXh;`FcaEGD0RhD""
-  IL_03b0:  stloc.0
-  IL_03b1:  br         IL_045d
-  IL_03b6:  ldstr      ""<9Ria992H`W:DNX7lm]LV]9LUnJKDXcCo6Zd_FM]""
-  IL_03bb:  stloc.0
-  IL_03bc:  br         IL_045d
-  IL_03c1:  ldstr      ""[Z`j:cCFgh2cd3:>1Z@T0o<Q<0o_;11]nMd3bP9c""
-  IL_03c6:  stloc.0
-  IL_03c7:  br         IL_045d
-  IL_03cc:  ldstr      ""d2U5RWR:j0RS9MZZP3[f@NPgKFS9mQi:na@4Z_G0""
-  IL_03d1:  stloc.0
-  IL_03d2:  br         IL_045d
-  IL_03d7:  ldstr      ""n7AOl<DYj1]k>F7FaW^5b2Ki6UP0@=glIc@RE]3>""
-  IL_03dc:  stloc.0
-  IL_03dd:  br.s       IL_045d
-  IL_03df:  ldstr      ""H==7DT_M5125HT:m@`7cgg>WbZ4HAFg`Am:Ba:fF""
-  IL_03e4:  stloc.0
-  IL_03e5:  br.s       IL_045d
-  IL_03e7:  ldstr      ""iEj07Ik=?G35AfEf?8@5[@4OGYeXIHYH]CZlHY7:""
-  IL_03ec:  stloc.0
-  IL_03ed:  br.s       IL_045d
-  IL_03ef:  ldstr      "">AcFS3V9Y@g<55K`=QnYTS=B^CS@kg6:Hc_UaRTj""
-  IL_03f4:  stloc.0
-  IL_03f5:  br.s       IL_045d
-  IL_03f7:  ldstr      ""d1QZgJ_jT]UeL^UF2XWS@I?Hdi1MTm9Z3mdV7]0:""
-  IL_03fc:  stloc.0
-  IL_03fd:  br.s       IL_045d
-  IL_03ff:  ldstr      ""fVObMkcK:_AQae0VY4N]bDXXI_KkoeNZ9ohT?gfU""
-  IL_0404:  stloc.0
-  IL_0405:  br.s       IL_045d
-  IL_0407:  ldstr      ""9o4i04]a4g2PRLBl@`]OaoY]1<h3on[5=I3U[9RR""
-  IL_040c:  stloc.0
-  IL_040d:  br.s       IL_045d
-  IL_040f:  ldstr      ""A1>CNg1bZTYE64G<Adn;aE957eWjEcaXZUf<TlGj""
-  IL_0414:  stloc.0
-  IL_0415:  br.s       IL_045d
-  IL_0417:  ldstr      ""SK`1T7]RZZR]lkZ`nFcm]k0RJlcF>eN5=jEi=A^k""
-  IL_041c:  stloc.0
-  IL_041d:  br.s       IL_045d
-  IL_041f:  ldstr      ""0@U=MkSf3niYF;8aC0U]IX=X[Y]Kjmj<4CR5:4R4""
-  IL_0424:  stloc.0
-  IL_0425:  br.s       IL_045d
-  IL_0427:  ldstr      ""4g1JY?VRdh5RYS[Z;ElS=5I`7?>OKlD3mF1;]M<O""
-  IL_042c:  stloc.0
-  IL_042d:  br.s       IL_045d
-  IL_042f:  ldstr      ""EH=noQ6]]@Vj5PDW;KFeEE7j>I<Q>4243W`AGHAe""
-  IL_0434:  stloc.0
-  IL_0435:  br.s       IL_045d
-  IL_0437:  ldstr      ""?k3Amd3aFf3_4S<bJ9;UdR7WYVmbZLh[2ekHKdTM""
-  IL_043c:  stloc.0
-  IL_043d:  br.s       IL_045d
-  IL_043f:  ldstr      ""HR9nATB9C[FY7B]9iI6IbodSencFWSVlhL879C:W""
-  IL_0444:  stloc.0
-  IL_0445:  br.s       IL_045d
-  IL_0447:  ldstr      ""XPTnWmDfL^AIH];Ek6l1AV9J020j<W:V6SU9VA@D""
-  IL_044c:  stloc.0
-  IL_044d:  br.s       IL_045d
-  IL_044f:  ldstr      ""MXO]7S@eM`o>LUXfLTk^m3eP2NbAj8N^[]J7PCh9""
-  IL_0454:  stloc.0
-  IL_0455:  br.s       IL_045d
-  IL_0457:  ldstr      ""L=FTZJ_V59eFjg_REMagg4n0Sng1]3mOgEAQ]EL4""
-  IL_045c:  stloc.0
-  IL_045d:  ldloc.0
-  IL_045e:  ldarg.0
-  IL_045f:  call       ""bool string.op_Equality(string, string)""
-  IL_0464:  ret
+  IL_001e:  ldarg.0   
+  IL_001f:  call       ""ComputeStringHash""
+  IL_0024:  stloc.1   
+  IL_0025:  ldloc.1   
+  IL_0026:  ldc.i4     0xb2f29419
+  IL_002b:  bgt.un     IL_00e0
+  IL_0030:  ldloc.1   
+  IL_0031:  ldc.i4     0x619348d8
+  IL_0036:  bgt.un.s   IL_008c
+  IL_0038:  ldloc.1   
+  IL_0039:  ldc.i4     0x36758e37
+  IL_003e:  bgt.un.s   IL_0066
+  IL_0040:  ldloc.1   
+  IL_0041:  ldc.i4     0x144fd20d
+  IL_0046:  beq        IL_02ae
+  IL_004b:  ldloc.1   
+  IL_004c:  ldc.i4     0x14ca99e2
+  IL_0051:  beq        IL_025a
+  IL_0056:  ldloc.1   
+  IL_0057:  ldc.i4     0x36758e37
+  IL_005c:  beq        IL_0206
+  IL_0061:  br         IL_0453
+  IL_0066:  ldloc.1   
+  IL_0067:  ldc.i4     0x5398a778
+  IL_006c:  beq        IL_021b
+  IL_0071:  ldloc.1   
+  IL_0072:  ldc.i4     0x616477cf
+  IL_0077:  beq        IL_01b2
+  IL_007c:  ldloc.1   
+  IL_007d:  ldc.i4     0x619348d8
+  IL_0082:  beq        IL_02ed
+  IL_0087:  br         IL_0453
+  IL_008c:  ldloc.1   
+  IL_008d:  ldc.i4     0x78a826a8
+  IL_0092:  bgt.un.s   IL_00ba
+  IL_0094:  ldloc.1   
+  IL_0095:  ldc.i4     0x65b3e3e5
+  IL_009a:  beq        IL_02c3
+  IL_009f:  ldloc.1   
+  IL_00a0:  ldc.i4     0x7822b5bc
+  IL_00a5:  beq        IL_0284
+  IL_00aa:  ldloc.1   
+  IL_00ab:  ldc.i4     0x78a826a8
+  IL_00b0:  beq        IL_01dc
+  IL_00b5:  br         IL_0453
+  IL_00ba:  ldloc.1   
+  IL_00bb:  ldc.i4     0x7f66da4e
+  IL_00c0:  beq        IL_0356
+  IL_00c5:  ldloc.1   
+  IL_00c6:  ldc.i4     0xb13d374d
+  IL_00cb:  beq        IL_032c
+  IL_00d0:  ldloc.1   
+  IL_00d1:  ldc.i4     0xb2f29419
+  IL_00d6:  beq        IL_0302
+  IL_00db:  br         IL_0453
+  IL_00e0:  ldloc.1   
+  IL_00e1:  ldc.i4     0xd59864f4
+  IL_00e6:  bgt.un.s   IL_013c
+  IL_00e8:  ldloc.1   
+  IL_00e9:  ldc.i4     0xbf4a9f8e
+  IL_00ee:  bgt.un.s   IL_0116
+  IL_00f0:  ldloc.1   
+  IL_00f1:  ldc.i4     0xb6e02d3a
+  IL_00f6:  beq        IL_0299
+  IL_00fb:  ldloc.1   
+  IL_00fc:  ldc.i4     0xbaed3db3
+  IL_0101:  beq        IL_0317
+  IL_0106:  ldloc.1   
+  IL_0107:  ldc.i4     0xbf4a9f8e
+  IL_010c:  beq        IL_0230
+  IL_0111:  br         IL_0453
+  IL_0116:  ldloc.1   
+  IL_0117:  ldc.i4     0xc6284d42
+  IL_011c:  beq        IL_01f1
+  IL_0121:  ldloc.1   
+  IL_0122:  ldc.i4     0xd1761402
+  IL_0127:  beq        IL_01c7
+  IL_012c:  ldloc.1   
+  IL_012d:  ldc.i4     0xd59864f4
+  IL_0132:  beq        IL_026f
+  IL_0137:  br         IL_0453
+  IL_013c:  ldloc.1   
+  IL_013d:  ldc.i4     0xeb323c73
+  IL_0142:  bgt.un.s   IL_016a
+  IL_0144:  ldloc.1   
+  IL_0145:  ldc.i4     0xdca4b248
+  IL_014a:  beq        IL_0245
+  IL_014f:  ldloc.1   
+  IL_0150:  ldc.i4     0xe926f470
+  IL_0155:  beq        IL_036b
+  IL_015a:  ldloc.1   
+  IL_015b:  ldc.i4     0xeb323c73
+  IL_0160:  beq        IL_02d8
+  IL_0165:  br         IL_0453
+  IL_016a:  ldloc.1   
+  IL_016b:  ldc.i4     0xf1ea0ad5
+  IL_0170:  beq        IL_0341
+  IL_0175:  ldloc.1   
+  IL_0176:  ldc.i4     0xfa67b44d
+  IL_017b:  beq.s      IL_019d
+  IL_017d:  ldloc.1   
+  IL_017e:  ldc.i4     0xfea21584
+  IL_0183:  bne.un     IL_0453
+  IL_0188:  ldarg.0   
+  IL_0189:  ldstr      ""N?_2hBEJa_klm0=BRoM]mBSY3l=Zm<Aj:mBNm9[9""
+  IL_018e:  call       ""bool string.op_Equality(string, string)""
+  IL_0193:  brtrue     IL_0380
+  IL_0198:  br         IL_0453
+  IL_019d:  ldarg.0   
+  IL_019e:  ldstr      ""emoYDC`E3JS]IU[X55VKF<e5CjkZb0S0VYQlcS]I""
+  IL_01a3:  call       ""bool string.op_Equality(string, string)""
+  IL_01a8:  brtrue     IL_038b
+  IL_01ad:  br         IL_0453
+  IL_01b2:  ldarg.0   
+  IL_01b3:  ldstr      ""Ye]@FRVZi8Rbn0;43c8lo5`W]1CK;cfa2485N45m""
+  IL_01b8:  call       ""bool string.op_Equality(string, string)""
+  IL_01bd:  brtrue     IL_0396
+  IL_01c2:  br         IL_0453
+  IL_01c7:  ldarg.0   
+  IL_01c8:  ldstr      ""[Q0V3M_N2;9jTP=79iBK6<edbYXh;`FcaEGD0RhD""
+  IL_01cd:  call       ""bool string.op_Equality(string, string)""
+  IL_01d2:  brtrue     IL_03a1
+  IL_01d7:  br         IL_0453
+  IL_01dc:  ldarg.0   
+  IL_01dd:  ldstr      ""<9Ria992H`W:DNX7lm]LV]9LUnJKDXcCo6Zd_FM]""
+  IL_01e2:  call       ""bool string.op_Equality(string, string)""
+  IL_01e7:  brtrue     IL_03ac
+  IL_01ec:  br         IL_0453
+  IL_01f1:  ldarg.0   
+  IL_01f2:  ldstr      ""[Z`j:cCFgh2cd3:>1Z@T0o<Q<0o_;11]nMd3bP9c""
+  IL_01f7:  call       ""bool string.op_Equality(string, string)""
+  IL_01fc:  brtrue     IL_03b7
+  IL_0201:  br         IL_0453
+  IL_0206:  ldarg.0   
+  IL_0207:  ldstr      ""d2U5RWR:j0RS9MZZP3[f@NPgKFS9mQi:na@4Z_G0""
+  IL_020c:  call       ""bool string.op_Equality(string, string)""
+  IL_0211:  brtrue     IL_03c2
+  IL_0216:  br         IL_0453
+  IL_021b:  ldarg.0   
+  IL_021c:  ldstr      ""n7AOl<DYj1]k>F7FaW^5b2Ki6UP0@=glIc@RE]3>""
+  IL_0221:  call       ""bool string.op_Equality(string, string)""
+  IL_0226:  brtrue     IL_03cd
+  IL_022b:  br         IL_0453
+  IL_0230:  ldarg.0   
+  IL_0231:  ldstr      ""H==7DT_M5125HT:m@`7cgg>WbZ4HAFg`Am:Ba:fF""
+  IL_0236:  call       ""bool string.op_Equality(string, string)""
+  IL_023b:  brtrue     IL_03d5
+  IL_0240:  br         IL_0453
+  IL_0245:  ldarg.0   
+  IL_0246:  ldstr      ""iEj07Ik=?G35AfEf?8@5[@4OGYeXIHYH]CZlHY7:""
+  IL_024b:  call       ""bool string.op_Equality(string, string)""
+  IL_0250:  brtrue     IL_03dd
+  IL_0255:  br         IL_0453
+  IL_025a:  ldarg.0   
+  IL_025b:  ldstr      "">AcFS3V9Y@g<55K`=QnYTS=B^CS@kg6:Hc_UaRTj""
+  IL_0260:  call       ""bool string.op_Equality(string, string)""
+  IL_0265:  brtrue     IL_03e5
+  IL_026a:  br         IL_0453
+  IL_026f:  ldarg.0   
+  IL_0270:  ldstr      ""d1QZgJ_jT]UeL^UF2XWS@I?Hdi1MTm9Z3mdV7]0:""
+  IL_0275:  call       ""bool string.op_Equality(string, string)""
+  IL_027a:  brtrue     IL_03ed
+  IL_027f:  br         IL_0453
+  IL_0284:  ldarg.0   
+  IL_0285:  ldstr      ""fVObMkcK:_AQae0VY4N]bDXXI_KkoeNZ9ohT?gfU""
+  IL_028a:  call       ""bool string.op_Equality(string, string)""
+  IL_028f:  brtrue     IL_03f5
+  IL_0294:  br         IL_0453
+  IL_0299:  ldarg.0   
+  IL_029a:  ldstr      ""9o4i04]a4g2PRLBl@`]OaoY]1<h3on[5=I3U[9RR""
+  IL_029f:  call       ""bool string.op_Equality(string, string)""
+  IL_02a4:  brtrue     IL_03fd
+  IL_02a9:  br         IL_0453
+  IL_02ae:  ldarg.0   
+  IL_02af:  ldstr      ""A1>CNg1bZTYE64G<Adn;aE957eWjEcaXZUf<TlGj""
+  IL_02b4:  call       ""bool string.op_Equality(string, string)""
+  IL_02b9:  brtrue     IL_0405
+  IL_02be:  br         IL_0453
+  IL_02c3:  ldarg.0   
+  IL_02c4:  ldstr      ""SK`1T7]RZZR]lkZ`nFcm]k0RJlcF>eN5=jEi=A^k""
+  IL_02c9:  call       ""bool string.op_Equality(string, string)""
+  IL_02ce:  brtrue     IL_040d
+  IL_02d3:  br         IL_0453
+  IL_02d8:  ldarg.0   
+  IL_02d9:  ldstr      ""0@U=MkSf3niYF;8aC0U]IX=X[Y]Kjmj<4CR5:4R4""
+  IL_02de:  call       ""bool string.op_Equality(string, string)""
+  IL_02e3:  brtrue     IL_0415
+  IL_02e8:  br         IL_0453
+  IL_02ed:  ldarg.0   
+  IL_02ee:  ldstr      ""4g1JY?VRdh5RYS[Z;ElS=5I`7?>OKlD3mF1;]M<O""
+  IL_02f3:  call       ""bool string.op_Equality(string, string)""
+  IL_02f8:  brtrue     IL_041d
+  IL_02fd:  br         IL_0453
+  IL_0302:  ldarg.0   
+  IL_0303:  ldstr      ""EH=noQ6]]@Vj5PDW;KFeEE7j>I<Q>4243W`AGHAe""
+  IL_0308:  call       ""bool string.op_Equality(string, string)""
+  IL_030d:  brtrue     IL_0425
+  IL_0312:  br         IL_0453
+  IL_0317:  ldarg.0   
+  IL_0318:  ldstr      ""?k3Amd3aFf3_4S<bJ9;UdR7WYVmbZLh[2ekHKdTM""
+  IL_031d:  call       ""bool string.op_Equality(string, string)""
+  IL_0322:  brtrue     IL_042d
+  IL_0327:  br         IL_0453
+  IL_032c:  ldarg.0   
+  IL_032d:  ldstr      ""HR9nATB9C[FY7B]9iI6IbodSencFWSVlhL879C:W""
+  IL_0332:  call       ""bool string.op_Equality(string, string)""
+  IL_0337:  brtrue     IL_0435
+  IL_033c:  br         IL_0453
+  IL_0341:  ldarg.0   
+  IL_0342:  ldstr      ""XPTnWmDfL^AIH];Ek6l1AV9J020j<W:V6SU9VA@D""
+  IL_0347:  call       ""bool string.op_Equality(string, string)""
+  IL_034c:  brtrue     IL_043d
+  IL_0351:  br         IL_0453
+  IL_0356:  ldarg.0   
+  IL_0357:  ldstr      ""MXO]7S@eM`o>LUXfLTk^m3eP2NbAj8N^[]J7PCh9""
+  IL_035c:  call       ""bool string.op_Equality(string, string)""
+  IL_0361:  brtrue     IL_0445
+  IL_0366:  br         IL_0453
+  IL_036b:  ldarg.0   
+  IL_036c:  ldstr      ""L=FTZJ_V59eFjg_REMagg4n0Sng1]3mOgEAQ]EL4""
+  IL_0371:  call       ""bool string.op_Equality(string, string)""
+  IL_0376:  brtrue     IL_044d
+  IL_037b:  br         IL_0453
+  IL_0380:  ldstr      ""N?_2hBEJa_klm0=BRoM]mBSY3l=Zm<Aj:mBNm9[9""
+  IL_0385:  stloc.0   
+  IL_0386:  br         IL_0453
+  IL_038b:  ldstr      ""emoYDC`E3JS]IU[X55VKF<e5CjkZb0S0VYQlcS]I""
+  IL_0390:  stloc.0   
+  IL_0391:  br         IL_0453
+  IL_0396:  ldstr      ""Ye]@FRVZi8Rbn0;43c8lo5`W]1CK;cfa2485N45m""
+  IL_039b:  stloc.0   
+  IL_039c:  br         IL_0453
+  IL_03a1:  ldstr      ""[Q0V3M_N2;9jTP=79iBK6<edbYXh;`FcaEGD0RhD""
+  IL_03a6:  stloc.0   
+  IL_03a7:  br         IL_0453
+  IL_03ac:  ldstr      ""<9Ria992H`W:DNX7lm]LV]9LUnJKDXcCo6Zd_FM]""
+  IL_03b1:  stloc.0   
+  IL_03b2:  br         IL_0453
+  IL_03b7:  ldstr      ""[Z`j:cCFgh2cd3:>1Z@T0o<Q<0o_;11]nMd3bP9c""
+  IL_03bc:  stloc.0   
+  IL_03bd:  br         IL_0453
+  IL_03c2:  ldstr      ""d2U5RWR:j0RS9MZZP3[f@NPgKFS9mQi:na@4Z_G0""
+  IL_03c7:  stloc.0   
+  IL_03c8:  br         IL_0453
+  IL_03cd:  ldstr      ""n7AOl<DYj1]k>F7FaW^5b2Ki6UP0@=glIc@RE]3>""
+  IL_03d2:  stloc.0   
+  IL_03d3:  br.s       IL_0453
+  IL_03d5:  ldstr      ""H==7DT_M5125HT:m@`7cgg>WbZ4HAFg`Am:Ba:fF""
+  IL_03da:  stloc.0   
+  IL_03db:  br.s       IL_0453
+  IL_03dd:  ldstr      ""iEj07Ik=?G35AfEf?8@5[@4OGYeXIHYH]CZlHY7:""
+  IL_03e2:  stloc.0   
+  IL_03e3:  br.s       IL_0453
+  IL_03e5:  ldstr      "">AcFS3V9Y@g<55K`=QnYTS=B^CS@kg6:Hc_UaRTj""
+  IL_03ea:  stloc.0   
+  IL_03eb:  br.s       IL_0453
+  IL_03ed:  ldstr      ""d1QZgJ_jT]UeL^UF2XWS@I?Hdi1MTm9Z3mdV7]0:""
+  IL_03f2:  stloc.0   
+  IL_03f3:  br.s       IL_0453
+  IL_03f5:  ldstr      ""fVObMkcK:_AQae0VY4N]bDXXI_KkoeNZ9ohT?gfU""
+  IL_03fa:  stloc.0   
+  IL_03fb:  br.s       IL_0453
+  IL_03fd:  ldstr      ""9o4i04]a4g2PRLBl@`]OaoY]1<h3on[5=I3U[9RR""
+  IL_0402:  stloc.0   
+  IL_0403:  br.s       IL_0453
+  IL_0405:  ldstr      ""A1>CNg1bZTYE64G<Adn;aE957eWjEcaXZUf<TlGj""
+  IL_040a:  stloc.0   
+  IL_040b:  br.s       IL_0453
+  IL_040d:  ldstr      ""SK`1T7]RZZR]lkZ`nFcm]k0RJlcF>eN5=jEi=A^k""
+  IL_0412:  stloc.0   
+  IL_0413:  br.s       IL_0453
+  IL_0415:  ldstr      ""0@U=MkSf3niYF;8aC0U]IX=X[Y]Kjmj<4CR5:4R4""
+  IL_041a:  stloc.0   
+  IL_041b:  br.s       IL_0453
+  IL_041d:  ldstr      ""4g1JY?VRdh5RYS[Z;ElS=5I`7?>OKlD3mF1;]M<O""
+  IL_0422:  stloc.0   
+  IL_0423:  br.s       IL_0453
+  IL_0425:  ldstr      ""EH=noQ6]]@Vj5PDW;KFeEE7j>I<Q>4243W`AGHAe""
+  IL_042a:  stloc.0   
+  IL_042b:  br.s       IL_0453
+  IL_042d:  ldstr      ""?k3Amd3aFf3_4S<bJ9;UdR7WYVmbZLh[2ekHKdTM""
+  IL_0432:  stloc.0   
+  IL_0433:  br.s       IL_0453
+  IL_0435:  ldstr      ""HR9nATB9C[FY7B]9iI6IbodSencFWSVlhL879C:W""
+  IL_043a:  stloc.0   
+  IL_043b:  br.s       IL_0453
+  IL_043d:  ldstr      ""XPTnWmDfL^AIH];Ek6l1AV9J020j<W:V6SU9VA@D""
+  IL_0442:  stloc.0   
+  IL_0443:  br.s       IL_0453
+  IL_0445:  ldstr      ""MXO]7S@eM`o>LUXfLTk^m3eP2NbAj8N^[]J7PCh9""
+  IL_044a:  stloc.0   
+  IL_044b:  br.s       IL_0453
+  IL_044d:  ldstr      ""L=FTZJ_V59eFjg_REMagg4n0Sng1]3mOgEAQ]EL4""
+  IL_0452:  stloc.0   
+  IL_0453:  ldloc.0   
+  IL_0454:  ldarg.0   
+  IL_0455:  call       ""bool string.op_Equality(string, string)""
+  IL_045a:  ret       
 }
 "
             );
@@ -3152,29 +3136,29 @@ public class Test
 class X {}
 class Conv
 {
-    public static implicit operator int (Conv C)
-    {
-        return 1;
-    }
-    
-    public static implicit operator X (Conv C2)
-    {
-        return new X();
-    }
-    
-    public static int Main()
-    {
-        Conv C = new Conv();
-        switch(C)
-        {
-            case 1:
+	public static implicit operator int (Conv C)
+	{
+		return 1;
+	}
+	
+	public static implicit operator X (Conv C2)
+	{
+		return new X();
+	}
+	
+	public static int Main()
+	{
+		Conv C = new Conv();
+		switch(C)
+		{
+		    case 1:
                 System.Console.WriteLine(""Pass"");
                 return 0;
-            default:
+		    default:
                 System.Console.WriteLine(""Fail"");
                 return 1;
-        }
-    }		
+		}
+	}		
 }
 ";
             CompileAndVerify(text, expectedOutput: "Pass");
@@ -3193,38 +3177,38 @@ class Conv
 enum X { F = 0 }
 class Conv
 {
-    // only valid operator
-    public static implicit operator int (Conv C)
-    {
-        return 1;
-    }
-    
+	// only valid operator
+	public static implicit operator int (Conv C)
+	{
+		return 1;
+	}
+	
     // bool type is not valid
-    public static implicit operator bool (Conv C2)
-    {
-        return false;
-    }
+	public static implicit operator bool (Conv C2)
+	{
+		return false;
+	}
 
     // enum type is not valid
     public static implicit operator X (Conv C3)
-    {
-        return X.F;
-    }
-    
-    
-    public static int Main()
-    {
-        Conv C = new Conv();
-        switch(C)
-        {
-            case 1:
+	{
+		return X.F;
+	}
+	
+	
+	public static int Main()
+	{
+		Conv C = new Conv();
+		switch(C)
+		{
+		    case 1:
                 System.Console.WriteLine(""Pass"");
                 return 0;
-            default:
+		    default:
                 System.Console.WriteLine(""Fail"");
                 return 1;
-        }
-    }		
+		}
+	}		
 }
 ";
             CompileAndVerify(text, expectedOutput: "Pass");
@@ -3241,32 +3225,32 @@ class Conv
             var text = @"
 struct Conv
 {
-    public static implicit operator int (Conv C)
-    {
-        return 1;
-    }
-    
+	public static implicit operator int (Conv C)
+	{
+		return 1;
+	}
+	
     public static implicit operator int? (Conv? C2)
-    {
-        return null;
-    }
-    
+	{
+		return null;
+	}
+	
     public static int Main()
-    {
-        Conv? D = new Conv();
-        switch(D)
-        {
-            case 1:
+	{
+		Conv? D = new Conv();
+		switch(D)
+		{
+		    case 1:
                 System.Console.WriteLine(""Fail"");
                 return 1;
-            case null:
+		    case null:
                 System.Console.WriteLine(""Pass"");
                 return 0;
-            default:
+		    default:
                 System.Console.WriteLine(""Fail"");
                 return 1;
-        }
-    }		
+		}
+	}		
 }
 ";
             CompileAndVerify(text, expectedOutput: "Pass");
@@ -3283,32 +3267,32 @@ struct Conv
             var text = @"
 struct Conv
 {
-    public static implicit operator int (Conv C)
-    {
-        return 1;
-    }
-    
+	public static implicit operator int (Conv C)
+	{
+		return 1;
+	}
+	
     public static implicit operator int? (Conv? C)
-    {
-        return null;
-    }
-    
+	{
+		return null;
+	}
+	
     public static int Main()
-    {
-        Conv? C = new Conv();
-        switch(C)
-        {
-            case null:
+	{
+		Conv? C = new Conv();
+		switch(C)
+		{
+		    case null:
                 System.Console.WriteLine(""Pass"");
                 return 0;
-            case 1:
+		    case 1:
                 System.Console.WriteLine(""Fail"");
                 return 0;
-            default:
+		    default:
                 System.Console.WriteLine(""Fail"");
                 return 0;
-        }
-    }		
+		}
+	}		
 }
 ";
             CompileAndVerify(text, expectedOutput: "Pass");
@@ -3960,10 +3944,10 @@ namespace ConsoleApplication24
             ERR_BadDelegateConstructor = 148,
             ERR_MethodNameExpected = 149,
             ERR_ConstantExpected = 150,
-            // ERR_V6SwitchGoverningTypeValueExpected shares the same error code (CS0151) with ERR_IntegralTypeValueExpected in Dev10 compiler.
+            // ERR_SwitchGoverningTypeValueExpected shares the same error code (CS0151) with ERR_IntegralTypeValueExpected in Dev10 compiler.
             // However ERR_IntegralTypeValueExpected is currently unused and hence being removed. If we need to generate this error in future
             // we can use error code CS0166. CS0166 was originally reserved for ERR_SwitchFallInto in Dev10, but was never used. 
-            ERR_V6SwitchGoverningTypeValueExpected = 151,
+            ERR_SwitchGoverningTypeValueExpected = 151,
             ERR_DuplicateCaseLabel = 152,
             ERR_InvalidGotoCase = 153,
             ERR_PropertyLacksGet = 154,
@@ -5708,8 +5692,8 @@ class SwitchTest
                 foo = 0;
                 break;
         }
-
-        Console.Write(foo);     // foo must be definitely assigned here
+        
+        Console.Write(foo);     // foo must be definitely assigned here        
         return foo;
     }
 }
@@ -5718,34 +5702,30 @@ class SwitchTest
             var compVerifier = CompileAndVerify(text, expectedOutput: "0");
             compVerifier.VerifyIL("SwitchTest.Main", @"
 {
-  // Code size       40 (0x28)
+  // Code size       38 (0x26)
   .maxstack  2
   .locals init (int V_0, //n
-                int V_1, //foo
-                int V_2)
+  int V_1) //foo
   IL_0000:  ldc.i4.3
   IL_0001:  stloc.0
   IL_0002:  ldloc.0
-  IL_0003:  stloc.2
-  IL_0004:  ldloc.2
-  IL_0005:  ldc.i4.1
-  IL_0006:  sub
-  IL_0007:  switch    (
-        IL_001a,
-        IL_001a,
-        IL_001e)
-  IL_0018:  br.s       IL_001e
-  IL_001a:  ldloc.0
-  IL_001b:  stloc.1
-  IL_001c:  br.s       IL_0020
-  IL_001e:  ldc.i4.0
-  IL_001f:  stloc.1
-  IL_0020:  ldloc.1
-  IL_0021:  call       ""void System.Console.Write(int)""
-  IL_0026:  ldloc.1
-  IL_0027:  ret
-}
-"
+  IL_0003:  ldc.i4.1
+  IL_0004:  sub
+  IL_0005:  switch    (
+  IL_0018,
+  IL_0018,
+  IL_001c)
+  IL_0016:  br.s       IL_001c
+  IL_0018:  ldloc.0
+  IL_0019:  stloc.1
+  IL_001a:  br.s       IL_001e
+  IL_001c:  ldc.i4.0
+  IL_001d:  stloc.1
+  IL_001e:  ldloc.1
+  IL_001f:  call       ""void System.Console.Write(int)""
+  IL_0024:  ldloc.1
+  IL_0025:  ret
+}"
             );
         }
 
@@ -5882,7 +5862,7 @@ class SwitchTest
             case 1:
               mylabel:
                 try
-                {
+                {                    
                     throw new System.ApplicationException();
                 }
                 catch(Exception)
@@ -5998,16 +5978,16 @@ public class Test
 {
     public static int Main(string [] args)
     {
-        int ret = 2;
-        switch (true)
+		int ret = 2;
+		switch (true)
         {
-            case true:
-                ret = 0;
-                break;
-            case false:        // unreachable case label
-                ret = 1;
-                break;
-        }
+		    case true:
+			    ret = 0;
+			    break;
+		    case false:        // unreachable case label
+			    ret = 1;
+			    break;
+		}
 
         Console.Write(ret);
         return(ret);
@@ -6046,16 +6026,16 @@ public class Test
 {
     public static int Main(string [] args)
     {
-        int ret = 1;
-        switch (true)
+		int ret = 1;
+		switch (true)
         {
-            default:        // unreachable default label
-                ret = 1;
+		    default:        // unreachable default label
+			    ret = 1;
+			    break;
+		    case true: 
+			    ret = 0;
                 break;
-            case true: 
-                ret = 0;
-                break;
-        }
+		}
 
         Console.Write(ret);
         return(ret);
@@ -6180,9 +6160,9 @@ public class Test
     public static int Main(string [] args)
     {
         int ret = 0;
-        switch (true) {
+		switch (true) {
 
-        }
+		}
 
         Console.Write(ret);
         return(0);
@@ -6644,6 +6624,7 @@ class Program {
         boo(42);
     }
 }
+
 ";
             var compVerifier = CompileAndVerify(text, expectedOutput: "");
             compVerifier.VerifyIL("Program.boo",
@@ -6699,20 +6680,17 @@ class Program {
             compVerifier.VerifyIL("Program.boo",
 @"
 {
-  // Code size       25 (0x19)
+  // Code size       23 (0x17)
   .maxstack  2
-  .locals init (int V_0)
   IL_0000:  ldarg.0
-  IL_0001:  stloc.0
-  IL_0002:  ldloc.0
-  IL_0003:  ldc.i4.s   42
-  IL_0005:  bne.un.s   IL_0017
-  IL_0007:  ldstr      ""foo""
-  IL_000c:  ldstr      ""bar""
-  IL_0011:  call       ""bool string.op_Inequality(string, string)""
-  IL_0016:  pop
-  IL_0017:  ldnull
-  IL_0018:  ret
+  IL_0001:  ldc.i4.s   42
+  IL_0003:  bne.un.s   IL_0015
+  IL_0005:  ldstr      ""foo""
+  IL_000a:  ldstr      ""bar""
+  IL_000f:  call       ""bool string.op_Inequality(string, string)""
+  IL_0014:  pop
+  IL_0015:  ldnull
+  IL_0016:  ret
 }
 "
             );

@@ -201,7 +201,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                 foreach (BoundSwitchLabel boundLabel in section.SwitchLabels)
                 {
                     var label = (SourceLabelSymbol)boundLabel.Label;
-                    var labelConstant = boundLabel.ExpressionOpt?.ConstantValue;
+                    var labelConstant = boundLabel.ConstantValueOpt;
 
                     if (labelConstant == ConstantValue.Null)
                     {
@@ -250,9 +250,9 @@ namespace Microsoft.CodeAnalysis.CSharp
             {
                 foreach (var boundLabel in section.SwitchLabels)
                 {
-                    if (boundLabel.ExpressionOpt != null)
+                    if (boundLabel.ConstantValueOpt != null)
                     {
-                        var value = boundLabel.ExpressionOpt.ConstantValue;
+                        var value = boundLabel.ConstantValueOpt;
                         Debug.Assert(value.IsString || value.IsNull);
                         count++;
                     }

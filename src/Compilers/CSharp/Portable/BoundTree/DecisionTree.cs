@@ -127,8 +127,8 @@ namespace Microsoft.CodeAnalysis.CSharp
         private readonly Symbol _enclosingSymbol;
         private readonly DiagnosticBag _diagnostics;
         private readonly BoundPatternSwitchStatement _switchStatement;
+        private BoundPatternSwitchSection _section;
         private readonly Conversions _conversions;
-
         private CSharpSyntaxNode _syntax;
 
         public DecisionTreeComputer(
@@ -154,8 +154,10 @@ namespace Microsoft.CodeAnalysis.CSharp
             }
             var result = DecisionTree.Create(_switchStatement.Expression, _switchStatement.Expression.Type, _enclosingSymbol);
             BoundPatternSwitchLabel defaultLabel = null;
+            BoundPatternSwitchSection defaultSection = null;
             foreach (var section in _switchStatement.SwitchSections)
             {
+                this._section = section;
                 foreach (var label in section.SwitchLabels)
                 {
                     if (label.Syntax.Kind() == SyntaxKind.DefaultSwitchLabel)
@@ -167,6 +169,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                         else
                         {
                             defaultLabel = label;
+                            defaultSection = section;
                         }
                     }
                     else
@@ -192,7 +195,7 @@ namespace Microsoft.CodeAnalysis.CSharp
 
             if (defaultLabel != null)
             {
-                Add(result, (e, t) => new DecisionTree.Guarded(_switchStatement.Expression, _switchStatement.Expression.Type, default(ImmutableArray<KeyValuePair<BoundExpression, LocalSymbol>>), null, defaultLabel));
+                Add(result, (e, t) => new DecisionTree.Guarded(_switchStatement.Expression, _switchStatement.Expression.Type, default(ImmutableArray<KeyValuePair<BoundExpression, LocalSymbol>>), defaultSection, null, defaultLabel));
             }
 
             return result;
@@ -208,13 +211,13 @@ namespace Microsoft.CodeAnalysis.CSharp
                 case BoundKind.ConstantPattern:
                     {
                         var constantPattern = (BoundConstantPattern)pattern;
-                        AddByValue(decisionTree, constantPattern.Value, (e, t) => new DecisionTree.Guarded(e, t, default(ImmutableArray<KeyValuePair<BoundExpression, LocalSymbol>>), guard, label), label.HasErrors);
+                        AddByValue(decisionTree, constantPattern.Value, (e, t) => new DecisionTree.Guarded(e, t, default(ImmutableArray<KeyValuePair<BoundExpression, LocalSymbol>>), _section, guard, label), label.HasErrors);
                         break;
                     }
                 case BoundKind.DeclarationPattern:
                     {
                         var declarationPattern = (BoundDeclarationPattern)pattern;
-                        DecisionMaker maker = (e, t) => new DecisionTree.Guarded(e, t, ImmutableArray.Create(new KeyValuePair<BoundExpression, LocalSymbol>(e, declarationPattern.LocalSymbol)), guard, label);
+                        DecisionMaker maker = (e, t) => new DecisionTree.Guarded(e, t, ImmutableArray.Create(new KeyValuePair<BoundExpression, LocalSymbol>(e, declarationPattern.LocalSymbol)), _section, guard, label);
                         if (declarationPattern.IsVar)
                         {
                             Add(decisionTree, maker);
@@ -618,6 +621,8 @@ namespace Microsoft.CodeAnalysis.CSharp
             var localSymbol = new SynthesizedLocal(_enclosingSymbol as MethodSymbol, type, SynthesizedLocalKind.PatternMatchingTemp, _syntax, false, RefKind.None);
             var expression = new BoundLocal(_syntax, localSymbol, null, type);
             var result = makeDecision(expression, type);
+            Debug.Assert(result.Temp == null);
+            result.Temp = localSymbol;
             byType.TypeAndDecision.Add(new KeyValuePair<TypeSymbol, DecisionTree>(type, result));
             if (_conversions.ExpressionOfTypeMatchesPatternType(byType.Type, type) == true && result.MatchIsComplete && byType.WhenNull?.MatchIsComplete == true)
             {
@@ -825,7 +830,7 @@ namespace Microsoft.CodeAnalysis.CSharp
     {
         public readonly BoundExpression Expression;
         public readonly TypeSymbol Type;
-        public readonly LocalSymbol Temp;
+        public LocalSymbol Temp;
         public bool MatchIsComplete;
 
         public enum DecisionKind { ByType, ByValue, Guarded }
@@ -939,6 +944,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             // A sequence of bindings to be assigned before evaluation of the guard or jump to the label.
             // Each one contains the source of the assignment and the destination of the assignment, in that order.
             public readonly ImmutableArray<KeyValuePair<BoundExpression, LocalSymbol>> Bindings;
+            public readonly BoundPatternSwitchSection Section;
             public readonly BoundExpression Guard;
             public readonly BoundPatternSwitchLabel Label;
             public DecisionTree Default = null; // decision tree to use if the Guard is false
@@ -947,6 +953,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                 BoundExpression expression,
                 TypeSymbol type,
                 ImmutableArray<KeyValuePair<BoundExpression, LocalSymbol>> bindings,
+                BoundPatternSwitchSection section,
                 BoundExpression guard,
                 BoundPatternSwitchLabel label)
                 : base(expression, type, null)
@@ -954,6 +961,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                 this.Guard = guard;
                 this.Label = label;
                 this.Bindings = bindings;
+                this.Section = section;
                 Debug.Assert(guard?.ConstantValue != ConstantValue.False);
                 base.MatchIsComplete =
                     (guard == null) || (guard.ConstantValue == ConstantValue.True);

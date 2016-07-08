@@ -789,8 +789,8 @@ namespace Microsoft.CodeAnalysis.CSharp
             {
                 foreach (var l in s.SwitchLabels)
                 {
-                    if (l.ExpressionOpt == null) continue;
-                    var v2 = l.ExpressionOpt.ConstantValue.Int32Value;
+                    if (l.ConstantValueOpt == null) continue;
+                    var v2 = l.ConstantValueOpt.Int32Value;
                     Debug.Assert(!labels.Contains(v2));
                     labels.Add(v2);
                 }
@@ -800,7 +800,8 @@ namespace Microsoft.CodeAnalysis.CSharp
         public BoundSwitchSection SwitchSection(int value, params BoundStatement[] statements)
         {
             var label = GenerateLabel("case+" + value);
-            var switchLabel = new BoundSwitchLabel(Syntax, label, Literal(value)) { WasCompilerGenerated = true };
+            var literal = Literal(value);
+            var switchLabel = new BoundSwitchLabel(Syntax, label, literal, literal.ConstantValue) { WasCompilerGenerated = true };
             return new BoundSwitchSection(Syntax, ImmutableArray.Create<BoundSwitchLabel>(switchLabel), ImmutableArray.Create<BoundStatement>(statements)) { WasCompilerGenerated = true };
         }
 
@@ -811,7 +812,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             {
                 var label = GenerateLabel("case+" + i);
                 var expression = Literal(i);
-                builder.Add(new BoundSwitchLabel(Syntax, label, expression) { WasCompilerGenerated = true });
+                builder.Add(new BoundSwitchLabel(Syntax, label, expression, expression.ConstantValue) { WasCompilerGenerated = true });
             }
 
             return new BoundSwitchSection(Syntax, builder.ToImmutableAndFree(), ImmutableArray.Create<BoundStatement>(statements)) { WasCompilerGenerated = true };

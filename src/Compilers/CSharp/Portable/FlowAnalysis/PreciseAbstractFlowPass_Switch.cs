@@ -57,7 +57,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                     foreach (var boundSwitchLabel in section.SwitchLabels)
                     {
                         var label = boundSwitchLabel.Label;
-                        hasDefaultLabel = hasDefaultLabel || boundSwitchLabel.ExpressionOpt == null;
+                        hasDefaultLabel = hasDefaultLabel || boundSwitchLabel.ConstantValueOpt == null;
                         SetState(breakState.Clone());
                         var simulatedGoto = new BoundGotoStatement(node.Syntax, label);
                         VisitGotoStatement(simulatedGoto);
@@ -292,7 +292,9 @@ namespace Microsoft.CodeAnalysis.CSharp
 
         private bool FullyHandlesItsInput(DecisionTree decision)
         {
+            if (decision == null) return false;
             if (decision.MatchIsComplete) return true;
+            // We check for completeness based on value. Other cases were handled in the construction of the decision tree.
             if (decision.Expression.ConstantValue == null) return false;
             var value = decision.Expression.ConstantValue;
             switch (decision.Kind)
