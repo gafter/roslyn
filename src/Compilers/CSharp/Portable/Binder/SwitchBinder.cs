@@ -34,7 +34,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                 // in C# 6 and earlier, we use the old binder. In C# 7 and later, we use the new binder which
                 // is capable of binding both the old and new syntax. However, the new binder does not yet
                 // lead to a translation that fully supports edit-and-continue.
-                parseOptions?.IsFeatureEnabled(MessageID.IDS_FeaturePatternMatching) != false && parseOptions?.Features.ContainsKey("typeswitch") != false
+                (parseOptions?.IsFeatureEnabled(MessageID.IDS_FeaturePatternMatching) != false || parseOptions?.Features.ContainsKey("typeswitch") != false)
                 ? new PatternSwitchBinder(next, switchSyntax)
                 : new SwitchBinder(next, switchSyntax);
         }
@@ -248,17 +248,9 @@ namespace Microsoft.CodeAnalysis.CSharp
             }
         }
 
-        private BoundExpression ConvertCaseExpression(TypeSymbol switchGoverningType, CSharpSyntaxNode node, BoundExpression caseExpression, Binder sectionBinder, ref ConstantValue constantValueOpt, DiagnosticBag diagnostics, bool isGotoCaseExpr = false)
+        protected BoundExpression ConvertCaseExpression(TypeSymbol switchGoverningType, CSharpSyntaxNode node, BoundExpression caseExpression, Binder sectionBinder, ref ConstantValue constantValueOpt, DiagnosticBag diagnostics, bool isGotoCaseExpr = false)
         {
-            BoundExpression convertedCaseExpression;
-            if (!isGotoCaseExpr)
-            {
-                // NOTE: This will allow user-defined conversions, even though they're not allowed here.  This is acceptable
-                // because the result of a user-defined conversion does not have a ConstantValue and we'll report a diagnostic
-                // to that effect below (same error code as Dev10).
-                convertedCaseExpression = sectionBinder.GenerateConversionForAssignment(switchGoverningType, caseExpression, diagnostics);
-            }
-            else
+            if (isGotoCaseExpr)
             {
                 // SPEC VIOLATION for Dev10 COMPATIBILITY:
 
@@ -271,10 +263,8 @@ namespace Microsoft.CodeAnalysis.CSharp
                 // but there exists an explicit conversion, Dev10 compiler generates a warning "WRN_GotoCaseShouldConvert"
                 // instead of an error. See test "CS0469_NoImplicitConversionWarning".
 
-                // CONSIDER: Should we introduce a breaking change and violate Dev10 compatibility and follow the spec?
-
                 HashSet<DiagnosticInfo> useSiteDiagnostics = null;
-                Conversion conversion = sectionBinder.Conversions.ClassifyConversionFromExpression(caseExpression, switchGoverningType, ref useSiteDiagnostics);
+                Conversion conversion = Conversions.ClassifyConversionFromExpression(caseExpression, switchGoverningType, ref useSiteDiagnostics);
                 diagnostics.Add(node, useSiteDiagnostics);
                 if (!conversion.IsValid)
                 {
@@ -285,27 +275,10 @@ namespace Microsoft.CodeAnalysis.CSharp
                     diagnostics.Add(ErrorCode.WRN_GotoCaseShouldConvert, node.Location, switchGoverningType);
                 }
 
-                convertedCaseExpression = sectionBinder.CreateConversion(caseExpression, conversion, switchGoverningType, diagnostics);
+                caseExpression = CreateConversion(caseExpression, conversion, switchGoverningType, diagnostics);
             }
 
-            if (switchGoverningType.IsNullableType()
-                && convertedCaseExpression.Kind == BoundKind.Conversion
-                // Null is a special case here because we want to compare null to the Nullable<T> itself, not to the underlying type.
-                && (convertedCaseExpression.ConstantValue == null || !convertedCaseExpression.ConstantValue.IsNull))
-            {
-                var operand = ((BoundConversion)convertedCaseExpression).Operand;
-
-                // We are not intested in the diagnostic that get created here
-                var diagnosticBag = DiagnosticBag.GetInstance();
-                constantValueOpt = sectionBinder.CreateConversion(operand, switchGoverningType.GetNullableUnderlyingType(), diagnosticBag).ConstantValue;
-                diagnosticBag.Free();
-            }
-            else
-            {
-                constantValueOpt = convertedCaseExpression.ConstantValue;
-            }
-
-            return convertedCaseExpression;
+            return ConvertPatternExpression(switchGoverningType, node, caseExpression, ref constantValueOpt, diagnostics);
         }
 
         private List<SourceLabelSymbol> FindMatchingSwitchCaseLabels(ConstantValue constantValue, SyntaxNodeOrToken labelSyntax = default(SyntaxNodeOrToken))
@@ -665,6 +638,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                 syntax: node,
                 label: boundLabelSymbol,
                 expressionOpt: boundLabelExpressionOpt,
+                constantValueOpt: labelExpressionConstant,
                 hasErrors: hasErrors || hasDuplicateErrors);
         }
 

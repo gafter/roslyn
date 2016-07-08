@@ -29,9 +29,9 @@ namespace Microsoft.CodeAnalysis.CSharp
                     var parseOptions = _switchSyntax?.SyntaxTree?.Options as CSharpParseOptions;
                     _isPatternSwitch =
                         (parseOptions?.IsFeatureEnabled(MessageID.IDS_FeaturePatternMatching) != false &&
-                        (parseOptions?.Features.ContainsKey("typeswitch") != false ||
+                        (parseOptions?.Features.ContainsKey("typeswitch") == true ||
                          IsPatternSwitchSyntax(_switchSyntax) ||
-                         this.SwitchGoverningType.IsValidV6SwitchGoverningType()));
+                         !SwitchGoverningType.IsValidV6SwitchGoverningType()));
                 }
 
                 return _isPatternSwitch.GetValueOrDefault();
@@ -361,39 +361,6 @@ namespace Microsoft.CodeAnalysis.CSharp
                 // Create the label symbol
                 labels.Add(new SourceLabelSymbol((MethodSymbol)this.ContainingMemberOrLambda, labelSyntax, boundLabelConstantOpt));
             }
-        }
-
-        private BoundExpression ConvertCaseExpression(TypeSymbol switchGoverningType, CSharpSyntaxNode node, BoundExpression caseExpression, Binder sectionBinder, ref ConstantValue constantValueOpt, DiagnosticBag diagnostics, bool isGotoCaseExpr = false)
-        {
-            if (isGotoCaseExpr)
-            {
-                // SPEC VIOLATION for Dev10 COMPATIBILITY:
-
-                // Dev10 compiler violates the SPEC comment below:
-                //      "if the constant-expression is not implicitly convertible (§6.1) to 
-                //      the governing type of the nearest enclosing switch statement, 
-                //      a compile-time error occurs"
-
-                // If there is no implicit conversion from gotoCaseExpression to switchGoverningType,
-                // but there exists an explicit conversion, Dev10 compiler generates a warning "WRN_GotoCaseShouldConvert"
-                // instead of an error. See test "CS0469_NoImplicitConversionWarning".
-
-                HashSet<DiagnosticInfo> useSiteDiagnostics = null;
-                Conversion conversion = Conversions.ClassifyConversionFromExpression(caseExpression, switchGoverningType, ref useSiteDiagnostics);
-                diagnostics.Add(node, useSiteDiagnostics);
-                if (!conversion.IsValid)
-                {
-                    GenerateImplicitConversionError(diagnostics, node, conversion, caseExpression, switchGoverningType);
-                }
-                else if (!conversion.IsImplicit)
-                {
-                    diagnostics.Add(ErrorCode.WRN_GotoCaseShouldConvert, node.Location, switchGoverningType);
-                }
-
-                caseExpression = CreateConversion(caseExpression, conversion, switchGoverningType, diagnostics);
-            }
-
-            return ConvertPatternExpression(switchGoverningType, node, caseExpression, ref constantValueOpt, diagnostics);
         }
 
         internal override BoundStatement BindGotoCaseOrDefault(GotoStatementSyntax node, Binder gotoBinder, DiagnosticBag diagnostics)

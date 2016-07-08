@@ -760,7 +760,10 @@ class Program
                 Diagnostic(ErrorCode.WRN_GotoCaseShouldConvert, "goto case 3;").WithArguments("Color").WithLocation(15, 17),
                 // (15,17): error CS0159: No such label 'case 3:' within the scope of the goto statement
                 //                 goto case 3; // warning CS0469: The 'goto case' value is not implicitly convertible to type 'Color'
-                Diagnostic(ErrorCode.ERR_LabelNotFound, "goto case 3;").WithArguments("case 3:").WithLocation(15, 17)
+                Diagnostic(ErrorCode.ERR_LabelNotFound, "goto case 3;").WithArguments("case 3:").WithLocation(15, 17),
+                // (18,13): error CS8070: Control cannot fall out of switch from final case label ('case Color x when false:')
+                //             case Color x when false:
+                Diagnostic(ErrorCode.ERR_SwitchFallOut, "case Color x when false:").WithArguments("case Color x when false:").WithLocation(18, 13)
                 );
             var compilation = CreateCompilationWithMscorlib45(source, options: TestOptions.DebugExe, parseOptions: s_patternParseOptions);
             compilation.VerifyDiagnostics(
@@ -815,6 +818,51 @@ class Program
                 Diagnostic(ErrorCode.WRN_GotoCaseShouldConvert, "goto case 1;").WithArguments("Color").WithLocation(17, 17)
                 );
             var expectedOutput = @"done";
+            var comp = CompileAndVerify(compilation, expectedOutput: expectedOutput);
+        }
+
+        [Fact]
+        public void WhenClause01()
+        {
+            // This test exercises a tricky aspect of lowering: the variables of a switch section
+            // (such as i and j below) need to be in scope, from the point of view of the IL, both
+            // in the when clause and in the body of the switch block. But those two bodies of
+            // code are separate from each other: the when clause is part of the decision tree,
+            // while the switch blocks are emitted after the entire decision tree has been emitted.
+            // To get the scoping right (from the point-of-view of emit and the debugger), the compiler
+            // organizes the code so that the when clauses and the section bodies are co-located
+            // within the block that defines the variables of the switch section. We branch to a
+            // label within the when clause, where the pattern variables are assigned followed by
+            // evaluating the when condition. If it fails we branch back into the decision tree. If
+            // it succeeds we branch to the user-written body of the switch block.
+            var source =
+@"using System;
+
+class Program
+{
+    public static void Main()
+    {
+        M(1);
+        M(""sasquatch"");
+    }
+    public static void M(object o)
+    {
+        switch (o)
+        {
+            case int i /*when i is int j*/:
+                Console.WriteLine(i);
+                break;
+            //case string s when s is string t:
+            //    Console.WriteLine(t);
+            //    break;
+        }
+    }
+}";
+            var compilation = CreateCompilationWithMscorlib45(source, options: TestOptions.DebugExe, parseOptions: s_patternParseOptions);
+            compilation.VerifyDiagnostics();
+            var expectedOutput =
+@"1
+sasquatch";
             var comp = CompileAndVerify(compilation, expectedOutput: expectedOutput);
         }
     }
