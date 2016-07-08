@@ -849,12 +849,12 @@ class Program
     {
         switch (o)
         {
-            case int i /*when i is int j*/:
-                Console.WriteLine(i);
+            case int i when i is int j:
+                Console.WriteLine(j);
                 break;
-            //case string s when s is string t:
-            //    Console.WriteLine(t);
-            //    break;
+            case string s when s is string t:
+                Console.WriteLine(t);
+                break;
         }
     }
 }";

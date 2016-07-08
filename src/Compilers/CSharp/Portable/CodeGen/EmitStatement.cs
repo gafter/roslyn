@@ -1085,7 +1085,7 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeGen
                 foreach (BoundSwitchLabel boundLabel in section.SwitchLabels)
                 {
                     var label = boundLabel.Label;
-                    if (boundLabel.ExpressionOpt == null)
+                    if (boundLabel.ConstantValueOpt == null)
                     {
                         fallThroughLabel = label;
                     }

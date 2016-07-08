@@ -250,7 +250,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             {
                 foreach (var boundLabel in section.SwitchLabels)
                 {
-                    if (boundLabel.ExpressionOpt != null)
+                    if (boundLabel.ConstantValueOpt != null)
                     {
                         var value = boundLabel.ConstantValueOpt;
                         Debug.Assert(value.IsString || value.IsNull);

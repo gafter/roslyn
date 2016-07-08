@@ -49,6 +49,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                 // at this point the end of result is unreachable.
             }
 
+            result.Add(_factory.Label(node.BreakLabel));
             var translatedSwitch = _factory.Block(pslr.DeclaredTemps.ToImmutableArray().Concat(node.InnerLocals), node.InnerLocalFunctions, result.ToImmutableAndFree());
             return translatedSwitch;
         }
