@@ -1,4 +1,4 @@
-﻿// Copyright (c) Microsoft.  All Rights Reserved.  Licensed under the Apache License, Version 2.0.  See License.txt in the project root for license information.
+// Copyright (c) Microsoft.  All Rights Reserved.  Licensed under the Apache License, Version 2.0.  See License.txt in the project root for license information.
 
 using System;
 using System.Collections.Generic;
@@ -65,7 +65,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                 {
                     if (!SyntaxFacts.IsValidIdentifier(preprocessorSymbol))
                     {
-                        throw new ArgumentException("preprocessorSymbols");
+                        throw new ArgumentException(nameof(preprocessorSymbols));
                     }
                 }
             }
@@ -96,6 +96,16 @@ namespace Microsoft.CodeAnalysis.CSharp
         {
         }
 
+        private CSharpParseOptions(CSharpParseOptions other, LanguageVersion mapped, LanguageVersion specified) : this(
+            languageVersion: other.SpecifiedLanguageVersion,
+            documentationMode: other.DocumentationMode,
+            kind: other.Kind,
+            preprocessorSymbols: other.PreprocessorSymbols,
+            features: other.Features.ToImmutableDictionary())
+        {
+            this.SpecifiedLanguageVersion = specified;
+            this.LanguageVersion = mapped;
+        }
         // No validation
         internal CSharpParseOptions(
             LanguageVersion languageVersion,
@@ -139,7 +149,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                 throw new ArgumentOutOfRangeException(nameof(version));
             }
 
-            return new CSharpParseOptions(this) { SpecifiedLanguageVersion = version, LanguageVersion = effectiveLanguageVersion };
+            return new CSharpParseOptions(this, effectiveLanguageVersion, version);
         }
 
         public CSharpParseOptions WithPreprocessorSymbols(IEnumerable<string> preprocessorSymbols)

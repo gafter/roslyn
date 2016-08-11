@@ -1,4 +1,4 @@
-﻿' Copyright (c) Microsoft.  All Rights Reserved.  Licensed under the Apache License, Version 2.0.  See License.txt in the project root for license information.
+' Copyright (c) Microsoft.  All Rights Reserved.  Licensed under the Apache License, Version 2.0.  See License.txt in the project root for license information.
 
 Imports System.Collections.Immutable
 Imports Microsoft.CodeAnalysis
@@ -19,8 +19,8 @@ Namespace Microsoft.CodeAnalysis.VisualBasic
         Private _features As ImmutableDictionary(Of String, String)
 
         Private _preprocessorSymbols As ImmutableArray(Of KeyValuePair(Of String, Object))
-        Private _specifiedLanguageVersion As LanguageVersion
-        Private _languageVersion As LanguageVersion
+        Private ReadOnly _specifiedLanguageVersion As LanguageVersion
+        Private ReadOnly _languageVersion As LanguageVersion
 
         ''' <summary>
         ''' Creates an instance of VisualBasicParseOptions.
@@ -131,7 +131,16 @@ Namespace Microsoft.CodeAnalysis.VisualBasic
                 preprocessorSymbols:=other._preprocessorSymbols,
                 features:=other._features)
         End Sub
+        Private Sub New(other As VisualBasicParseOptions, MappedVersion As LanguageVersion, specificVersion As LanguageVersion)
 
+            MyBase.New(other.Kind, other.DocumentationMode)
+
+            Debug.Assert(Not other.PreprocessorSymbols.IsDefault)
+            _specifiedLanguageVersion = specificVersion
+            _languageVersion = MappedVersion
+            _preprocessorSymbols = other.PreprocessorSymbols
+            _features = other.Features.ToImmutableDictionary
+        End Sub
         Private Shared ReadOnly Property DefaultPreprocessorSymbols As ImmutableArray(Of KeyValuePair(Of String, Object))
             Get
                 If s_defaultPreprocessorSymbols.IsDefaultOrEmpty Then
@@ -196,7 +205,7 @@ Namespace Microsoft.CodeAnalysis.VisualBasic
                 Throw New ArgumentOutOfRangeException(NameOf(version))
             End If
 
-            Return New VisualBasicParseOptions(Me) With {._specifiedLanguageVersion = version, ._languageVersion = effectiveVersion}
+            Return New VisualBasicParseOptions(Me, effectiveVersion, version)
         End Function
 
         ''' <summary>
