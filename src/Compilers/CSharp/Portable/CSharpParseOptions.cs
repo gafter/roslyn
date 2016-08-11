@@ -19,16 +19,18 @@ namespace Microsoft.CodeAnalysis.CSharp
         public static CSharpParseOptions Default { get; } = new CSharpParseOptions();
 
         private ImmutableDictionary<string, string> _features;
+        internal readonly LanguageVersion _LanguageVersion;
+        internal readonly LanguageVersion _SpecifiedLanguageVersion;
 
         /// <summary>
         /// Gets the effective language version.
         /// </summary>
-        public LanguageVersion LanguageVersion { get; private set; }
+        public LanguageVersion LanguageVersion { get { return _LanguageVersion; } }
 
         /// <summary>
         /// Gets the specified language version.
         /// </summary>
-        public LanguageVersion SpecifiedLanguageVersion { get; private set; }
+        public LanguageVersion SpecifiedLanguageVersion { get { return _SpecifiedLanguageVersion; } }
 
         internal ImmutableArray<string> PreprocessorSymbols { get; private set; }
 
@@ -96,15 +98,12 @@ namespace Microsoft.CodeAnalysis.CSharp
         {
         }
 
-        private CSharpParseOptions(CSharpParseOptions other, LanguageVersion mapped, LanguageVersion specified) : this(
-            languageVersion: other.SpecifiedLanguageVersion,
-            documentationMode: other.DocumentationMode,
-            kind: other.Kind,
-            preprocessorSymbols: other.PreprocessorSymbols,
-            features: other.Features.ToImmutableDictionary())
+        internal CSharpParseOptions(CSharpParseOptions other, LanguageVersion mapped, LanguageVersion specified) : base(other.Kind, other.DocumentationMode)
         {
-            this.SpecifiedLanguageVersion = specified;
-            this.LanguageVersion = mapped;
+            this.PreprocessorSymbols = other.PreprocessorSymbols;
+            this._features = other.Features.ToImmutableDictionary();
+            this._SpecifiedLanguageVersion = specified;
+            this._LanguageVersion = mapped;
         }
         // No validation
         internal CSharpParseOptions(
@@ -115,8 +114,8 @@ namespace Microsoft.CodeAnalysis.CSharp
             : base(kind, documentationMode)
         {
             Debug.Assert(!preprocessorSymbols.IsDefault);
-            this.SpecifiedLanguageVersion = languageVersion;
-            this.LanguageVersion = languageVersion.MapSpecifiedToEffectiveVersion();
+            this._SpecifiedLanguageVersion = languageVersion;
+            this._LanguageVersion = languageVersion.MapSpecifiedToEffectiveVersion();
             this.PreprocessorSymbols = preprocessorSymbols;
             _features = ImmutableDictionary<string, string>.Empty;
         }

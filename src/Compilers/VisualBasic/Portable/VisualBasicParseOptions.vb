@@ -131,7 +131,7 @@ Namespace Microsoft.CodeAnalysis.VisualBasic
                 preprocessorSymbols:=other._preprocessorSymbols,
                 features:=other._features)
         End Sub
-        Private Sub New(other As VisualBasicParseOptions, MappedVersion As LanguageVersion, specificVersion As LanguageVersion)
+        Protected Friend Sub New(other As VisualBasicParseOptions, MappedVersion As LanguageVersion, specificVersion As LanguageVersion)
 
             MyBase.New(other.Kind, other.DocumentationMode)
 
