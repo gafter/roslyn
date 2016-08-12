@@ -66,6 +66,8 @@ namespace Microsoft.CodeAnalysis.CSharp.UnitTests.Parsing
         {
             ReflectionAssert.AssertPublicAndInternalFieldsAndProperties(
                 typeof(CSharpParseOptions),
+                "_LanguageVersion",
+                "_SpecifiedLanguageVersion",
                 "Features",
                 "LanguageVersion",
                 "PreprocessorSymbolNames",
