@@ -1134,7 +1134,7 @@ namespace Microsoft.CodeAnalysis.CSharp
         ERR_NoSuchMemberOrExtensionNeedUsing = 4036,
         #endregion diagnostics introduced in C# 5
 
-        // available 4037-4999
+        // unused 4037-4999
 
         #region diagnostics introduced in C# 6
         // WRN_UnknownOption = 5000,   //unused in Roslyn
@@ -1242,6 +1242,8 @@ namespace Microsoft.CodeAnalysis.CSharp
         ERR_MutuallyExclusiveOptions = 7102,
         #endregion diagnostics introduced in C# 6
 
+        // huge gap here; unused 7103-8000
+
         #region more diagnostics introduced in Roslyn (C# 6)
         WRN_UnimplementedCommandLineSwitch = 8001,
         WRN_ReferencedAssemblyDoesNotHaveStrongName = 8002,
@@ -1343,7 +1345,7 @@ namespace Microsoft.CodeAnalysis.CSharp
         ERR_ExpressionTreeContainsLocalFunction = 8110,
         #endregion diagnostics for local functions introduced in C# 7
 
-        // Available = 8111, 8112, 8113, 8114, 8115
+        // unused 8111, 8112, 8113, 8114, 8115
 
         #region diagnostics for pattern-matching introduced in C# 7
         ERR_PatternNullableType = 8116,
@@ -1417,9 +1419,11 @@ namespace Microsoft.CodeAnalysis.CSharp
         ERR_RefReturningCallAndAwait = 8178,
         #endregion diagnostics for ref locals and ref returns introduced in C# 7
 
+        #region diagnostic introduced for expression-bodied accessors in C# 7
         ERR_SemiOrLBraceOrArrowExpected = 8179,
+        #endregion diagnostic introduced for expression-bodied accessors in C# 7
 
-        // Available  = 8180-8195
+        // unused 8180-8195
 
         #region diagnostics for out var
         ERR_ImplicitlyTypedOutVariableUsedInTheSameArgumentList = 8196,
