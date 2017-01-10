@@ -4429,7 +4429,7 @@ public class Program5815
         [Fact]
         public void Fuzz()
         {
-            int dt = Math.Abs(new DateTime().Ticks.GetHashCode() % 10000000);
+            int dt = Math.Abs((int)(DateTime.Now.Ticks % 10000000));
             for (int i = 1; i < 100000; i++)
             {
                 PatternMatchingFuzz(i + dt);
@@ -4438,11 +4438,6 @@ public class Program5815
 
         public void PatternMatchingFuzz(int dt)
         {
-            if (dt == 0)
-            {
-                dt = new DateTime().Ticks.GetHashCode();
-            }
-
             Random r = new Random(dt);
 
             // generate a pattern-matching switch randomly from templates
