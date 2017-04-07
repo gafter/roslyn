@@ -560,6 +560,22 @@ namespace Microsoft.CodeAnalysis
                 }
             }
 
+            public override short Int16Value
+            {
+                get
+                {
+                    switch (this.Discriminator)
+                    {
+                        case ConstantValueTypeDiscriminator.Byte:
+                            return unchecked((short)(_value));
+                        case ConstantValueTypeDiscriminator.SByte:
+                            return unchecked((short)(sbyte)(_value));
+                        default:
+                            throw ExceptionUtilities.UnexpectedValue(this.Discriminator);
+                    }
+                }
+            }
+
             public override int GetHashCode()
             {
                 return Hash.Combine(base.GetHashCode(), _value.GetHashCode());
@@ -606,6 +622,22 @@ namespace Microsoft.CodeAnalysis
                 get
                 {
                     return unchecked((ushort)_value);
+                }
+            }
+
+            public override int Int32Value
+            {
+                get
+                {
+                    switch (this.Discriminator)
+                    {
+                        case ConstantValueTypeDiscriminator.Int16:
+                            return unchecked((int)(_value));
+                        case ConstantValueTypeDiscriminator.UInt16:
+                            return unchecked((int)(ushort)(_value));
+                        default:
+                            throw ExceptionUtilities.UnexpectedValue(this.Discriminator);
+                    }
                 }
             }
 
@@ -657,6 +689,22 @@ namespace Microsoft.CodeAnalysis
                 get
                 {
                     return unchecked((uint)_value);
+                }
+            }
+
+            public override long Int64Value
+            {
+                get
+                {
+                    switch (this.Discriminator)
+                    {
+                        case ConstantValueTypeDiscriminator.Int32:
+                            return unchecked((long)(_value));
+                        case ConstantValueTypeDiscriminator.UInt32:
+                            return unchecked((long)(uint)(_value));
+                        default:
+                            throw ExceptionUtilities.UnexpectedValue(this.Discriminator);
+                    }
                 }
             }
 

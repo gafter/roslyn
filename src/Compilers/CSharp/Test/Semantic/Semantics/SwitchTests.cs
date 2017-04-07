@@ -3014,6 +3014,45 @@ class C
                 Diagnostic(ErrorCode.ERR_FeatureNotAvailableInVersion1, "b").WithArguments("switch on boolean type", "2"));
         }
 
+        public void SmallUnsignedEdgeCase()
+        {
+            var source = @"
+using System;
+class C
+{
+    static void Main(string[] args)
+    {
+        byte testByte = 130;
+
+        switch (testByte)
+        {
+            case 127: // 0111 1111
+            case 128: // 1000 0000
+                Console.Write(0);
+                break;
+            default:
+                Console.Write(1);
+                break;
+        }
+
+        ushort testUshort = 32769;
+
+        switch (testUshort)
+        {
+            case 32767: // 0111 1111 1111 1111
+            case 32768: // 1000 0000 0000 0000
+                Console.Write(0);
+                break;
+            default:
+                Console.Write(1);
+                break;
+        }
+    }
+}";
+            var comp = CompileAndVerify(source, expectedOutput: @"11");
+            comp.VerifyDiagnostics();
+        }
+
         #endregion
     }
 }
