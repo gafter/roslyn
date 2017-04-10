@@ -29,41 +29,87 @@ namespace Microsoft.CodeAnalysis
         DateTime,
     }
 
+    /// <summary>
+    /// Represents a constant value. For the purposes of the specifications within this type, System.Char is treated as an integral type.
+    /// </summary>
     internal abstract partial class ConstantValue : IEquatable<ConstantValue>
     {
         public abstract ConstantValueTypeDiscriminator Discriminator { get; }
         internal abstract SpecialType SpecialType { get; }
 
+        /// <summary>
+        /// If the constant is a string, return its constant value. If not, the behavior is not defined.
+        /// </summary>
         public virtual string StringValue { get { throw new InvalidOperationException(); } }
+
+        /// <summary>
+        /// If the constant is a boolean, return its constant value. If not, the behavior is not defined.
+        /// </summary>
         public virtual bool BooleanValue { get { throw new InvalidOperationException(); } }
 
+        /// <summary>
+        /// If the constant is integral, return its value converted to sbyte. If not, the behavior is not defined.
+        /// </summary>
         public virtual sbyte SByteValue { get { throw new InvalidOperationException(); } }
+
+        /// <summary>
+        /// If the constant is integral, return its value converted to byte. If not, the behavior is not defined.
+        /// </summary>
         public virtual byte ByteValue { get { throw new InvalidOperationException(); } }
 
-        // If we can get SByteValue, we can automatically get Int16Value, Int32Value, Int64Value. 
-        // This is needed when constant values are reinterpreted during constant folding - 
-        // for example a Byte value may be read via UIntValue accessor when folding Byte + Uint
-        //
-        // I have decided that default implementation of Int16Value in terms of SByteValue is appropriate here.
-        // Same pattern is used for providing default implementation of Int32Value in terms of Int16Value and so on.
-        //
-        // An alternative solution would be to override Int16Value, Int32Value, Int64Value whenever I override SByteValue
-        // and so on for Int16Value, Int32Value. That could work mildly faster but would result in a lot more code.
+        /// <summary>
+        /// If the constant is integral, return its value converted to short. If not, the behavior is not defined.
+        /// </summary>
+        public virtual short Int16Value { get { throw new InvalidOperationException(); } }
 
-        public virtual short Int16Value { get { return SByteValue; } }
-        public virtual ushort UInt16Value { get { return ByteValue; } }
+        /// <summary>
+        /// If the constant is integral, return its value converted to ushort. If not, the behavior is not defined.
+        /// </summary>
+        public virtual ushort UInt16Value { get { throw new InvalidOperationException(); } }
 
-        public virtual int Int32Value { get { return Int16Value; } }
-        public virtual uint UInt32Value { get { return UInt16Value; } }
+        /// <summary>
+        /// If the constant is integral, return its value converted to int. If not, the behavior is not defined.
+        /// </summary>
+        public virtual int Int32Value { get { throw new InvalidOperationException(); } }
 
-        public virtual long Int64Value { get { return Int32Value; } }
-        public virtual ulong UInt64Value { get { return UInt32Value; } }
+        /// <summary>
+        /// If the constant is integral, return its value converted to uint. If not, the behavior is not defined.
+        /// </summary>
+        public virtual uint UInt32Value { get { throw new InvalidOperationException(); } }
 
+        /// <summary>
+        /// If the constant is integral, return its value converted to long. If not, the behavior is not defined.
+        /// </summary>
+        public virtual long Int64Value { get { throw new InvalidOperationException(); } }
+
+        /// <summary>
+        /// If the constant is integral, return its value converted to ulong. If not, the behavior is not defined.
+        /// </summary>
+        public virtual ulong UInt64Value { get { throw new InvalidOperationException(); } }
+
+        /// <summary>
+        /// If the constant is of type char, return its value. If not, the behavior is not defined.
+        /// </summary>
         public virtual char CharValue { get { throw new InvalidOperationException(); } }
+
+        /// <summary>
+        /// If the constant is of type decimal, return its value. If not, the behavior is not defined.
+        /// </summary>
         public virtual decimal DecimalValue { get { throw new InvalidOperationException(); } }
+
+        /// <summary>
+        /// If the constant is of type DateTime, return its value. If not, the behavior is not defined.
+        /// </summary>
         public virtual DateTime DateTimeValue { get { throw new InvalidOperationException(); } }
 
+        /// <summary>
+        /// If the constant is of a floating-point type, return its value converted to double. If not, the behavior is not defined.
+        /// </summary>
         public virtual double DoubleValue { get { throw new InvalidOperationException(); } }
+
+        /// <summary>
+        /// If the constant is of a floating-point type, return its value converted to float. If not, the behavior is not defined.
+        /// </summary>
         public virtual float SingleValue { get { throw new InvalidOperationException(); } }
 
         // returns true if value is in its default (zero-inited) form.
@@ -104,7 +150,7 @@ namespace Microsoft.CodeAnalysis
                 return ConstantValueDefault.Char;
             }
 
-            return new ConstantValueI16(value);
+            return new ConstantValueChar(value);
         }
 
         public static ConstantValue Create(sbyte value)
@@ -118,7 +164,7 @@ namespace Microsoft.CodeAnalysis
                 return ConstantValueOne.SByte;
             }
 
-            return new ConstantValueI8(value);
+            return new ConstantValueS8(value);
         }
 
         public static ConstantValue Create(byte value)
@@ -132,7 +178,7 @@ namespace Microsoft.CodeAnalysis
                 return ConstantValueOne.Byte;
             }
 
-            return new ConstantValueI8(value);
+            return new ConstantValueU8(value);
         }
 
         public static ConstantValue Create(Int16 value)
@@ -146,7 +192,7 @@ namespace Microsoft.CodeAnalysis
                 return ConstantValueOne.Int16;
             }
 
-            return new ConstantValueI16(value);
+            return new ConstantValueS16(value);
         }
 
         public static ConstantValue Create(UInt16 value)
@@ -160,7 +206,7 @@ namespace Microsoft.CodeAnalysis
                 return ConstantValueOne.UInt16;
             }
 
-            return new ConstantValueI16(value);
+            return new ConstantValueU16(value);
         }
 
         public static ConstantValue Create(Int32 value)
@@ -174,7 +220,7 @@ namespace Microsoft.CodeAnalysis
                 return ConstantValueOne.Int32;
             }
 
-            return new ConstantValueI32(value);
+            return new ConstantValueS32(value);
         }
 
         public static ConstantValue Create(UInt32 value)
@@ -188,7 +234,7 @@ namespace Microsoft.CodeAnalysis
                 return ConstantValueOne.UInt32;
             }
 
-            return new ConstantValueI32(value);
+            return new ConstantValueU32(value);
         }
 
         public static ConstantValue Create(Int64 value)
@@ -202,7 +248,7 @@ namespace Microsoft.CodeAnalysis
                 return ConstantValueOne.Int64;
             }
 
-            return new ConstantValueI64(value);
+            return new ConstantValueS64(value);
         }
 
         public static ConstantValue Create(UInt64 value)
@@ -216,7 +262,7 @@ namespace Microsoft.CodeAnalysis
                 return ConstantValueOne.UInt64;
             }
 
-            return new ConstantValueI64(value);
+            return new ConstantValueU64(value);
         }
 
         public static ConstantValue Create(bool value)
@@ -245,19 +291,7 @@ namespace Microsoft.CodeAnalysis
             return new ConstantValueSingle(value);
         }
 
-        public static ConstantValue CreateSingle(double value)
-        {
-            if (BitConverter.DoubleToInt64Bits(value) == 0)
-            {
-                return ConstantValueDefault.Single;
-            }
-            else if (value == 1)
-            {
-                return ConstantValueOne.Single;
-            }
-
-            return new ConstantValueSingle(value);
-        }
+        private static readonly object zeroAsObject = 0.0f;
 
         public static ConstantValue Create(double value)
         {
@@ -334,10 +368,7 @@ namespace Microsoft.CodeAnalysis
                 case ConstantValueTypeDiscriminator.Char: return Create((char)value);
                 case ConstantValueTypeDiscriminator.Boolean: return Create((bool)value);
                 case ConstantValueTypeDiscriminator.Single:
-                    // values for singles may actually have double precision
-                    return value is double ?
-                        CreateSingle((double)value) :
-                        Create((float)value);
+                    return Create(value is double ? (float)(double)value : (float)value);
                 case ConstantValueTypeDiscriminator.Double: return Create((double)value);
                 case ConstantValueTypeDiscriminator.Decimal: return Create((decimal)value);
                 case ConstantValueTypeDiscriminator.DateTime: return Create((DateTime)value);

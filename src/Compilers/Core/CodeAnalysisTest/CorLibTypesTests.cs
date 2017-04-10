@@ -63,7 +63,6 @@ namespace Microsoft.CodeAnalysis.UnitTests
 
             var cv = ConstantValue.Create(1);
             Assert.Throws<InvalidOperationException>(() => { var c = cv.StringValue; });
-            Assert.Throws<InvalidOperationException>(() => { var c = cv.CharValue; });
             Assert.Throws<InvalidOperationException>(() => { var c = cv.DateTimeValue; });
 
             var cv1 = ConstantValue.Create(null, ConstantValueTypeDiscriminator.Null);
@@ -172,10 +171,10 @@ namespace Microsoft.CodeAnalysis.UnitTests
             Assert.Equal(@"ConstantValueString(""QC"": String)", cv.ToString());
 
             cv = ConstantValue.Create((sbyte)-128);
-            Assert.Equal("ConstantValueI8(-128: SByte)", cv.ToString());
+            Assert.Equal("ConstantValueS8(-128: SByte)", cv.ToString());
 
             cv = ConstantValue.Create((ulong)123456789);
-            Assert.Equal("ConstantValueI64(123456789: UInt64)", cv.ToString());
+            Assert.Equal("ConstantValueU64(123456789: UInt64)", cv.ToString());
         }
     }
 }
