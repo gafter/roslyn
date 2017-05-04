@@ -8895,5 +8895,26 @@ public enum FlagsEnum
             var verifier = CompileAndVerify(source, expectedOutput: "Foo, Bar");
             verifier.VerifyDiagnostics();
         }
+
+        [Fact]
+        public void IsWarningWithNonNullConstant()
+        {
+            var source =
+@"class Program
+{
+    public static void Main(string[] args)
+    {
+        const string d = ""foo"";
+        var x = d is string;
+    }
+}
+";
+            var compilation = CreateStandardCompilation(source)
+                .VerifyDiagnostics(
+                // (6,17): warning CS0183: The given expression is always of the provided ('string') type
+                //         var x = d is string;
+                Diagnostic(ErrorCode.WRN_IsAlwaysTrue, "d is string").WithArguments("string").WithLocation(6, 17)
+                );
+        }
     }
 }
