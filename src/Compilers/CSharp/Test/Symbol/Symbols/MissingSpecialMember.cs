@@ -2002,16 +2002,10 @@ public class X
             compilation.VerifyEmitDiagnostics(
                 // (16,38): warning CS0184: The given expression is never of the provided ('bool') type
                 //         Console.WriteLine("7. {0}", (x is bool is bool));
-                Diagnostic(ErrorCode.WRN_IsAlwaysFalse, "x is bool").WithArguments("bool").WithLocation(16, 38),
+                Diagnostic(ErrorCode.WRN_IsAlwaysFalse, "x is bool").WithArguments("bool"),
                 // (16,38): warning CS0183: The given expression is always of the provided ('bool') type
                 //         Console.WriteLine("7. {0}", (x is bool is bool));
-                Diagnostic(ErrorCode.WRN_IsAlwaysTrue, "x is bool is bool").WithArguments("bool").WithLocation(16, 38),
-                // (12,19): error CS0656: Missing compiler required member 'System.Nullable`1.GetValueOrDefault'
-                //         {if (x is int y) Console.WriteLine("4. {0}", y);}
-                Diagnostic(ErrorCode.ERR_MissingPredefinedMember, "int y").WithArguments("System.Nullable`1", "GetValueOrDefault").WithLocation(12, 19),
-                // (15,19): error CS0656: Missing compiler required member 'System.Nullable`1.GetValueOrDefault'
-                //         {if (x is int y) Console.WriteLine("6. {0}", y);}
-                Diagnostic(ErrorCode.ERR_MissingPredefinedMember, "int y").WithArguments("System.Nullable`1", "GetValueOrDefault").WithLocation(15, 19)
+                Diagnostic(ErrorCode.WRN_IsAlwaysTrue, "x is bool is bool").WithArguments("bool")
                 );
         }
 

@@ -3218,7 +3218,11 @@ public class X
 }
 ";
             var compilation = CreateCompilationWithMscorlib45(source, options: TestOptions.DebugExe);
-            compilation.VerifyDiagnostics();
+            compilation.VerifyDiagnostics(
+                // (11,27): warning CS0183: The given expression is always of the provided ('string') type
+                //         Console.WriteLine("foo" is System.String); // true
+                Diagnostic(ErrorCode.WRN_IsAlwaysTrue, @"""foo"" is System.String").WithArguments("string").WithLocation(11, 27)
+                );
             CompileAndVerify(compilation, expectedOutput:
 @"True
 False
@@ -5593,33 +5597,6 @@ namespace System
                 );
         }
 
-        [Fact, WorkItem(17266, "https://github.com/dotnet/roslyn/issues/17266")]
-        public void DoubleEvaluation01()
-        {
-            var source =
-@"using System;
-public class C
-{
-    public static void Main()
-    {
-        if (TryGet() is int index)
-        {
-            Console.WriteLine(index);
-        }
-    }
-
-    public static int? TryGet()
-    {
-        Console.WriteLine(""eval"");
-        return null;
-    }
-}";
-            var compilation = CreateCompilationWithMscorlib45(source, options: TestOptions.DebugExe);
-            compilation.VerifyDiagnostics();
-            var expectedOutput = @"eval";
-            var comp = CompileAndVerify(compilation, expectedOutput: expectedOutput);
-        }
-
         [Fact]
         [WorkItem(17089, "https://github.com/dotnet/roslyn/issues/17089")]
         public void Dynamic_01()
@@ -5894,6 +5871,37 @@ public class Program
             compilation = CreateCompilationWithMscorlib45(source, references: new MetadataReference[] { CSharpRef, SystemCoreRef }, options: TestOptions.ReleaseExe, parseOptions: TestOptions.Regular7_1);
             compilation.VerifyDiagnostics();
             CompileAndVerify(compilation, expectedOutput: "True1False0");
+        }
+
+        [Fact, WorkItem(19151, "https://github.com/dotnet/roslyn/issues/19151")]
+        public void RefutablePatterns()
+        {
+            var source =
+@"public class Program
+{
+    public static void Main(string[] args)
+    {
+    }
+    void M1(byte? b)
+    {
+        if (b is int) { }
+        if (b is int i) { }
+        switch (b) { case int j: break; }
+    }
+}
+";
+            var compilation = CreateStandardCompilation(source);
+            compilation.VerifyDiagnostics(
+                // (8,13): warning CS0184: The given expression is never of the provided ('int') type
+                //         if (b is int) { }
+                Diagnostic(ErrorCode.WRN_IsAlwaysFalse, "b is int").WithArguments("int").WithLocation(8, 13),
+                // (9,18): error CS8121: An expression of type 'byte?' cannot be handled by a pattern of type 'int'.
+                //         if (b is int i) { }
+                Diagnostic(ErrorCode.ERR_PatternWrongType, "int").WithArguments("byte?", "int").WithLocation(9, 18),
+                // (10,27): error CS8121: An expression of type 'byte?' cannot be handled by a pattern of type 'int'.
+                //         switch (b) { case int j: break; }
+                Diagnostic(ErrorCode.ERR_PatternWrongType, "int").WithArguments("byte?", "int").WithLocation(10, 27)
+                );
         }
     }
 }

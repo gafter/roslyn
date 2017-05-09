@@ -2749,10 +2749,6 @@ namespace Microsoft.CodeAnalysis.CSharp
             bool operandCouldBeNull = true)
         {
             Debug.Assert((object)targetType != null);
-            operandCouldBeNull =
-                operandCouldBeNull &&
-                operandType.CanContainNull() && // a value type is never null
-                (operandConstantValue == null || operandConstantValue == ConstantValue.Null); // a non-null constant is never null
 
             // SPEC:    The result of the operation depends on D and T as follows:
             // SPEC:    1)      If T is a reference type, the result is true if D and T are the same type, if D is a reference type and
@@ -2794,6 +2790,11 @@ namespace Microsoft.CodeAnalysis.CSharp
             }
 
             Debug.Assert((object)operandType != null);
+
+            operandCouldBeNull =
+                operandCouldBeNull &&
+                operandType.CanContainNull() && // a value type is never null
+                (operandConstantValue == null || operandConstantValue == ConstantValue.Null); // a non-null constant is never null
 
             switch (conversionKind)
             {
@@ -2878,6 +2879,8 @@ namespace Microsoft.CodeAnalysis.CSharp
                 case ConversionKind.ImplicitUserDefined:
                 case ConversionKind.ExplicitUserDefined:
                 case ConversionKind.IntPtr:
+                case ConversionKind.ExplicitTuple:
+                case ConversionKind.ImplicitTuple:
 
                     // Consider all the cases where we know that "x is T" must be false just from
                     // the conversion classification.
