@@ -6613,22 +6613,22 @@ partial class C
         <entry offset=""0x0"" startLine=""4"" startColumn=""5"" endLine=""4"" endColumn=""6"" />
         <entry offset=""0x1"" startLine=""5"" startColumn=""9"" endLine=""5"" endColumn=""19"" />
         <entry offset=""0x5"" hidden=""true"" />
-        <entry offset=""0x5c"" startLine=""7"" startColumn=""20"" endLine=""7"" endColumn=""34"" />
-        <entry offset=""0x61"" startLine=""9"" startColumn=""20"" endLine=""9"" endColumn=""34"" />
-        <entry offset=""0x66"" startLine=""10"" startColumn=""17"" endLine=""10"" endColumn=""23"" />
-        <entry offset=""0x68"" startLine=""11"" startColumn=""20"" endLine=""11"" endColumn=""34"" />
-        <entry offset=""0x6d"" startLine=""13"" startColumn=""20"" endLine=""13"" endColumn=""34"" />
-        <entry offset=""0x72"" startLine=""14"" startColumn=""17"" endLine=""14"" endColumn=""23"" />
-        <entry offset=""0x74"" startLine=""16"" startColumn=""17"" endLine=""16"" endColumn=""23"" />
-        <entry offset=""0x76"" startLine=""18"" startColumn=""17"" endLine=""18"" endColumn=""23"" />
-        <entry offset=""0x78"" startLine=""20"" startColumn=""9"" endLine=""20"" endColumn=""19"" />
-        <entry offset=""0x7d"" hidden=""true"" />
-        <entry offset=""0xb2"" startLine=""23"" startColumn=""17"" endLine=""23"" endColumn=""23"" />
-        <entry offset=""0xb4"" startLine=""25"" startColumn=""17"" endLine=""25"" endColumn=""23"" />
-        <entry offset=""0xb6"" startLine=""27"" startColumn=""9"" endLine=""27"" endColumn=""19"" />
-        <entry offset=""0xbb"" hidden=""true"" />
-        <entry offset=""0xc7"" startLine=""30"" startColumn=""17"" endLine=""30"" endColumn=""23"" />
-        <entry offset=""0xc9"" startLine=""32"" startColumn=""5"" endLine=""32"" endColumn=""6"" />
+        <entry offset=""0x5b"" startLine=""7"" startColumn=""20"" endLine=""7"" endColumn=""34"" />
+        <entry offset=""0x60"" startLine=""9"" startColumn=""20"" endLine=""9"" endColumn=""34"" />
+        <entry offset=""0x65"" startLine=""10"" startColumn=""17"" endLine=""10"" endColumn=""23"" />
+        <entry offset=""0x67"" startLine=""11"" startColumn=""20"" endLine=""11"" endColumn=""34"" />
+        <entry offset=""0x6c"" startLine=""13"" startColumn=""20"" endLine=""13"" endColumn=""34"" />
+        <entry offset=""0x71"" startLine=""14"" startColumn=""17"" endLine=""14"" endColumn=""23"" />
+        <entry offset=""0x73"" startLine=""16"" startColumn=""17"" endLine=""16"" endColumn=""23"" />
+        <entry offset=""0x75"" startLine=""18"" startColumn=""17"" endLine=""18"" endColumn=""23"" />
+        <entry offset=""0x77"" startLine=""20"" startColumn=""9"" endLine=""20"" endColumn=""19"" />
+        <entry offset=""0x7c"" hidden=""true"" />
+        <entry offset=""0xb0"" startLine=""23"" startColumn=""17"" endLine=""23"" endColumn=""23"" />
+        <entry offset=""0xb2"" startLine=""25"" startColumn=""17"" endLine=""25"" endColumn=""23"" />
+        <entry offset=""0xb4"" startLine=""27"" startColumn=""9"" endLine=""27"" endColumn=""19"" />
+        <entry offset=""0xb9"" hidden=""true"" />
+        <entry offset=""0xc5"" startLine=""30"" startColumn=""17"" endLine=""30"" endColumn=""23"" />
+        <entry offset=""0xc7"" startLine=""32"" startColumn=""5"" endLine=""32"" endColumn=""6"" />
       </sequencePoints>
     </method>
   </methods>

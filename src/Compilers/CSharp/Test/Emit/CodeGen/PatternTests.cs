@@ -82,11 +82,11 @@ public class C
             var compilation = CreateStandardCompilation(source, options: TestOptions.DebugExe);
             compilation.VerifyDiagnostics();
             var expectedOutput = @"eval";
-            var compVerifier = CompileAndVerify(compilation, verify: false);
+            var compVerifier = CompileAndVerify(compilation, expectedOutput: expectedOutput);
             compVerifier.VerifyIL("C.Main",
 @"{
-  // Code size       33 (0x21)
-  .maxstack  2
+  // Code size       36 (0x24)
+  .maxstack  1
   .locals init (int V_0, //index
                 bool V_1,
                 int? V_2)
@@ -94,22 +94,20 @@ public class C
   IL_0001:  call       ""int? C.TryGet()""
   IL_0006:  stloc.2
   IL_0007:  ldloca.s   V_2
-  IL_0009:  call       ""int int?.Value.get""
-  IL_000e:  dup
-  IL_000f:  stloc.0
-  IL_0010:  ldnull
-  IL_0011:  cgt.un
-  IL_0013:  stloc.1
-  IL_0014:  ldloc.1
-  IL_0015:  brfalse.s  IL_0020
-  IL_0017:  nop
-  IL_0018:  ldloc.0
-  IL_0019:  call       ""void System.Console.WriteLine(int)""
-  IL_001e:  nop
-  IL_001f:  nop
-  IL_0020:  ret
+  IL_0009:  call       ""int int?.GetValueOrDefault()""
+  IL_000e:  stloc.0
+  IL_000f:  ldloca.s   V_2
+  IL_0011:  call       ""bool int?.HasValue.get""
+  IL_0016:  stloc.1
+  IL_0017:  ldloc.1
+  IL_0018:  brfalse.s  IL_0023
+  IL_001a:  nop
+  IL_001b:  ldloc.0
+  IL_001c:  call       ""void System.Console.WriteLine(int)""
+  IL_0021:  nop
+  IL_0022:  nop
+  IL_0023:  ret
 }");
-            CompileAndVerify(compilation, expectedOutput: expectedOutput);
         }
     }
 }

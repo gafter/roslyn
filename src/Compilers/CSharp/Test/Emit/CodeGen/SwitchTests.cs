@@ -7714,7 +7714,7 @@ public class Program
   IL_0004:  call       ""bool int?.HasValue.get""
   IL_0009:  brfalse.s  IL_001a
   IL_000b:  ldloca.s   V_0
-  IL_000d:  call       ""int int?.Value.get""
+  IL_000d:  call       ""int int?.GetValueOrDefault()""
   IL_0012:  stloc.1
   IL_0013:  ldloc.1
   IL_0014:  call       ""void System.Console.Write(int)""
@@ -7748,7 +7748,7 @@ public class Program
   IL_0010:  brtrue.s   IL_0014
   IL_0012:  br.s       IL_002b
   IL_0014:  ldloca.s   V_0
-  IL_0016:  call       ""int int?.Value.get""
+  IL_0016:  call       ""int int?.GetValueOrDefault()""
   IL_001b:  stloc.1
   IL_001c:  br.s       IL_001e
   IL_001e:  ldloc.1
@@ -7866,7 +7866,7 @@ public class Program
                 expectedOutput: "1");
             compVerifier.VerifyIL("Program.M",
 @"{
-  // Code size       25 (0x19)
+  // Code size       31 (0x1f)
   .maxstack  1
   .locals init (int? V_0,
                 System.IComparable V_1)
@@ -7874,13 +7874,14 @@ public class Program
   IL_0001:  stloc.0
   IL_0002:  ldloca.s   V_0
   IL_0004:  call       ""bool int?.HasValue.get""
-  IL_0009:  brfalse.s  IL_0018
-  IL_000b:  ldloc.0
-  IL_000c:  box        ""int?""
-  IL_0011:  stloc.1
-  IL_0012:  ldloc.1
-  IL_0013:  call       ""void System.Console.Write(object)""
-  IL_0018:  ret
+  IL_0009:  brfalse.s  IL_001e
+  IL_000b:  ldloca.s   V_0
+  IL_000d:  call       ""int int?.GetValueOrDefault()""
+  IL_0012:  box        ""int""
+  IL_0017:  stloc.1
+  IL_0018:  ldloc.1
+  IL_0019:  call       ""void System.Console.Write(object)""
+  IL_001e:  ret
 }"
             );
             compVerifier = CompileAndVerify(source,
@@ -7888,7 +7889,7 @@ public class Program
                 expectedOutput: "1");
             compVerifier.VerifyIL("Program.M",
 @"{
-  // Code size       45 (0x2d)
+  // Code size       51 (0x33)
   .maxstack  1
   .locals init (int? V_0,
                 System.IComparable V_1,
@@ -7905,20 +7906,21 @@ public class Program
   IL_0009:  ldloca.s   V_0
   IL_000b:  call       ""bool int?.HasValue.get""
   IL_0010:  brtrue.s   IL_0014
-  IL_0012:  br.s       IL_001d
-  IL_0014:  ldloc.0
-  IL_0015:  box        ""int?""
-  IL_001a:  stloc.1
-  IL_001b:  br.s       IL_001f
-  IL_001d:  br.s       IL_002c
-  IL_001f:  ldloc.1
-  IL_0020:  stloc.3
-  IL_0021:  br.s       IL_0023
-  IL_0023:  ldloc.3
-  IL_0024:  call       ""void System.Console.Write(object)""
-  IL_0029:  nop
-  IL_002a:  br.s       IL_002c
-  IL_002c:  ret
+  IL_0012:  br.s       IL_0023
+  IL_0014:  ldloca.s   V_0
+  IL_0016:  call       ""int int?.GetValueOrDefault()""
+  IL_001b:  box        ""int""
+  IL_0020:  stloc.1
+  IL_0021:  br.s       IL_0025
+  IL_0023:  br.s       IL_0032
+  IL_0025:  ldloc.1
+  IL_0026:  stloc.3
+  IL_0027:  br.s       IL_0029
+  IL_0029:  ldloc.3
+  IL_002a:  call       ""void System.Console.Write(object)""
+  IL_002f:  nop
+  IL_0030:  br.s       IL_0032
+  IL_0032:  ret
 }"
             );
         }

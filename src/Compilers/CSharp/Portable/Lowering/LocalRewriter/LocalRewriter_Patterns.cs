@@ -142,13 +142,18 @@ namespace Microsoft.CodeAnalysis.CSharp
                 );
         }
 
-        private bool MatchIsIrrefutable(BoundExpression source, TypeSymbol targetType, bool requiredNullTest)
+        private bool? MatchConstantValue(BoundExpression source, TypeSymbol targetType, bool requiredNullTest)
         {
             // use site diagnostics will already have been reported during binding.
             HashSet<DiagnosticInfo> ignoredDiagnostics = null;
-            var conversionKind = _compilation.Conversions.ClassifyConversionFromType(source.Type, targetType, ref ignoredDiagnostics).Kind;
-            var constantResult = Binder.GetIsOperatorConstantResult(source.Type, targetType, conversionKind, source.ConstantValue, requiredNullTest);
-            return constantResult == ConstantValue.True;
+            var sourceType = source.Type.IsDynamic() ? _compilation.GetSpecialType(SpecialType.System_Object) : source.Type;
+            var conversionKind = _compilation.Conversions.ClassifyConversionFromType(sourceType, targetType, ref ignoredDiagnostics).Kind;
+            var constantResult = Binder.GetIsOperatorConstantResult(sourceType, targetType, conversionKind, source.ConstantValue, requiredNullTest);
+            return
+                constantResult == ConstantValue.True ? true :
+                constantResult == ConstantValue.False ? false :
+                constantResult == null ? (bool?)null :
+                throw ExceptionUtilities.UnexpectedValue(constantResult);
         }
 
         BoundExpression MakeIsDeclarationPattern(SyntaxNode syntax, BoundExpression loweredInput, BoundExpression loweredTarget, bool requiresNullTest)
@@ -156,38 +161,35 @@ namespace Microsoft.CodeAnalysis.CSharp
             var type = loweredTarget.Type;
             requiresNullTest = requiresNullTest && loweredInput.Type.CanContainNull();
 
-            // It is possible that the input value is already of the correct type, in which case the pattern
-            // is irrefutable, and we can just do the assignment and return true (or perform the null test).
-            if (MatchIsIrrefutable(loweredInput.Type, loweredTarget.Type, requiresNullTest))
+            // If the match is impossible, we simply evaluate the input and yield false.
+            var matchConstantValue = MatchConstantValue(loweredInput, type, false);
+            if (matchConstantValue == false)
             {
-                var convertedInput = _factory.Convert(loweredTarget.Type, loweredInput);
-                var assignment = _factory.AssignmentExpression(loweredTarget, convertedInput);
-                return requiresNullTest
-                    ? _factory.ObjectNotEqual(assignment, _factory.Null(type))
-                    : _factory.MakeSequence(assignment, _factory.Literal(true));
+                return _factory.MakeSequence(loweredInput, _factory.Literal(false));
             }
 
             // It is possible that the input value is already of the correct type, in which case the pattern
             // is irrefutable, and we can just do the assignment and return true (or perform the null test).
-            if (MatchIsIrrefutable(loweredInput, type, false))
+            if (matchConstantValue == true)
             {
-                requiresNullTest = requiresNullTest && !MatchIsIrrefutable(loweredInput, type, true);
+                requiresNullTest = requiresNullTest && MatchConstantValue(loweredInput, type, true) != true;
                 if (loweredInput.Type.IsNullableType())
                 {
                     var getValueOrDefault = _factory.SpecialMethod(SpecialMember.System_Nullable_T_GetValueOrDefault).AsMember((NamedTypeSymbol)loweredInput.Type);
                     if (requiresNullTest)
                     {
-                        //bool Is<T>(int? input, out int output) where T : struct
+                        //bool Is<T>(T? input, out T output) where T : struct
                         //{
                         //    output = input.GetValueOrDefault();
                         //    return input.HasValue;
                         //}
-                        var i = _factory.SynthesizedLocal(loweredInput.Type, syntax); // we copy the input to avoid double evaluation
+
+                        var input = _factory.SynthesizedLocal(loweredInput.Type, syntax); // we copy the input to avoid double evaluation
                         var getHasValue = _factory.SpecialMethod(SpecialMember.System_Nullable_T_get_HasValue).AsMember((NamedTypeSymbol)loweredInput.Type);
-                        return _factory.MakeSequence(i,
-                            _factory.AssignmentExpression(_factory.Local(i), loweredInput),
-                            _factory.AssignmentExpression(loweredTarget, _factory.Convert(type, _factory.Call(_factory.Local(i), getValueOrDefault))),
-                            _factory.Call(_factory.Local(i), getHasValue)
+                        return _factory.MakeSequence(input,
+                            _factory.AssignmentExpression(_factory.Local(input), loweredInput),
+                            _factory.AssignmentExpression(loweredTarget, _factory.Convert(type, _factory.Call(_factory.Local(input), getValueOrDefault))),
+                            _factory.Call(_factory.Local(input), getHasValue)
                             );
                     }
                     else
@@ -217,6 +219,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                 //     t = e as T;
                 //     return t != null;
                 // }
+
                 return _factory.ObjectNotEqual(
                     _factory.AssignmentExpression(loweredTarget, _factory.As(loweredInput, type)),
                     _factory.Null(type));

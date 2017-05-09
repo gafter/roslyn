@@ -1236,7 +1236,7 @@ namespace Microsoft.CodeAnalysis.CSharp
 
         internal BoundExpression NullOrDefault(TypeSymbol typeSymbol)
         {
-            return typeSymbol.IsValueType ? Default(typeSymbol) : Null(typeSymbol);
+            return typeSymbol.IsReferenceType ? Null(typeSymbol) : Default(typeSymbol);
         }
 
         internal BoundExpression Not(
