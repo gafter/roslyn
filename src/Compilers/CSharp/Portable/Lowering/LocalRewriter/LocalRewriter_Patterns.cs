@@ -151,20 +151,21 @@ namespace Microsoft.CodeAnalysis.CSharp
             return constantResult == ConstantValue.True;
         }
 
-        bool Is<T>(int? input, out int output) where T : struct
-        {
-            output = input.GetValueOrDefault();
-            return input.HasValue;
-        }
-
         BoundExpression MakeIsDeclarationPattern(SyntaxNode syntax, BoundExpression loweredInput, BoundExpression loweredTarget, bool requiresNullTest)
         {
             var type = loweredTarget.Type;
             requiresNullTest = requiresNullTest && loweredInput.Type.CanContainNull();
 
-            // The type here is not a Nullable<T> instance type, as that would have led to the semantic error:
-            // ERR_PatternNullableType: It is not legal to use nullable type '{0}' in a pattern; use the underlying type '{1}' instead.
-            Debug.Assert(!type.IsNullableType());
+            // It is possible that the input value is already of the correct type, in which case the pattern
+            // is irrefutable, and we can just do the assignment and return true (or perform the null test).
+            if (MatchIsIrrefutable(loweredInput.Type, loweredTarget.Type, requiresNullTest))
+            {
+                var convertedInput = _factory.Convert(loweredTarget.Type, loweredInput);
+                var assignment = _factory.AssignmentExpression(loweredTarget, convertedInput);
+                return requiresNullTest
+                    ? _factory.ObjectNotEqual(assignment, _factory.Null(type))
+                    : _factory.MakeSequence(assignment, _factory.Literal(true));
+            }
 
             // It is possible that the input value is already of the correct type, in which case the pattern
             // is irrefutable, and we can just do the assignment and return true (or perform the null test).
