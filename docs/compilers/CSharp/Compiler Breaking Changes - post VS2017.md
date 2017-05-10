@@ -15,14 +15,16 @@ Consider the case where the type of `a` is `System.Func<bool>` and you write `va
 
 - https://github.com/dotnet/roslyn/issues/16870 In C# 7.0 and before C# 7.1, the compiler accepted self-assignments in deconstruction-assignment. The compiler now produces a warning for that. For instance, in `(x, y) = (x, 2);`.
 
-- The compiler now produces a warning when a non-null constant string is tested using the `is` operator against the type `string` or one of its base classes or interfaces:
-> ``` c#
-> const string d = "foo";
-> var x = d is string; // warning CS0183: The given expression is always of the provided ('string') type
-> ```
-
-- The compiler is now more precise in detecting erroneous pattern-matching operations:
+- The compiler is now more precise in detecting erroneous pattern-matching operations because the expression could not possibly match the pattern. The following situations now cause an error:
   1. xyzzy
   2. xyzzy
+The following situations now cause a `warning CS0183: The given expression is always of the provided ('{0}') type`:
+  1. `"foo" is string s;`
+  2. xyzzy
+The following situations now cause a `warning CS0183: The given expression is never of the provided ('{0}') type`:
+  1. `null is string s;`
+  2. xyzzy
+
+
 
  
