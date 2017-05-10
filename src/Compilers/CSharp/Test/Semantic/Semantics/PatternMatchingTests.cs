@@ -5900,26 +5900,30 @@ public class Program
 {
     public static void Main(string[] args)
     {
+        if (null as string is string s1) { }
+        const string s = null;
+        if (s is string s2) { }
+        if (""foo"" is string s3) { }
     }
-    void M1(byte? b)
+    void M1(int? i)
     {
-        if (b is int) { }
-        if (b is int i) { }
-        switch (b) { case int j: break; }
+        if (i is long) { }
+        if (i is long l) { }
+        switch (b) { case long m: break; }
     }
 }
 ";
             var compilation = CreateStandardCompilation(source);
             compilation.VerifyDiagnostics(
-                // (8,13): warning CS0184: The given expression is never of the provided ('int') type
-                //         if (b is int) { }
-                Diagnostic(ErrorCode.WRN_IsAlwaysFalse, "b is int").WithArguments("int").WithLocation(8, 13),
-                // (9,18): error CS8121: An expression of type 'byte?' cannot be handled by a pattern of type 'int'.
-                //         if (b is int i) { }
-                Diagnostic(ErrorCode.ERR_PatternWrongType, "int").WithArguments("byte?", "int").WithLocation(9, 18),
-                // (10,27): error CS8121: An expression of type 'byte?' cannot be handled by a pattern of type 'int'.
-                //         switch (b) { case int j: break; }
-                Diagnostic(ErrorCode.ERR_PatternWrongType, "int").WithArguments("byte?", "int").WithLocation(10, 27)
+                // (12,13): warning CS0184: The given expression is never of the provided ('long') type
+                //         if (i is long) { }
+                Diagnostic(ErrorCode.WRN_IsAlwaysFalse, "i is long").WithArguments("long").WithLocation(12, 13),
+                // (13,18): error CS8121: An expression of type 'int?' cannot be handled by a pattern of type 'long'.
+                //         if (i is long l) { }
+                Diagnostic(ErrorCode.ERR_PatternWrongType, "long").WithArguments("int?", "long").WithLocation(13, 18),
+                // (14,17): error CS0103: The name 'b' does not exist in the current context
+                //         switch (b) { case long m: break; }
+                Diagnostic(ErrorCode.ERR_NameNotInContext, "b").WithArguments("b").WithLocation(14, 17)
                 );
         }
     }
