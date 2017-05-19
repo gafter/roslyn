@@ -181,7 +181,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                         var caseLabelSyntax = (CaseSwitchLabelSyntax)node;
                         bool wasExpression;
                         var pattern = sectionBinder.BindConstantPattern(
-                            node, boundSwitchExpression, boundSwitchExpression.Type, caseLabelSyntax.Value, node.HasErrors, diagnostics, out wasExpression, wasSwitchCase: true);
+                            node, boundSwitchExpression.Type, caseLabelSyntax.Value, node.HasErrors, diagnostics, out wasExpression, wasSwitchCase: true);
                         bool hasErrors = pattern.HasErrors;
                         var constantValue = pattern.ConstantValue;
                         if (!hasErrors &&
@@ -228,7 +228,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                     {
                         var matchLabelSyntax = (CasePatternSwitchLabelSyntax)node;
                         var pattern = sectionBinder.BindPattern(
-                            matchLabelSyntax.Pattern, boundSwitchExpression, boundSwitchExpression.Type, node.HasErrors, diagnostics, wasSwitchCase: true);
+                            matchLabelSyntax.Pattern, boundSwitchExpression.Type, node.HasErrors, diagnostics, wasSwitchCase: true);
                         return new BoundPatternSwitchLabel(node, label, pattern,
                             matchLabelSyntax.WhenClause != null ? sectionBinder.BindBooleanExpression(matchLabelSyntax.WhenClause.Condition, diagnostics) : null,
                             true, node.HasErrors);
