@@ -1,25 +1,22 @@
 ﻿// Copyright (c) Microsoft.  All Rights Reserved.  Licensed under the Apache License, Version 2.0.  See License.txt in the project root for license information.
 
-using System;
-using System.Collections.Immutable;
-using System.Threading;
-using Microsoft.CodeAnalysis.CSharp.Symbols;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
-using Microsoft.CodeAnalysis.Text;
-using Roslyn.Utilities;
 using Microsoft.CodeAnalysis.CSharp.Emit;
-using System.Globalization;
+using Roslyn.Utilities;
+using System.Collections.Immutable;
+using System.Diagnostics;
+using System.Threading;
 
 namespace Microsoft.CodeAnalysis.CSharp.Symbols
 {
     internal sealed class SubstitutedFieldSymbol : WrappedFieldSymbol
     {
-        private readonly SubstitutedNamedTypeSymbol _containingType;
+        private readonly NamedTypeSymbol _containingType;
         private TypeSymbol _lazyType;
 
-        internal SubstitutedFieldSymbol(SubstitutedNamedTypeSymbol containingType, FieldSymbol substitutedFrom)
+        internal SubstitutedFieldSymbol(NamedTypeSymbol containingType, FieldSymbol substitutedFrom)
             : base((FieldSymbol)substitutedFrom.OriginalDefinition)
         {
+            Debug.Assert(containingType.TypeSubstitution != null);
             _containingType = containingType;
         }
 

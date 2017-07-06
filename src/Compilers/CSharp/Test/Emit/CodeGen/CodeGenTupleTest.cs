@@ -11344,8 +11344,10 @@ class C
             Assert.False(m1Tuple.IsImplicitlyDeclared);
             Assert.True(m1Tuple.IsTupleType);
             Assert.Equal("System.ValueTuple<System.Int32, System.Int32>", m1Tuple.TupleUnderlyingType.ToTestDisplayString());
-            Assert.Same(m1Tuple, m1Tuple.ConstructedFrom);
-            Assert.Same(m1Tuple, m1Tuple.OriginalDefinition);
+            Assert.NotSame(m1Tuple, m1Tuple.ConstructedFrom);
+            Assert.Same(m1Tuple.ConstructedFrom, m1Tuple.TupleUnderlyingType.ConstructedFrom);
+            Assert.NotSame(m1Tuple, m1Tuple.OriginalDefinition);
+            Assert.Same(m1Tuple.OriginalDefinition, m1Tuple.TupleUnderlyingType.OriginalDefinition);
             AssertTupleTypeEquality(m1Tuple);
             Assert.Same(m1Tuple.TupleUnderlyingType.ContainingSymbol, m1Tuple.ContainingSymbol);
             Assert.Null(m1Tuple.GetUseSiteDiagnostic());

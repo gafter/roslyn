@@ -684,6 +684,10 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                     if (this.Equals(t2, comparison)) return true;
                 }
             }
+            else
+            {
+                if (this.IsTupleType != t2.IsTupleType) return false;
+            }
 
             NamedTypeSymbol other = t2 as NamedTypeSymbol;
             if ((object)other == null) return false;
