@@ -385,6 +385,7 @@ namespace Microsoft.CodeAnalysis.CSharp
         ///   the "value" parameter for a property setter,
         ///   the parameters on indexer accessor methods (not on the indexer itself),
         ///   methods in anonymous types,
+        ///   tuple types,
         /// </summary>
         public virtual bool IsImplicitlyDeclared
         {

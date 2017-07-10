@@ -1146,6 +1146,11 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             }
         }
 
+        /// <summary>
+        /// The locations in source where the tuple type originated. Note that, unlike for most
+        /// other constructed types, this differs from the locations of the underlying type that
+        /// the tuple type was constructed from.
+        /// </summary>
         public override ImmutableArray<Location> Locations
         {
             get
@@ -1266,7 +1271,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
         {
             get
             {
-                return 0;
+                return _underlyingType.Arity;
             }
         }
 
@@ -1274,20 +1279,28 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
         {
             get
             {
-                return ImmutableArray<TypeParameterSymbol>.Empty;
+                return _underlyingType.TypeParameters;
+            }
+        }
+
+        internal override TypeMap TypeSubstitution
+        {
+            get
+            {
+                return _underlyingType.TypeSubstitution;
             }
         }
 
         public override ImmutableArray<CustomModifier> GetTypeArgumentCustomModifiers(int ordinal)
         {
-            return GetEmptyTypeArgumentCustomModifiers(ordinal);
+            return _underlyingType.GetTypeArgumentCustomModifiers(ordinal);
         }
 
         internal override bool HasTypeArgumentsCustomModifiers
         {
             get
             {
-                return false;
+                return _underlyingType.HasTypeArgumentsCustomModifiers;
             }
         }
 
@@ -1295,7 +1308,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
         {
             get
             {
-                return ImmutableArray<TypeSymbol>.Empty;
+                return _underlyingType.TypeArgumentsNoUseSiteDiagnostics;
             }
         }
 
@@ -1303,7 +1316,15 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
         {
             get
             {
-                return this;
+                return _underlyingType.ConstructedFrom;
+            }
+        }
+
+        public override NamedTypeSymbol OriginalDefinition
+        {
+            get
+            {
+                return _underlyingType.OriginalDefinition;
             }
         }
 
