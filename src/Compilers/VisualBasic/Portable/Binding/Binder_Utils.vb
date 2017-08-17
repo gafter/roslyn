@@ -205,7 +205,7 @@ Namespace Microsoft.CodeAnalysis.VisualBasic
                     '  Note: Need to be present both MustInherit & NotInheritable for properly reporting #30926
                     foundModifiers = foundModifiers Or currentModifier
                 Else
-                    If currentModifier = SourceMemberFlags.Private Or currentModifier = SourceMemberFlags.Protected Then
+                    If currentModifier = SourceMemberFlags.Private OrElse currentModifier = SourceMemberFlags.Protected Then
                         privateProtectedToken = keywordSyntax
                     End If
                     foundModifiers = foundModifiers Or currentModifier
@@ -220,16 +220,11 @@ Namespace Microsoft.CodeAnalysis.VisualBasic
                 access = Accessibility.ProtectedOrFriend
             ElseIf (foundModifiers And (SourceMemberFlags.Private Or SourceMemberFlags.Protected)) = (SourceMemberFlags.Private Or SourceMemberFlags.Protected) Then
                 access = Accessibility.ProtectedAndFriend
-                Dim feature = InternalSyntax.Feature.PrivateProtected
-                Dim requiredVersion = Microsoft.CodeAnalysis.VisualBasic.Syntax.InternalSyntax.FeatureExtensions.GetLanguageVersion(feature)
-                Dim currentVersion = CType(privateProtectedToken.Parent.SyntaxTree.Options, VisualBasicParseOptions).LanguageVersion
-                If requiredVersion > currentVersion Then
-                    ' The Private Protected feature is not supported in this language version
-                    ReportDiagnostic(diagBag, privateProtectedToken, ERRID.ERR_LanguageVersion,
-                                     currentVersion.GetErrorName(),
-                                     ErrorFactory.ErrorInfo(Microsoft.CodeAnalysis.VisualBasic.Syntax.InternalSyntax.FeatureExtensions.GetResourceId(feature)),
-                                     New VisualBasicRequiredLanguageVersion(requiredVersion))
-                End If
+                InternalSyntax.Parser.CheckFeatureAvailability(
+                    diagBag,
+                    privateProtectedToken.GetLocation(),
+                    DirectCast(privateProtectedToken.SyntaxTree, VisualBasicSyntaxTree).Options.LanguageVersion,
+                    InternalSyntax.Feature.PrivateProtected)
             ElseIf (foundModifiers And SourceMemberFlags.Friend) <> 0 Then
                 access = Accessibility.Friend
             ElseIf (foundModifiers And SourceMemberFlags.Protected) <> 0 Then
@@ -691,58 +686,58 @@ Namespace Microsoft.CodeAnalysis.VisualBasic
                 End If
 
                 ' default type is object.
-                Return GetSpecialType(SpecialType.System_Object, identifier, diagBag)
+                Return GetSpecialType(specialType.System_Object, identifier, diagBag)
             End If
         End Function
 
         Public Shared Function GetSpecialTypeForTypeCharacter(typeChar As TypeCharacter, ByRef typeCharacterString As String) As SpecialType
-            Dim specialType As SpecialType = SpecialType.None
+            Dim specialType As SpecialType = specialType.None
 
             Select Case typeChar
                 Case TypeCharacter.Decimal
-                    specialType = SpecialType.System_Decimal
+                    specialType = specialType.System_Decimal
                     typeCharacterString = "@"
                 Case TypeCharacter.DecimalLiteral
-                    specialType = SpecialType.System_Decimal
+                    specialType = specialType.System_Decimal
                     typeCharacterString = "D"
                 Case TypeCharacter.Double
-                    specialType = SpecialType.System_Double
+                    specialType = specialType.System_Double
                     typeCharacterString = "#"
                 Case TypeCharacter.DoubleLiteral
-                    specialType = SpecialType.System_Double
+                    specialType = specialType.System_Double
                     typeCharacterString = "R"
                 Case TypeCharacter.Integer
-                    specialType = SpecialType.System_Int32
+                    specialType = specialType.System_Int32
                     typeCharacterString = "%"
                 Case TypeCharacter.IntegerLiteral
-                    specialType = SpecialType.System_Int32
+                    specialType = specialType.System_Int32
                     typeCharacterString = "I"
                 Case TypeCharacter.Long
-                    specialType = SpecialType.System_Int64
+                    specialType = specialType.System_Int64
                     typeCharacterString = "&"
                 Case TypeCharacter.LongLiteral
-                    specialType = SpecialType.System_Int64
+                    specialType = specialType.System_Int64
                     typeCharacterString = "L"
                 Case TypeCharacter.ShortLiteral
-                    specialType = SpecialType.System_Int16
+                    specialType = specialType.System_Int16
                     typeCharacterString = "S"
                 Case TypeCharacter.Single
-                    specialType = SpecialType.System_Single
+                    specialType = specialType.System_Single
                     typeCharacterString = "!"
                 Case TypeCharacter.SingleLiteral
-                    specialType = SpecialType.System_Single
+                    specialType = specialType.System_Single
                     typeCharacterString = "F"
                 Case TypeCharacter.String
-                    specialType = SpecialType.System_String
+                    specialType = specialType.System_String
                     typeCharacterString = "$"
                 Case TypeCharacter.UIntegerLiteral
-                    specialType = SpecialType.System_UInt32
+                    specialType = specialType.System_UInt32
                     typeCharacterString = "UI"
                 Case TypeCharacter.ULongLiteral
-                    specialType = SpecialType.System_UInt64
+                    specialType = specialType.System_UInt64
                     typeCharacterString = "UL"
                 Case TypeCharacter.UShortLiteral
-                    specialType = SpecialType.System_UInt16
+                    specialType = specialType.System_UInt16
                     typeCharacterString = "US"
                 Case TypeCharacter.None
                     typeCharacterString = Nothing
@@ -1154,7 +1149,7 @@ Namespace Microsoft.CodeAnalysis.VisualBasic
             End If
 
             Select Case container.TypeKind
-                Case TypeKind.Module
+                Case TYPEKIND.Module
                     ' Don't allow overloads in module
                     If (flags And SourceMemberFlags.Overloads) <> 0 Then
                         ReportModifierError(modifierList, ERRID.ERR_OverloadsModifierInModule, diagBag, SyntaxKind.OverloadsKeyword)
@@ -1173,7 +1168,7 @@ Namespace Microsoft.CodeAnalysis.VisualBasic
 
                     memberModifiers = New MemberModifiers(flags, memberModifiers.ComputedFlags Or SourceMemberFlags.Shared)
 
-                Case TypeKind.Interface
+                Case TYPEKIND.Interface
                     If (flags And SourceMemberFlags.InvalidInInterface) <> 0 Then
                         ReportModifierError(modifierList, If(isProperty, ERRID.ERR_BadInterfacePropertyFlags1, ERRID.ERR_BadInterfaceMethodFlags1), diagBag, InvalidModifiersInInterface)
                         flags = flags And Not SourceMemberFlags.InvalidInInterface
@@ -1182,7 +1177,7 @@ Namespace Microsoft.CodeAnalysis.VisualBasic
                     ' Interface members are always public and always implicitly MustOverride.
                     memberModifiers = New MemberModifiers(flags, memberModifiers.ComputedFlags Or SourceMemberFlags.MustOverride)
 
-                Case TypeKind.Structure
+                Case TYPEKIND.Structure
                     If (flags And SourceMemberFlags.Protected) <> 0 AndAlso (flags And SourceMemberFlags.Overrides) = 0 Then
                         ReportModifierError(modifierList, If(isProperty, ERRID.ERR_StructCantUseVarSpecifier1, ERRID.ERR_StructureCantUseProtected), diagBag, SyntaxKind.ProtectedKeyword)
 
@@ -1234,7 +1229,7 @@ Namespace Microsoft.CodeAnalysis.VisualBasic
             Dim flags = memberModifiers.FoundFlags
 
             Select Case container.TypeKind
-                Case TypeKind.Module
+                Case TYPEKIND.Module
                     ' Members in module are implicitly Shared, and cannot be explicitly Shared.
                     If (flags And SourceMemberFlags.InvalidInModule) <> 0 Then
                         ReportModifierError(modifierList, ERRID.ERR_ModuleCantUseEventSpecifier1, diagBag, InvalidModifiersInModule)
@@ -1246,7 +1241,7 @@ Namespace Microsoft.CodeAnalysis.VisualBasic
 
                     memberModifiers = New MemberModifiers(flags, memberModifiers.ComputedFlags Or SourceMemberFlags.Shared)
 
-                Case TypeKind.Interface
+                Case TYPEKIND.Interface
                     If (flags And SourceMemberFlags.InvalidInInterface) <> 0 Then
                         ReportModifierError(modifierList, ERRID.ERR_InterfaceCantUseEventSpecifier1, diagBag, InvalidModifiersInInterface)
                         flags = flags And Not SourceMemberFlags.InvalidInInterface
@@ -1255,7 +1250,7 @@ Namespace Microsoft.CodeAnalysis.VisualBasic
                     ' Interface members are always public and always implicitly MustOverride.
                     memberModifiers = New MemberModifiers(flags, memberModifiers.ComputedFlags Or SourceMemberFlags.MustOverride)
 
-                Case TypeKind.Structure
+                Case TYPEKIND.Structure
                     If (flags And SourceMemberFlags.Protected) <> 0 Then
                         ReportModifierError(modifierList, ERRID.ERR_StructureCantUseProtected, diagBag, SyntaxKind.ProtectedKeyword)
 
