@@ -144,6 +144,9 @@ Namespace Microsoft.CodeAnalysis.VisualBasic
                                         diagBag As DiagnosticBag) As MemberModifiers
             Dim foundModifiers As SourceMemberFlags = Nothing
             Dim privateProtectedToken As SyntaxToken = Nothing
+            Dim privateOverridableModifier As SyntaxToken = Nothing
+            Dim privateMustOverrideModifier As SyntaxToken = Nothing
+            Dim privateNotOverridableModifier As SyntaxToken = Nothing
 
             ' Go through each modifiers, accumulating flags of what we've seen and reporting errors.
             For Each keywordSyntax In syntax
@@ -180,16 +183,19 @@ Namespace Microsoft.CodeAnalysis.VisualBasic
                     ReportDiagnostic(diagBag, keywordSyntax, ERRID.ERR_OverridesImpliesOverridable)
                 ElseIf (currentModifier And SourceMemberFlags.PrivateOverridableModifiers) <> 0 AndAlso
                        (foundModifiers And SourceMemberFlags.PrivateOverridableModifiers) <> 0 Then
-                    ReportDiagnostic(diagBag, keywordSyntax, ERRID.ERR_BadSpecifierCombo2, "Private", "Overridable")
+                    privateOverridableModifier = keywordSyntax
+                    foundModifiers = foundModifiers Or currentModifier
                 ElseIf (currentModifier And SourceMemberFlags.ShadowsAndOverrides) <> 0 AndAlso
                     (foundModifiers And SourceMemberFlags.ShadowsAndOverrides) <> 0 Then
                     ReportDiagnostic(diagBag, keywordSyntax, ERRID.ERR_BadSpecifierCombo2, "Overrides", "Shadows")
                 ElseIf (currentModifier And SourceMemberFlags.PrivateMustOverrideModifiers) <> 0 AndAlso
                        (foundModifiers And SourceMemberFlags.PrivateMustOverrideModifiers) <> 0 Then
-                    ReportDiagnostic(diagBag, keywordSyntax, ERRID.ERR_BadSpecifierCombo2, "Private", "MustOverride")
+                    privateMustOverrideModifier = keywordSyntax
+                    foundModifiers = foundModifiers Or currentModifier
                 ElseIf (currentModifier And SourceMemberFlags.PrivateNotOverridableModifiers) <> 0 AndAlso
                        (foundModifiers And SourceMemberFlags.PrivateNotOverridableModifiers) <> 0 Then
-                    ReportDiagnostic(diagBag, keywordSyntax, ERRID.ERR_BadSpecifierCombo2, "Private", "NotOverridable")
+                    privateNotOverridableModifier = keywordSyntax
+                    foundModifiers = foundModifiers Or currentModifier
                 ElseIf (currentModifier And (SourceMemberFlags.Iterator Or SourceMemberFlags.WriteOnly)) <> 0 AndAlso
                        (foundModifiers And (SourceMemberFlags.Iterator Or SourceMemberFlags.WriteOnly)) <> 0 Then
                     ReportDiagnostic(diagBag, keywordSyntax, ERRID.ERR_BadSpecifierCombo2, "Iterator", "WriteOnly")
@@ -227,6 +233,17 @@ Namespace Microsoft.CodeAnalysis.VisualBasic
                 access = Accessibility.Private
             Else
                 access = defaultAccessibility
+            End If
+
+            If access = Accessibility.Private Then
+                If (foundModifiers And SourceMemberFlags.Overridable) <> 0 Then
+                    ReportDiagnostic(diagBag, privateOverridableModifier, ERRID.ERR_BadSpecifierCombo2, "Private", "Overridable")
+                ElseIf (foundModifiers And SourceMemberFlags.MustOverride) <> 0 Then
+                    ReportDiagnostic(diagBag, privateMustOverrideModifier, ERRID.ERR_BadSpecifierCombo2, "Private", "MustOverride")
+                ElseIf (foundModifiers And SourceMemberFlags.NotOverridable) <> 0 Then
+                    ReportDiagnostic(diagBag, privateNotOverridableModifier, ERRID.ERR_BadSpecifierCombo2, "Private", "NotOverridable")
+                End If
+                foundModifiers = foundModifiers And Not (SourceMemberFlags.Overridable Or SourceMemberFlags.MustOverride Or SourceMemberFlags.NotOverridable)
             End If
 
             ' Add accessibility into the flags.
@@ -669,58 +686,58 @@ Namespace Microsoft.CodeAnalysis.VisualBasic
                 End If
 
                 ' default type is object.
-                Return GetSpecialType(SpecialType.System_Object, identifier, diagBag)
+                Return GetSpecialType(specialType.System_Object, identifier, diagBag)
             End If
         End Function
 
         Public Shared Function GetSpecialTypeForTypeCharacter(typeChar As TypeCharacter, ByRef typeCharacterString As String) As SpecialType
-            Dim specialType As SpecialType = SpecialType.None
+            Dim specialType As SpecialType = specialType.None
 
             Select Case typeChar
                 Case TypeCharacter.Decimal
-                    specialType = SpecialType.System_Decimal
+                    specialType = specialType.System_Decimal
                     typeCharacterString = "@"
                 Case TypeCharacter.DecimalLiteral
-                    specialType = SpecialType.System_Decimal
+                    specialType = specialType.System_Decimal
                     typeCharacterString = "D"
                 Case TypeCharacter.Double
-                    specialType = SpecialType.System_Double
+                    specialType = specialType.System_Double
                     typeCharacterString = "#"
                 Case TypeCharacter.DoubleLiteral
-                    specialType = SpecialType.System_Double
+                    specialType = specialType.System_Double
                     typeCharacterString = "R"
                 Case TypeCharacter.Integer
-                    specialType = SpecialType.System_Int32
+                    specialType = specialType.System_Int32
                     typeCharacterString = "%"
                 Case TypeCharacter.IntegerLiteral
-                    specialType = SpecialType.System_Int32
+                    specialType = specialType.System_Int32
                     typeCharacterString = "I"
                 Case TypeCharacter.Long
-                    specialType = SpecialType.System_Int64
+                    specialType = specialType.System_Int64
                     typeCharacterString = "&"
                 Case TypeCharacter.LongLiteral
-                    specialType = SpecialType.System_Int64
+                    specialType = specialType.System_Int64
                     typeCharacterString = "L"
                 Case TypeCharacter.ShortLiteral
-                    specialType = SpecialType.System_Int16
+                    specialType = specialType.System_Int16
                     typeCharacterString = "S"
                 Case TypeCharacter.Single
-                    specialType = SpecialType.System_Single
+                    specialType = specialType.System_Single
                     typeCharacterString = "!"
                 Case TypeCharacter.SingleLiteral
-                    specialType = SpecialType.System_Single
+                    specialType = specialType.System_Single
                     typeCharacterString = "F"
                 Case TypeCharacter.String
-                    specialType = SpecialType.System_String
+                    specialType = specialType.System_String
                     typeCharacterString = "$"
                 Case TypeCharacter.UIntegerLiteral
-                    specialType = SpecialType.System_UInt32
+                    specialType = specialType.System_UInt32
                     typeCharacterString = "UI"
                 Case TypeCharacter.ULongLiteral
-                    specialType = SpecialType.System_UInt64
+                    specialType = specialType.System_UInt64
                     typeCharacterString = "UL"
                 Case TypeCharacter.UShortLiteral
-                    specialType = SpecialType.System_UInt16
+                    specialType = specialType.System_UInt16
                     typeCharacterString = "US"
                 Case TypeCharacter.None
                     typeCharacterString = Nothing
@@ -1132,7 +1149,7 @@ Namespace Microsoft.CodeAnalysis.VisualBasic
             End If
 
             Select Case container.TypeKind
-                Case TypeKind.Module
+                Case TYPEKIND.Module
                     ' Don't allow overloads in module
                     If (flags And SourceMemberFlags.Overloads) <> 0 Then
                         ReportModifierError(modifierList, ERRID.ERR_OverloadsModifierInModule, diagBag, SyntaxKind.OverloadsKeyword)
@@ -1151,7 +1168,7 @@ Namespace Microsoft.CodeAnalysis.VisualBasic
 
                     memberModifiers = New MemberModifiers(flags, memberModifiers.ComputedFlags Or SourceMemberFlags.Shared)
 
-                Case TypeKind.Interface
+                Case TYPEKIND.Interface
                     If (flags And SourceMemberFlags.InvalidInInterface) <> 0 Then
                         ReportModifierError(modifierList, If(isProperty, ERRID.ERR_BadInterfacePropertyFlags1, ERRID.ERR_BadInterfaceMethodFlags1), diagBag, InvalidModifiersInInterface)
                         flags = flags And Not SourceMemberFlags.InvalidInInterface
@@ -1160,7 +1177,7 @@ Namespace Microsoft.CodeAnalysis.VisualBasic
                     ' Interface members are always public and always implicitly MustOverride.
                     memberModifiers = New MemberModifiers(flags, memberModifiers.ComputedFlags Or SourceMemberFlags.MustOverride)
 
-                Case TypeKind.Structure
+                Case TYPEKIND.Structure
                     If (flags And SourceMemberFlags.Protected) <> 0 AndAlso (flags And SourceMemberFlags.Overrides) = 0 Then
                         ReportModifierError(modifierList, If(isProperty, ERRID.ERR_StructCantUseVarSpecifier1, ERRID.ERR_StructureCantUseProtected), diagBag, SyntaxKind.ProtectedKeyword)
 
@@ -1212,7 +1229,7 @@ Namespace Microsoft.CodeAnalysis.VisualBasic
             Dim flags = memberModifiers.FoundFlags
 
             Select Case container.TypeKind
-                Case TypeKind.Module
+                Case TYPEKIND.Module
                     ' Members in module are implicitly Shared, and cannot be explicitly Shared.
                     If (flags And SourceMemberFlags.InvalidInModule) <> 0 Then
                         ReportModifierError(modifierList, ERRID.ERR_ModuleCantUseEventSpecifier1, diagBag, InvalidModifiersInModule)
@@ -1224,7 +1241,7 @@ Namespace Microsoft.CodeAnalysis.VisualBasic
 
                     memberModifiers = New MemberModifiers(flags, memberModifiers.ComputedFlags Or SourceMemberFlags.Shared)
 
-                Case TypeKind.Interface
+                Case TYPEKIND.Interface
                     If (flags And SourceMemberFlags.InvalidInInterface) <> 0 Then
                         ReportModifierError(modifierList, ERRID.ERR_InterfaceCantUseEventSpecifier1, diagBag, InvalidModifiersInInterface)
                         flags = flags And Not SourceMemberFlags.InvalidInInterface
@@ -1233,7 +1250,7 @@ Namespace Microsoft.CodeAnalysis.VisualBasic
                     ' Interface members are always public and always implicitly MustOverride.
                     memberModifiers = New MemberModifiers(flags, memberModifiers.ComputedFlags Or SourceMemberFlags.MustOverride)
 
-                Case TypeKind.Structure
+                Case TYPEKIND.Structure
                     If (flags And SourceMemberFlags.Protected) <> 0 Then
                         ReportModifierError(modifierList, ERRID.ERR_StructureCantUseProtected, diagBag, SyntaxKind.ProtectedKeyword)
 
