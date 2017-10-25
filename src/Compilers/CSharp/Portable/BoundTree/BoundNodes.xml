@@ -1612,6 +1612,13 @@
   <Node Name="BoundWildcardPattern" Base="BoundPattern">
   </Node>
 
+  <Node Name="BoundRecursivePattern" Base="BoundPattern">
+    <Field Name="TypeOpt" Type="TypeSymbol" Null="allow"/>
+    <Field Name="DeconstructionOpt" Type="ImmutableArray&lt;BoundPattern&gt;" Null="allow"/>
+    <Field Name="PropertiesOpt" Type="ImmutableArray&lt;(Symbol symbol, BoundPattern pattern)&gt;" Null="allow"/>
+    <Field Name="Binding" Type="LocalSymbol" Null="allow"/>
+  </Node>
+
   <Node Name="BoundDiscardExpression" Base="BoundExpression">
     <!-- A discarded value, when a designator uses `_`. When the type is given as `var, its Type
          is null before type inference, and it is replaced by a BoundDiscardExpression with a non-null

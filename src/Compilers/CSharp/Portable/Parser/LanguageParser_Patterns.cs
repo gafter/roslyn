@@ -221,10 +221,47 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
             }
         }
 
-        // Priority is the ExpressionSyntax. It might return ExpressionSyntax which might be a constant pattern such as 'case 3:' 
-        // All constant expressions are converted to the constant pattern in the switch binder if it is a match statement.
-        // It is used for parsing patterns in the switch cases. It never returns constant pattern, because for a `case` we
-        // need to use a pre-pattern-matching syntax node for a constant case.
+        /// <summary>
+        /// Here is the grammar being parsed:
+        /// ``` antlr
+        /// pattern
+        /// 	: declaration_pattern
+        /// 	| constant_pattern
+        /// 	| deconstruction_pattern
+        /// 	| property_pattern
+        /// 	;
+        /// declaration_pattern
+        /// 	: type identifier
+        /// 	;
+        /// constant_pattern
+        /// 	: expression
+        /// 	;
+        /// deconstruction_pattern
+        /// 	: type? '(' subpatterns? ')' property_subpattern? identifier?
+        /// 	;
+        /// subpatterns
+        /// 	: subpattern
+        /// 	| subpattern ',' subpatterns
+        /// 	;
+        /// subpattern
+        /// 	: pattern
+        /// 	| identifier ':' pattern
+        /// 	;
+        /// property_subpattern
+        /// 	: '{' subpatterns? '}'
+        /// 	;
+        /// property_pattern
+        /// 	: property_subpattern identifier?
+        /// 	;
+        /// ```
+        ///
+        /// Priority is the ExpressionSyntax. It might return ExpressionSyntax which might be a constant pattern such as 'case 3:' 
+        /// All constant expressions are converted to the constant pattern in the switch binder if it is a match statement.
+        /// It is used for parsing patterns in the switch cases. It never returns constant pattern, because for a `case` we
+        /// need to use a pre-pattern-matching syntax node for a constant case.
+        /// </summary>
+        /// <param name="forCase">prevents the use of "when" for the identifier</param>
+        /// <returns></returns>
         private CSharpSyntaxNode ParseExpressionOrPattern(bool forCase)
         {
             // handle common error recovery situations during typing
