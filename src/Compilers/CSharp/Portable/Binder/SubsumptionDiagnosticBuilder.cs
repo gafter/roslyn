@@ -27,7 +27,7 @@ namespace Microsoft.CodeAnalysis.CSharp
         {
             // For the purpose of computing subsumption, we ignore the input expression's constant
             // value. Therefore we create a fake expression here that doesn't contain the value.
-            var placeholderExpression = new BoundDup(syntax, RefKind.None, switchGoverningType);
+            var placeholderExpression = new BoundImplicitReceiver(syntax, switchGoverningType);
             _subsumptionTree = CreateEmptyDecisionTree(placeholderExpression);
         }
 

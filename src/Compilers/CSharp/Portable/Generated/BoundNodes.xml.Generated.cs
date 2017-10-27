@@ -162,9 +162,10 @@ namespace Microsoft.CodeAnalysis.CSharp
         InterpolatedString,
         StringInsert,
         IsPatternExpression,
-        DeclarationPattern,
         ConstantPattern,
         WildcardPattern,
+        DeclarationPattern,
+        RecursivePattern,
         DiscardExpression,
         ThrowExpression,
         OutVariablePendingInference,
@@ -5896,46 +5897,6 @@ namespace Microsoft.CodeAnalysis.CSharp
 
     }
 
-    internal sealed partial class BoundDeclarationPattern : BoundPattern
-    {
-        public BoundDeclarationPattern(SyntaxNode syntax, Symbol variable, BoundExpression variableAccess, BoundTypeExpression declaredType, bool isVar, bool hasErrors = false)
-            : base(BoundKind.DeclarationPattern, syntax, hasErrors || variableAccess.HasErrors() || declaredType.HasErrors())
-        {
-
-            Debug.Assert(variableAccess != null, "Field 'variableAccess' cannot be null (use Null=\"allow\" in BoundNodes.xml to remove this check)");
-
-            this.Variable = variable;
-            this.VariableAccess = variableAccess;
-            this.DeclaredType = declaredType;
-            this.IsVar = isVar;
-        }
-
-
-        public Symbol Variable { get; }
-
-        public BoundExpression VariableAccess { get; }
-
-        public BoundTypeExpression DeclaredType { get; }
-
-        public bool IsVar { get; }
-
-        public override BoundNode Accept(BoundTreeVisitor visitor)
-        {
-            return visitor.VisitDeclarationPattern(this);
-        }
-
-        public BoundDeclarationPattern Update(Symbol variable, BoundExpression variableAccess, BoundTypeExpression declaredType, bool isVar)
-        {
-            if (variable != this.Variable || variableAccess != this.VariableAccess || declaredType != this.DeclaredType || isVar != this.IsVar)
-            {
-                var result = new BoundDeclarationPattern(this.Syntax, variable, variableAccess, declaredType, isVar, this.HasErrors);
-                result.WasCompilerGenerated = this.WasCompilerGenerated;
-                return result;
-            }
-            return this;
-        }
-    }
-
     internal sealed partial class BoundConstantPattern : BoundPattern
     {
         public BoundConstantPattern(SyntaxNode syntax, BoundExpression value, ConstantValue constantValue, bool hasErrors = false)
@@ -5986,6 +5947,96 @@ namespace Microsoft.CodeAnalysis.CSharp
         public override BoundNode Accept(BoundTreeVisitor visitor)
         {
             return visitor.VisitWildcardPattern(this);
+        }
+    }
+
+    internal sealed partial class BoundDeclarationPattern : BoundPattern
+    {
+        public BoundDeclarationPattern(SyntaxNode syntax, Symbol variable, BoundExpression variableAccess, BoundTypeExpression declaredType, bool isVar, bool hasErrors = false)
+            : base(BoundKind.DeclarationPattern, syntax, hasErrors || variableAccess.HasErrors() || declaredType.HasErrors())
+        {
+
+            Debug.Assert(variableAccess != null, "Field 'variableAccess' cannot be null (use Null=\"allow\" in BoundNodes.xml to remove this check)");
+
+            this.Variable = variable;
+            this.VariableAccess = variableAccess;
+            this.DeclaredType = declaredType;
+            this.IsVar = isVar;
+        }
+
+
+        public Symbol Variable { get; }
+
+        public BoundExpression VariableAccess { get; }
+
+        public BoundTypeExpression DeclaredType { get; }
+
+        public bool IsVar { get; }
+
+        public override BoundNode Accept(BoundTreeVisitor visitor)
+        {
+            return visitor.VisitDeclarationPattern(this);
+        }
+
+        public BoundDeclarationPattern Update(Symbol variable, BoundExpression variableAccess, BoundTypeExpression declaredType, bool isVar)
+        {
+            if (variable != this.Variable || variableAccess != this.VariableAccess || declaredType != this.DeclaredType || isVar != this.IsVar)
+            {
+                var result = new BoundDeclarationPattern(this.Syntax, variable, variableAccess, declaredType, isVar, this.HasErrors);
+                result.WasCompilerGenerated = this.WasCompilerGenerated;
+                return result;
+            }
+            return this;
+        }
+    }
+
+    internal sealed partial class BoundRecursivePattern : BoundPattern
+    {
+        public BoundRecursivePattern(SyntaxNode syntax, BoundTypeExpression declaredTypeOpt, TypeSymbol inputType, MethodSymbol deconstructMethodOpt, ImmutableArray<BoundPattern> deconstructionOpt, ImmutableArray<(Symbol symbol, BoundPattern pattern)> propertiesOpt, Symbol variable, BoundExpression variableAccess, bool hasErrors = false)
+            : base(BoundKind.RecursivePattern, syntax, hasErrors || declaredTypeOpt.HasErrors() || deconstructionOpt.HasErrors() || variableAccess.HasErrors())
+        {
+
+            Debug.Assert(inputType != null, "Field 'inputType' cannot be null (use Null=\"allow\" in BoundNodes.xml to remove this check)");
+            Debug.Assert(variableAccess != null, "Field 'variableAccess' cannot be null (use Null=\"allow\" in BoundNodes.xml to remove this check)");
+
+            this.DeclaredTypeOpt = declaredTypeOpt;
+            this.InputType = inputType;
+            this.DeconstructMethodOpt = deconstructMethodOpt;
+            this.DeconstructionOpt = deconstructionOpt;
+            this.PropertiesOpt = propertiesOpt;
+            this.Variable = variable;
+            this.VariableAccess = variableAccess;
+        }
+
+
+        public BoundTypeExpression DeclaredTypeOpt { get; }
+
+        public TypeSymbol InputType { get; }
+
+        public MethodSymbol DeconstructMethodOpt { get; }
+
+        public ImmutableArray<BoundPattern> DeconstructionOpt { get; }
+
+        public ImmutableArray<(Symbol symbol, BoundPattern pattern)> PropertiesOpt { get; }
+
+        public Symbol Variable { get; }
+
+        public BoundExpression VariableAccess { get; }
+
+        public override BoundNode Accept(BoundTreeVisitor visitor)
+        {
+            return visitor.VisitRecursivePattern(this);
+        }
+
+        public BoundRecursivePattern Update(BoundTypeExpression declaredTypeOpt, TypeSymbol inputType, MethodSymbol deconstructMethodOpt, ImmutableArray<BoundPattern> deconstructionOpt, ImmutableArray<(Symbol symbol, BoundPattern pattern)> propertiesOpt, Symbol variable, BoundExpression variableAccess)
+        {
+            if (declaredTypeOpt != this.DeclaredTypeOpt || inputType != this.InputType || deconstructMethodOpt != this.DeconstructMethodOpt || deconstructionOpt != this.DeconstructionOpt || propertiesOpt != this.PropertiesOpt || variable != this.Variable || variableAccess != this.VariableAccess)
+            {
+                var result = new BoundRecursivePattern(this.Syntax, declaredTypeOpt, inputType, deconstructMethodOpt, deconstructionOpt, propertiesOpt, variable, variableAccess, this.HasErrors);
+                result.WasCompilerGenerated = this.WasCompilerGenerated;
+                return result;
+            }
+            return this;
         }
     }
 
@@ -6440,12 +6491,14 @@ namespace Microsoft.CodeAnalysis.CSharp
                     return VisitStringInsert(node as BoundStringInsert, arg);
                 case BoundKind.IsPatternExpression: 
                     return VisitIsPatternExpression(node as BoundIsPatternExpression, arg);
-                case BoundKind.DeclarationPattern: 
-                    return VisitDeclarationPattern(node as BoundDeclarationPattern, arg);
                 case BoundKind.ConstantPattern: 
                     return VisitConstantPattern(node as BoundConstantPattern, arg);
                 case BoundKind.WildcardPattern: 
                     return VisitWildcardPattern(node as BoundWildcardPattern, arg);
+                case BoundKind.DeclarationPattern: 
+                    return VisitDeclarationPattern(node as BoundDeclarationPattern, arg);
+                case BoundKind.RecursivePattern: 
+                    return VisitRecursivePattern(node as BoundRecursivePattern, arg);
                 case BoundKind.DiscardExpression: 
                     return VisitDiscardExpression(node as BoundDiscardExpression, arg);
                 case BoundKind.ThrowExpression: 
@@ -7032,15 +7085,19 @@ namespace Microsoft.CodeAnalysis.CSharp
         {
             return this.DefaultVisit(node, arg);
         }
-        public virtual R VisitDeclarationPattern(BoundDeclarationPattern node, A arg)
-        {
-            return this.DefaultVisit(node, arg);
-        }
         public virtual R VisitConstantPattern(BoundConstantPattern node, A arg)
         {
             return this.DefaultVisit(node, arg);
         }
         public virtual R VisitWildcardPattern(BoundWildcardPattern node, A arg)
+        {
+            return this.DefaultVisit(node, arg);
+        }
+        public virtual R VisitDeclarationPattern(BoundDeclarationPattern node, A arg)
+        {
+            return this.DefaultVisit(node, arg);
+        }
+        public virtual R VisitRecursivePattern(BoundRecursivePattern node, A arg)
         {
             return this.DefaultVisit(node, arg);
         }
@@ -7636,15 +7693,19 @@ namespace Microsoft.CodeAnalysis.CSharp
         {
             return this.DefaultVisit(node);
         }
-        public virtual BoundNode VisitDeclarationPattern(BoundDeclarationPattern node)
-        {
-            return this.DefaultVisit(node);
-        }
         public virtual BoundNode VisitConstantPattern(BoundConstantPattern node)
         {
             return this.DefaultVisit(node);
         }
         public virtual BoundNode VisitWildcardPattern(BoundWildcardPattern node)
+        {
+            return this.DefaultVisit(node);
+        }
+        public virtual BoundNode VisitDeclarationPattern(BoundDeclarationPattern node)
+        {
+            return this.DefaultVisit(node);
+        }
+        public virtual BoundNode VisitRecursivePattern(BoundRecursivePattern node)
         {
             return this.DefaultVisit(node);
         }
@@ -8407,12 +8468,6 @@ namespace Microsoft.CodeAnalysis.CSharp
             this.Visit(node.Pattern);
             return null;
         }
-        public override BoundNode VisitDeclarationPattern(BoundDeclarationPattern node)
-        {
-            this.Visit(node.VariableAccess);
-            this.Visit(node.DeclaredType);
-            return null;
-        }
         public override BoundNode VisitConstantPattern(BoundConstantPattern node)
         {
             this.Visit(node.Value);
@@ -8420,6 +8475,19 @@ namespace Microsoft.CodeAnalysis.CSharp
         }
         public override BoundNode VisitWildcardPattern(BoundWildcardPattern node)
         {
+            return null;
+        }
+        public override BoundNode VisitDeclarationPattern(BoundDeclarationPattern node)
+        {
+            this.Visit(node.VariableAccess);
+            this.Visit(node.DeclaredType);
+            return null;
+        }
+        public override BoundNode VisitRecursivePattern(BoundRecursivePattern node)
+        {
+            this.Visit(node.DeclaredTypeOpt);
+            this.VisitList(node.DeconstructionOpt);
+            this.Visit(node.VariableAccess);
             return null;
         }
         public override BoundNode VisitDiscardExpression(BoundDiscardExpression node)
@@ -9287,12 +9355,6 @@ namespace Microsoft.CodeAnalysis.CSharp
             TypeSymbol type = this.VisitType(node.Type);
             return node.Update(expression, pattern, type);
         }
-        public override BoundNode VisitDeclarationPattern(BoundDeclarationPattern node)
-        {
-            BoundExpression variableAccess = (BoundExpression)this.Visit(node.VariableAccess);
-            BoundTypeExpression declaredType = (BoundTypeExpression)this.Visit(node.DeclaredType);
-            return node.Update(node.Variable, variableAccess, declaredType, node.IsVar);
-        }
         public override BoundNode VisitConstantPattern(BoundConstantPattern node)
         {
             BoundExpression value = (BoundExpression)this.Visit(node.Value);
@@ -9301,6 +9363,20 @@ namespace Microsoft.CodeAnalysis.CSharp
         public override BoundNode VisitWildcardPattern(BoundWildcardPattern node)
         {
             return node;
+        }
+        public override BoundNode VisitDeclarationPattern(BoundDeclarationPattern node)
+        {
+            BoundExpression variableAccess = (BoundExpression)this.Visit(node.VariableAccess);
+            BoundTypeExpression declaredType = (BoundTypeExpression)this.Visit(node.DeclaredType);
+            return node.Update(node.Variable, variableAccess, declaredType, node.IsVar);
+        }
+        public override BoundNode VisitRecursivePattern(BoundRecursivePattern node)
+        {
+            BoundTypeExpression declaredTypeOpt = (BoundTypeExpression)this.Visit(node.DeclaredTypeOpt);
+            ImmutableArray<BoundPattern> deconstructionOpt = (ImmutableArray<BoundPattern>)this.VisitList(node.DeconstructionOpt);
+            BoundExpression variableAccess = (BoundExpression)this.Visit(node.VariableAccess);
+            TypeSymbol inputType = this.VisitType(node.InputType);
+            return node.Update(declaredTypeOpt, inputType, node.DeconstructMethodOpt, deconstructionOpt, node.PropertiesOpt, node.Variable, variableAccess);
         }
         public override BoundNode VisitDiscardExpression(BoundDiscardExpression node)
         {
@@ -10826,17 +10902,6 @@ namespace Microsoft.CodeAnalysis.CSharp
             }
             );
         }
-        public override TreeDumperNode VisitDeclarationPattern(BoundDeclarationPattern node, object arg)
-        {
-            return new TreeDumperNode("declarationPattern", null, new TreeDumperNode[]
-            {
-                new TreeDumperNode("variable", node.Variable, null),
-                new TreeDumperNode("variableAccess", null, new TreeDumperNode[] { Visit(node.VariableAccess, null) }),
-                new TreeDumperNode("declaredType", null, new TreeDumperNode[] { Visit(node.DeclaredType, null) }),
-                new TreeDumperNode("isVar", node.IsVar, null)
-            }
-            );
-        }
         public override TreeDumperNode VisitConstantPattern(BoundConstantPattern node, object arg)
         {
             return new TreeDumperNode("constantPattern", null, new TreeDumperNode[]
@@ -10849,6 +10914,31 @@ namespace Microsoft.CodeAnalysis.CSharp
         public override TreeDumperNode VisitWildcardPattern(BoundWildcardPattern node, object arg)
         {
             return new TreeDumperNode("wildcardPattern", null, Array.Empty<TreeDumperNode>()
+            );
+        }
+        public override TreeDumperNode VisitDeclarationPattern(BoundDeclarationPattern node, object arg)
+        {
+            return new TreeDumperNode("declarationPattern", null, new TreeDumperNode[]
+            {
+                new TreeDumperNode("variable", node.Variable, null),
+                new TreeDumperNode("variableAccess", null, new TreeDumperNode[] { Visit(node.VariableAccess, null) }),
+                new TreeDumperNode("declaredType", null, new TreeDumperNode[] { Visit(node.DeclaredType, null) }),
+                new TreeDumperNode("isVar", node.IsVar, null)
+            }
+            );
+        }
+        public override TreeDumperNode VisitRecursivePattern(BoundRecursivePattern node, object arg)
+        {
+            return new TreeDumperNode("recursivePattern", null, new TreeDumperNode[]
+            {
+                new TreeDumperNode("declaredTypeOpt", null, new TreeDumperNode[] { Visit(node.DeclaredTypeOpt, null) }),
+                new TreeDumperNode("inputType", node.InputType, null),
+                new TreeDumperNode("deconstructMethodOpt", node.DeconstructMethodOpt, null),
+                new TreeDumperNode("deconstructionOpt", null, node.DeconstructionOpt.IsDefault ? Array.Empty<TreeDumperNode>() : from x in node.DeconstructionOpt select Visit(x, null)),
+                new TreeDumperNode("propertiesOpt", node.PropertiesOpt, null),
+                new TreeDumperNode("variable", node.Variable, null),
+                new TreeDumperNode("variableAccess", null, new TreeDumperNode[] { Visit(node.VariableAccess, null) })
+            }
             );
         }
         public override TreeDumperNode VisitDiscardExpression(BoundDiscardExpression node, object arg)
