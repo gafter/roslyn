@@ -316,7 +316,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                         }
 
                         variableSymbol = localSymbol;
-                        variableAccess = null;
+                        variableAccess = new BoundLocal(node, localSymbol, null, declType);
                         return;
                     }
                     else
@@ -406,7 +406,7 @@ namespace Microsoft.CodeAnalysis.CSharp
 
                 for (int i = 0; i < node.SubPatterns.Count; i++)
                 {
-                    bool isError = i >= outPlaceholders.Length;
+                    bool isError = outPlaceholders.IsDefaultOrEmpty || i >= outPlaceholders.Length;
                     var elementType = isError ? CreateErrorType() : outPlaceholders[i].Type;
                     // PROTOTYPE(patterns2): Check that node.SubPatterns[i].NameColon?.Name corresponds to parameter i of the method. Or,
                     // better yet, include those names in the AnalyzedArguments used in MakeDeconstructInvocationExpression so they are
@@ -426,8 +426,8 @@ namespace Microsoft.CodeAnalysis.CSharp
 
             BindPatternDesignation(node, node.Designation, declType, typeSyntax, diagnostics, ref hasErrors, out var variableSymbol, out var variableAccess);
             return new BoundRecursivePattern(
-                syntax: node, declaredTypeOpt: boundDeclType, inputType: declType, deconstructMethodOpt: deconstructMethod,
-                deconstructionOpt: patterns.ToImmutableAndFree(), propertiesOpt: propertiesOpt, variable: variableSymbol, variableAccess: variableAccess, hasErrors: hasErrors);
+                syntax: node, declaredType: boundDeclType, inputType: declType, deconstructMethodOpt: deconstructMethod,
+                deconstruction: patterns.ToImmutableAndFree(), propertiesOpt: propertiesOpt, variable: variableSymbol, variableAccess: variableAccess, hasErrors: hasErrors);
         }
 
         private BoundPattern BindPropertyPattern(PropertyPatternSyntax node, TypeSymbol operandType, bool hasErrors, DiagnosticBag diagnostics)
@@ -437,8 +437,8 @@ namespace Microsoft.CodeAnalysis.CSharp
             ImmutableArray<(Symbol property, BoundPattern pattern)> propertiesOpt = BindPropertySubpattern(node.PropertySubpattern, declType, diagnostics, ref hasErrors);
             BindPatternDesignation(node, node.Designation, declType, typeSyntax, diagnostics, ref hasErrors, out var variableSymbol, out var variableAccess);
             return new BoundRecursivePattern(
-                syntax: node, declaredTypeOpt: boundDeclType, inputType: declType, deconstructMethodOpt: null,
-                deconstructionOpt: default, propertiesOpt: propertiesOpt, variable: variableSymbol, variableAccess: variableAccess, hasErrors: hasErrors);
+                syntax: node, declaredType: boundDeclType, inputType: declType, deconstructMethodOpt: null,
+                deconstruction: default, propertiesOpt: propertiesOpt, variable: variableSymbol, variableAccess: variableAccess, hasErrors: hasErrors);
         }
 
         ImmutableArray<(Symbol property, BoundPattern pattern)> BindPropertySubpattern(
@@ -497,7 +497,6 @@ namespace Microsoft.CodeAnalysis.CSharp
             DiagnosticBag diagnostics)
         {
             // TODO: consider refactoring out common code with BindObjectInitializerMember
-
             BoundImplicitReceiver implicitReceiver = new BoundImplicitReceiver(memberName, inputType);
             string name = memberName.Identifier.ValueText;
 
@@ -530,6 +529,8 @@ namespace Microsoft.CodeAnalysis.CSharp
                 case BoundKind.IndexerAccess:
                 case BoundKind.DynamicIndexerAccess:
                 case BoundKind.EventAccess:
+                    // PROTOTYPE(patterns2): we need to decide what kinds of members can be used in a property pattern.
+                    // For now we support fields and readable non-indexed properties.
                 default:
                     if (!hasErrors)
                     {

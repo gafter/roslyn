@@ -799,10 +799,10 @@
     <Field Name="SwitchSections" Type="ImmutableArray&lt;BoundPatternSwitchSection&gt;"/>
     <Field Name="DefaultLabel" Type="BoundPatternSwitchLabel" Null="allow"/>
     <Field Name="BreakLabel" Type="GeneratedLabelSymbol"/>
-    
-    <!-- We store the pattern switch binder so we can perform some binding-like
-         operations during control flow analysis. -->
-    <Field Name="Binder" Type="PatternSwitchBinder"/>
+
+    <!-- A directed acyclic decision graph for the switch statement. It can be traversed
+    to determine if all labels are reachable, and if every input is handled. -->
+    <Field Name="DecisionDag" Type="DecisionDag.DecisionDag" Null="allow"/>
     <!-- A switch is considered complete if every value of the switch expression's
          type is handled by some switch label that is either not guarded by a when
          clause, or for which the when clause expression has the constant value true. -->
@@ -1607,16 +1607,16 @@
          free. The necessity of this member is a consequence of a design issue documented in
          https://github.com/dotnet/roslyn/issues/13960 . When that is fixed this field can be
          removed. -->
-    <Field Name="VariableAccess" Type="BoundExpression" Null="disallow"/>
+    <Field Name="VariableAccess" Type="BoundExpression" Null="allow"/>
     <Field Name="DeclaredType" Type="BoundTypeExpression" Null="allow"/>
     <Field Name="IsVar" Type="bool"/>
   </Node>
 
   <Node Name="BoundRecursivePattern" Base="BoundPattern">
-    <Field Name="DeclaredTypeOpt" Type="BoundTypeExpression" Null="allow"/>
+    <Field Name="DeclaredType" Type="BoundTypeExpression" Null="allow"/>
     <Field Name="InputType" Type="TypeSymbol"/>
     <Field Name="DeconstructMethodOpt" Type="MethodSymbol" Null="allow"/>
-    <Field Name="DeconstructionOpt" Type="ImmutableArray&lt;BoundPattern&gt;" Null="allow"/>
+    <Field Name="Deconstruction" Type="ImmutableArray&lt;BoundPattern&gt;"/>
     <Field Name="PropertiesOpt" Type="ImmutableArray&lt;(Symbol symbol, BoundPattern pattern)&gt;" Null="allow"/>
     <!-- Variable is a local symbol, or in the case of top-level code in scripts and interactive,
          a field that is a member of the script class. Variable is null if `_` is used or if the identifier is omitted. -->
@@ -1628,7 +1628,7 @@
          free. The necessity of this member is a consequence of a design issue documented in
          https://github.com/dotnet/roslyn/issues/13960 . When that is fixed this field can be
          removed. -->
-    <Field Name="VariableAccess" Type="BoundExpression" Null="disallow"/>
+    <Field Name="VariableAccess" Type="BoundExpression" Null="allow"/>
   </Node>
 
   <Node Name="BoundDiscardExpression" Base="BoundExpression">

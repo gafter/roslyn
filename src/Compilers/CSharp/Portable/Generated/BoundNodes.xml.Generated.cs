@@ -2810,7 +2810,7 @@ namespace Microsoft.CodeAnalysis.CSharp
 
     internal sealed partial class BoundPatternSwitchStatement : BoundStatement
     {
-        public BoundPatternSwitchStatement(SyntaxNode syntax, BoundExpression expression, bool someLabelAlwaysMatches, ImmutableArray<LocalSymbol> innerLocals, ImmutableArray<LocalFunctionSymbol> innerLocalFunctions, ImmutableArray<BoundPatternSwitchSection> switchSections, BoundPatternSwitchLabel defaultLabel, GeneratedLabelSymbol breakLabel, PatternSwitchBinder binder, bool isComplete, bool hasErrors = false)
+        public BoundPatternSwitchStatement(SyntaxNode syntax, BoundExpression expression, bool someLabelAlwaysMatches, ImmutableArray<LocalSymbol> innerLocals, ImmutableArray<LocalFunctionSymbol> innerLocalFunctions, ImmutableArray<BoundPatternSwitchSection> switchSections, BoundPatternSwitchLabel defaultLabel, GeneratedLabelSymbol breakLabel, DecisionDag.DecisionDag decisionDag, bool isComplete, bool hasErrors = false)
             : base(BoundKind.PatternSwitchStatement, syntax, hasErrors || expression.HasErrors() || switchSections.HasErrors() || defaultLabel.HasErrors())
         {
 
@@ -2819,7 +2819,6 @@ namespace Microsoft.CodeAnalysis.CSharp
             Debug.Assert(!innerLocalFunctions.IsDefault, "Field 'innerLocalFunctions' cannot be null (use Null=\"allow\" in BoundNodes.xml to remove this check)");
             Debug.Assert(!switchSections.IsDefault, "Field 'switchSections' cannot be null (use Null=\"allow\" in BoundNodes.xml to remove this check)");
             Debug.Assert(breakLabel != null, "Field 'breakLabel' cannot be null (use Null=\"allow\" in BoundNodes.xml to remove this check)");
-            Debug.Assert(binder != null, "Field 'binder' cannot be null (use Null=\"allow\" in BoundNodes.xml to remove this check)");
 
             this.Expression = expression;
             this.SomeLabelAlwaysMatches = someLabelAlwaysMatches;
@@ -2828,7 +2827,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             this.SwitchSections = switchSections;
             this.DefaultLabel = defaultLabel;
             this.BreakLabel = breakLabel;
-            this.Binder = binder;
+            this.DecisionDag = decisionDag;
             this.IsComplete = isComplete;
         }
 
@@ -2847,7 +2846,7 @@ namespace Microsoft.CodeAnalysis.CSharp
 
         public GeneratedLabelSymbol BreakLabel { get; }
 
-        public PatternSwitchBinder Binder { get; }
+        public DecisionDag.DecisionDag DecisionDag { get; }
 
         public bool IsComplete { get; }
 
@@ -2856,11 +2855,11 @@ namespace Microsoft.CodeAnalysis.CSharp
             return visitor.VisitPatternSwitchStatement(this);
         }
 
-        public BoundPatternSwitchStatement Update(BoundExpression expression, bool someLabelAlwaysMatches, ImmutableArray<LocalSymbol> innerLocals, ImmutableArray<LocalFunctionSymbol> innerLocalFunctions, ImmutableArray<BoundPatternSwitchSection> switchSections, BoundPatternSwitchLabel defaultLabel, GeneratedLabelSymbol breakLabel, PatternSwitchBinder binder, bool isComplete)
+        public BoundPatternSwitchStatement Update(BoundExpression expression, bool someLabelAlwaysMatches, ImmutableArray<LocalSymbol> innerLocals, ImmutableArray<LocalFunctionSymbol> innerLocalFunctions, ImmutableArray<BoundPatternSwitchSection> switchSections, BoundPatternSwitchLabel defaultLabel, GeneratedLabelSymbol breakLabel, DecisionDag.DecisionDag decisionDag, bool isComplete)
         {
-            if (expression != this.Expression || someLabelAlwaysMatches != this.SomeLabelAlwaysMatches || innerLocals != this.InnerLocals || innerLocalFunctions != this.InnerLocalFunctions || switchSections != this.SwitchSections || defaultLabel != this.DefaultLabel || breakLabel != this.BreakLabel || binder != this.Binder || isComplete != this.IsComplete)
+            if (expression != this.Expression || someLabelAlwaysMatches != this.SomeLabelAlwaysMatches || innerLocals != this.InnerLocals || innerLocalFunctions != this.InnerLocalFunctions || switchSections != this.SwitchSections || defaultLabel != this.DefaultLabel || breakLabel != this.BreakLabel || decisionDag != this.DecisionDag || isComplete != this.IsComplete)
             {
-                var result = new BoundPatternSwitchStatement(this.Syntax, expression, someLabelAlwaysMatches, innerLocals, innerLocalFunctions, switchSections, defaultLabel, breakLabel, binder, isComplete, this.HasErrors);
+                var result = new BoundPatternSwitchStatement(this.Syntax, expression, someLabelAlwaysMatches, innerLocals, innerLocalFunctions, switchSections, defaultLabel, breakLabel, decisionDag, isComplete, this.HasErrors);
                 result.WasCompilerGenerated = this.WasCompilerGenerated;
                 return result;
             }
@@ -5955,9 +5954,6 @@ namespace Microsoft.CodeAnalysis.CSharp
         public BoundDeclarationPattern(SyntaxNode syntax, Symbol variable, BoundExpression variableAccess, BoundTypeExpression declaredType, bool isVar, bool hasErrors = false)
             : base(BoundKind.DeclarationPattern, syntax, hasErrors || variableAccess.HasErrors() || declaredType.HasErrors())
         {
-
-            Debug.Assert(variableAccess != null, "Field 'variableAccess' cannot be null (use Null=\"allow\" in BoundNodes.xml to remove this check)");
-
             this.Variable = variable;
             this.VariableAccess = variableAccess;
             this.DeclaredType = declaredType;
@@ -5992,30 +5988,30 @@ namespace Microsoft.CodeAnalysis.CSharp
 
     internal sealed partial class BoundRecursivePattern : BoundPattern
     {
-        public BoundRecursivePattern(SyntaxNode syntax, BoundTypeExpression declaredTypeOpt, TypeSymbol inputType, MethodSymbol deconstructMethodOpt, ImmutableArray<BoundPattern> deconstructionOpt, ImmutableArray<(Symbol symbol, BoundPattern pattern)> propertiesOpt, Symbol variable, BoundExpression variableAccess, bool hasErrors = false)
-            : base(BoundKind.RecursivePattern, syntax, hasErrors || declaredTypeOpt.HasErrors() || deconstructionOpt.HasErrors() || variableAccess.HasErrors())
+        public BoundRecursivePattern(SyntaxNode syntax, BoundTypeExpression declaredType, TypeSymbol inputType, MethodSymbol deconstructMethodOpt, ImmutableArray<BoundPattern> deconstruction, ImmutableArray<(Symbol symbol, BoundPattern pattern)> propertiesOpt, Symbol variable, BoundExpression variableAccess, bool hasErrors = false)
+            : base(BoundKind.RecursivePattern, syntax, hasErrors || declaredType.HasErrors() || deconstruction.HasErrors() || variableAccess.HasErrors())
         {
 
             Debug.Assert(inputType != null, "Field 'inputType' cannot be null (use Null=\"allow\" in BoundNodes.xml to remove this check)");
-            Debug.Assert(variableAccess != null, "Field 'variableAccess' cannot be null (use Null=\"allow\" in BoundNodes.xml to remove this check)");
+            Debug.Assert(!deconstruction.IsDefault, "Field 'deconstruction' cannot be null (use Null=\"allow\" in BoundNodes.xml to remove this check)");
 
-            this.DeclaredTypeOpt = declaredTypeOpt;
+            this.DeclaredType = declaredType;
             this.InputType = inputType;
             this.DeconstructMethodOpt = deconstructMethodOpt;
-            this.DeconstructionOpt = deconstructionOpt;
+            this.Deconstruction = deconstruction;
             this.PropertiesOpt = propertiesOpt;
             this.Variable = variable;
             this.VariableAccess = variableAccess;
         }
 
 
-        public BoundTypeExpression DeclaredTypeOpt { get; }
+        public BoundTypeExpression DeclaredType { get; }
 
         public TypeSymbol InputType { get; }
 
         public MethodSymbol DeconstructMethodOpt { get; }
 
-        public ImmutableArray<BoundPattern> DeconstructionOpt { get; }
+        public ImmutableArray<BoundPattern> Deconstruction { get; }
 
         public ImmutableArray<(Symbol symbol, BoundPattern pattern)> PropertiesOpt { get; }
 
@@ -6028,11 +6024,11 @@ namespace Microsoft.CodeAnalysis.CSharp
             return visitor.VisitRecursivePattern(this);
         }
 
-        public BoundRecursivePattern Update(BoundTypeExpression declaredTypeOpt, TypeSymbol inputType, MethodSymbol deconstructMethodOpt, ImmutableArray<BoundPattern> deconstructionOpt, ImmutableArray<(Symbol symbol, BoundPattern pattern)> propertiesOpt, Symbol variable, BoundExpression variableAccess)
+        public BoundRecursivePattern Update(BoundTypeExpression declaredType, TypeSymbol inputType, MethodSymbol deconstructMethodOpt, ImmutableArray<BoundPattern> deconstruction, ImmutableArray<(Symbol symbol, BoundPattern pattern)> propertiesOpt, Symbol variable, BoundExpression variableAccess)
         {
-            if (declaredTypeOpt != this.DeclaredTypeOpt || inputType != this.InputType || deconstructMethodOpt != this.DeconstructMethodOpt || deconstructionOpt != this.DeconstructionOpt || propertiesOpt != this.PropertiesOpt || variable != this.Variable || variableAccess != this.VariableAccess)
+            if (declaredType != this.DeclaredType || inputType != this.InputType || deconstructMethodOpt != this.DeconstructMethodOpt || deconstruction != this.Deconstruction || propertiesOpt != this.PropertiesOpt || variable != this.Variable || variableAccess != this.VariableAccess)
             {
-                var result = new BoundRecursivePattern(this.Syntax, declaredTypeOpt, inputType, deconstructMethodOpt, deconstructionOpt, propertiesOpt, variable, variableAccess, this.HasErrors);
+                var result = new BoundRecursivePattern(this.Syntax, declaredType, inputType, deconstructMethodOpt, deconstruction, propertiesOpt, variable, variableAccess, this.HasErrors);
                 result.WasCompilerGenerated = this.WasCompilerGenerated;
                 return result;
             }
@@ -8485,8 +8481,8 @@ namespace Microsoft.CodeAnalysis.CSharp
         }
         public override BoundNode VisitRecursivePattern(BoundRecursivePattern node)
         {
-            this.Visit(node.DeclaredTypeOpt);
-            this.VisitList(node.DeconstructionOpt);
+            this.Visit(node.DeclaredType);
+            this.VisitList(node.Deconstruction);
             this.Visit(node.VariableAccess);
             return null;
         }
@@ -8906,7 +8902,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             BoundExpression expression = (BoundExpression)this.Visit(node.Expression);
             ImmutableArray<BoundPatternSwitchSection> switchSections = (ImmutableArray<BoundPatternSwitchSection>)this.VisitList(node.SwitchSections);
             BoundPatternSwitchLabel defaultLabel = (BoundPatternSwitchLabel)this.Visit(node.DefaultLabel);
-            return node.Update(expression, node.SomeLabelAlwaysMatches, node.InnerLocals, node.InnerLocalFunctions, switchSections, defaultLabel, node.BreakLabel, node.Binder, node.IsComplete);
+            return node.Update(expression, node.SomeLabelAlwaysMatches, node.InnerLocals, node.InnerLocalFunctions, switchSections, defaultLabel, node.BreakLabel, node.DecisionDag, node.IsComplete);
         }
         public override BoundNode VisitPatternSwitchSection(BoundPatternSwitchSection node)
         {
@@ -9372,11 +9368,11 @@ namespace Microsoft.CodeAnalysis.CSharp
         }
         public override BoundNode VisitRecursivePattern(BoundRecursivePattern node)
         {
-            BoundTypeExpression declaredTypeOpt = (BoundTypeExpression)this.Visit(node.DeclaredTypeOpt);
-            ImmutableArray<BoundPattern> deconstructionOpt = (ImmutableArray<BoundPattern>)this.VisitList(node.DeconstructionOpt);
+            BoundTypeExpression declaredType = (BoundTypeExpression)this.Visit(node.DeclaredType);
+            ImmutableArray<BoundPattern> deconstruction = (ImmutableArray<BoundPattern>)this.VisitList(node.Deconstruction);
             BoundExpression variableAccess = (BoundExpression)this.Visit(node.VariableAccess);
             TypeSymbol inputType = this.VisitType(node.InputType);
-            return node.Update(declaredTypeOpt, inputType, node.DeconstructMethodOpt, deconstructionOpt, node.PropertiesOpt, node.Variable, variableAccess);
+            return node.Update(declaredType, inputType, node.DeconstructMethodOpt, deconstruction, node.PropertiesOpt, node.Variable, variableAccess);
         }
         public override BoundNode VisitDiscardExpression(BoundDiscardExpression node)
         {
@@ -10097,7 +10093,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                 new TreeDumperNode("switchSections", null, from x in node.SwitchSections select Visit(x, null)),
                 new TreeDumperNode("defaultLabel", null, new TreeDumperNode[] { Visit(node.DefaultLabel, null) }),
                 new TreeDumperNode("breakLabel", node.BreakLabel, null),
-                new TreeDumperNode("binder", node.Binder, null),
+                new TreeDumperNode("decisionDag", node.DecisionDag, null),
                 new TreeDumperNode("isComplete", node.IsComplete, null)
             }
             );
@@ -10931,10 +10927,10 @@ namespace Microsoft.CodeAnalysis.CSharp
         {
             return new TreeDumperNode("recursivePattern", null, new TreeDumperNode[]
             {
-                new TreeDumperNode("declaredTypeOpt", null, new TreeDumperNode[] { Visit(node.DeclaredTypeOpt, null) }),
+                new TreeDumperNode("declaredType", null, new TreeDumperNode[] { Visit(node.DeclaredType, null) }),
                 new TreeDumperNode("inputType", node.InputType, null),
                 new TreeDumperNode("deconstructMethodOpt", node.DeconstructMethodOpt, null),
-                new TreeDumperNode("deconstructionOpt", null, node.DeconstructionOpt.IsDefault ? Array.Empty<TreeDumperNode>() : from x in node.DeconstructionOpt select Visit(x, null)),
+                new TreeDumperNode("deconstruction", null, from x in node.Deconstruction select Visit(x, null)),
                 new TreeDumperNode("propertiesOpt", node.PropertiesOpt, null),
                 new TreeDumperNode("variable", node.Variable, null),
                 new TreeDumperNode("variableAccess", null, new TreeDumperNode[] { Visit(node.VariableAccess, null) })
