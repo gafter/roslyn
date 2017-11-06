@@ -802,11 +802,43 @@
 
     <!-- A directed acyclic decision graph for the switch statement. It can be traversed
     to determine if all labels are reachable, and if every input is handled. -->
-    <Field Name="DecisionDag" Type="DecisionDag.DecisionDag" Null="allow"/>
+    <Field Name="DecisionDag" Type="BoundDecisionDag" Null="allow"/>
     <!-- A switch is considered complete if every value of the switch expression's
          type is handled by some switch label that is either not guarded by a when
          clause, or for which the when clause expression has the constant value true. -->
     <Field Name="IsComplete" Type="bool"/>
+  </Node>
+
+  <AbstractNode Name="BoundDecisionDag" Base="BoundNode">
+    <Field Name="Label" Type="LabelSymbol"/>
+  </AbstractNode>
+  <!-- This node is used to indicate a point in the decision dag where an evaluation is performed, such as invoking Deconstruct. -->
+  <Node Name="BoundEvaluationPoint" Base="BoundDecisionDag">
+    <!-- Input is the input to the evaluation point. Null for a where clause. -->
+    <Field Name="Input" Type="BoundExpression" Null="allow"/>
+    <Field Name="Evaluation" Type="BoundExpression" Null="disallow"/>
+    <Field Name="Next" Type="BoundDecisionDag" Null="disallow"/>
+  </Node>
+  <!-- This node is used to indicate a point in the decision dag where a test may change the path of the decision dag. -->
+  <Node Name="BoundDecisionPoint" Base="BoundDecisionDag">
+    <!-- Input is the input to the decision point, or null if it is a where clause. -->
+    <Field Name="Input" Type="BoundExpression" Null="allow"/>
+    <Field Name="Evaluation" Type="BoundExpression" Null="disallow"/>
+    <Field Name="WhenTrue" Type="BoundDecisionDag" Null="disallow"/>
+    <Field Name="WhenFalse" Type="BoundDecisionDag" Null="disallow"/>
+  </Node>
+  <Node Name="BoundPatternBindings" Base="BoundDecisionDag">
+    <Field Name="Bindings" Type="ImmutableArray&lt;BoundAssignmentOperator&gt;" Null="disallow"/>
+    <!-- Next is either the where clause or the final label (BoundDecision) -->
+    <Field Name="Next" Type="BoundDecisionDag" Null="disallow"/>
+  </Node>
+  <!-- This node is used to indicate a point in the decision dag where the decision has been completed. -->
+  <Node Name="BoundDecision" Base="BoundDecisionDag">
+  </Node>
+  <!-- A RootValueIdentifier is an abstract value that refers to the root value of a pattern-matching operation.
+       It appears only in the decision tree. -->
+  <Node Name="RootValueIdentifier" Base="BoundExpression">
+    <Field Name="Type" Type="TypeSymbol" Override="true" Null="allow"/>
   </Node>
 
   <Node Name="BoundPatternSwitchSection" Base="BoundStatementList">

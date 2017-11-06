@@ -30,7 +30,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Test.Utilities
 
         public static readonly CSharpParseOptions RegularWithIOperationFeature = Regular.WithIOperationsFeature();
 
-        public static readonly CSharpParseOptions RegularWithRecursivePatterns = Regular6.WithRecursivePatterns();
+        public static readonly CSharpParseOptions RegularWithRecursivePatterns = Regular.WithRecursivePatterns();
 
         public static readonly CSharpCompilationOptions ReleaseDll = new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary, optimizationLevel: OptimizationLevel.Release);
         public static readonly CSharpCompilationOptions ReleaseExe = new CSharpCompilationOptions(OutputKind.ConsoleApplication, optimizationLevel: OptimizationLevel.Release);

@@ -39,8 +39,47 @@ public class Point
     public int Length => 5;
 }
 ";
-            CreateCompilationWithMscorlib45(source, options: TestOptions.DebugExe, parseOptions: TestOptions.RegularWithRecursivePatterns).VerifyDiagnostics(
+            var compilation = CreateCompilationWithMscorlib45(source, options: TestOptions.DebugExe, parseOptions: TestOptions.RegularWithRecursivePatterns);
+            compilation.VerifyDiagnostics(
                 );
+            var comp = CompileAndVerify(compilation, expectedOutput: "True");
+        }
+
+        [Fact]
+        public void Patterns2_02()
+        {
+            var source =
+@"
+class Program
+{
+    public static void Main()
+    {
+        Point p = new Point();
+        switch (p)
+        {
+            case Point(3, 4) { Length: 5 }:
+                System.Console.WriteLine(true);
+                break;
+            default:
+                System.Console.WriteLine(false);
+                break;
+        }
+    }
+}
+public class Point
+{
+    public void Deconstruct(out int X, out int Y)
+    {
+        X = 3;
+        Y = 4;
+    }
+    public int Length => 5;
+}
+";
+            var compilation = CreateCompilationWithMscorlib45(source, options: TestOptions.DebugExe, parseOptions: TestOptions.RegularWithRecursivePatterns);
+            compilation.VerifyDiagnostics(
+                );
+            var comp = CompileAndVerify(compilation, expectedOutput: "True");
         }
     }
 }

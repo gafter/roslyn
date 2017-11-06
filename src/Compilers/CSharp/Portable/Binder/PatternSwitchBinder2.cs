@@ -54,10 +54,18 @@ namespace Microsoft.CodeAnalysis.CSharp
                 BindPatternSwitchSections(originalBinder, out defaultLabel, out isComplete, out var someCaseMatches, diagnostics);
             var locals = GetDeclaredLocalsForScope(node);
             var functions = GetDeclaredLocalFunctionsForScope(node);
-            DecisionDag.DecisionDag decisionDag = null; // we'll compute it later
+            BoundDecisionDag decisionDag = null; // we'll compute it later
             return new BoundPatternSwitchStatement(
-                node, boundSwitchExpression, someCaseMatches,
-                locals, functions, switchSections, defaultLabel, this.BreakLabel, decisionDag, isComplete);
+                syntax: node,
+                expression: boundSwitchExpression,
+                someLabelAlwaysMatches: someCaseMatches,
+                innerLocals: locals,
+                innerLocalFunctions: functions,
+                switchSections: switchSections,
+                defaultLabel: defaultLabel,
+                breakLabel: this.BreakLabel,
+                decisionDag: decisionDag,
+                isComplete: isComplete);
         }
 
         /// <summary>
