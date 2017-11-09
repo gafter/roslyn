@@ -814,31 +814,52 @@
   </AbstractNode>
   <!-- This node is used to indicate a point in the decision dag where an evaluation is performed, such as invoking Deconstruct. -->
   <Node Name="BoundEvaluationPoint" Base="BoundDecisionDag">
-    <!-- Input is the input to the evaluation point. Null for a where clause. -->
-    <Field Name="Input" Type="BoundExpression" Null="allow"/>
-    <Field Name="Evaluation" Type="BoundExpression" Null="disallow"/>
+    <Field Name="Evaluation" Type="BoundDagEvaluation" Null="disallow"/>
     <Field Name="Next" Type="BoundDecisionDag" Null="disallow"/>
   </Node>
   <!-- This node is used to indicate a point in the decision dag where a test may change the path of the decision dag. -->
   <Node Name="BoundDecisionPoint" Base="BoundDecisionDag">
-    <!-- Input is the input to the decision point, or null if it is a where clause. -->
-    <Field Name="Input" Type="BoundExpression" Null="allow"/>
-    <Field Name="Evaluation" Type="BoundExpression" Null="disallow"/>
+    <Field Name="Decision" Type="BoundDagDecision" Null="disallow"/>
     <Field Name="WhenTrue" Type="BoundDecisionDag" Null="disallow"/>
     <Field Name="WhenFalse" Type="BoundDecisionDag" Null="disallow"/>
   </Node>
-  <Node Name="BoundPatternBindings" Base="BoundDecisionDag">
-    <Field Name="Bindings" Type="ImmutableArray&lt;BoundAssignmentOperator&gt;" Null="disallow"/>
-    <!-- Next is either the where clause or the final label (BoundDecision) -->
-    <Field Name="Next" Type="BoundDecisionDag" Null="disallow"/>
+  <Node Name="BoundWhereClause" Base="BoundDecisionDag">
+    <Field Name="Bindings" Type="ImmutableArray&lt;(BoundExpression,BoundDagTemp)&gt;" Null="disallow"/>
+    <Field Name="Where" Type="BoundExpression" Null="allow"/>
+    <Field Name="WhenTrue" Type="BoundDecisionDag" Null="disallow"/>
+    <Field Name="WhenFalse" Type="BoundDecisionDag" Null="allow"/>
+  </Node>
+  <Node Name="BoundDagEvaluation" Base="BoundDagDecision">
+    <!-- Symbol is used as follows:
+         1. if it is a Deconstruct method, in indicates an invocation of that deconstruct and creation of N new temps.
+         2. if it is a Type, it indicates a type cast to that type, and the creation of one new temp of that type.
+         3. if it is a Field or Property symbol, it indicates a fetch and the creation of one new temp.
+         4. We ignore ITuple-based deconstruction for now. -->
+    <Field Name="Symbol" Type="Symbol"/>
+    <!-- As a decision, an evaluation is considered to always succeed. -->
+  </Node>
+  <AbstractNode Name="BoundDagDecision" Base="BoundNode">
+    <!-- Input is the input to the decision point. -->
+    <Field Name="Input" Type="BoundDagTemp"/>
+  </AbstractNode>
+  <Node Name="BoundNonNullDecision" Base="BoundDagDecision">
+    <!-- Check that the input is not null. -->
+  </Node>
+  <Node Name="BoundTypeDecision" Base="BoundDagDecision">
+    <!-- Check that the input is of the given type. Null check is separate. -->
+    <Field Name="Type" Type="TypeSymbol" Null="disallow"/>
+  </Node>
+  <Node Name="BoundValueDecision" Base="BoundDagDecision">
+    <!-- Check that the input is the same as the given constant value. -->
+    <Field Name="Value" Type="ConstantValue" Null="disallow"/>
+  </Node>
+  <Node Name="BoundDagTemp" Base="BoundNode">
+    <Field Name="Type" Type="TypeSymbol" Null="allow"/>
+    <Field Name="Source" Type="BoundDagEvaluation" Null="allow"/>
+    <Field Name="Index" Type="int"/>
   </Node>
   <!-- This node is used to indicate a point in the decision dag where the decision has been completed. -->
   <Node Name="BoundDecision" Base="BoundDecisionDag">
-  </Node>
-  <!-- A RootValueIdentifier is an abstract value that refers to the root value of a pattern-matching operation.
-       It appears only in the decision tree. -->
-  <Node Name="RootValueIdentifier" Base="BoundExpression">
-    <Field Name="Type" Type="TypeSymbol" Override="true" Null="allow"/>
   </Node>
 
   <Node Name="BoundPatternSwitchSection" Base="BoundStatementList">
