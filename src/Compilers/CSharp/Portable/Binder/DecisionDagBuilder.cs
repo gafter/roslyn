@@ -7,6 +7,7 @@ using System.Diagnostics;
 using System.Text;
 using Microsoft.CodeAnalysis.CSharp.Symbols;
 using Microsoft.CodeAnalysis.PooledObjects;
+using Roslyn.Utilities;
 
 namespace Microsoft.CodeAnalysis.CSharp
 {
@@ -36,14 +37,8 @@ namespace Microsoft.CodeAnalysis.CSharp
             out ImmutableArray<BoundDagDecision> decisions,
             out ImmutableArray<(BoundExpression, BoundDagTemp)> bindings)
         {
-            var decisionBuilder = ArrayBuilder<BoundDagDecision>.GetInstance();
-            var bindingBuilder = ArrayBuilder<(BoundExpression, BoundDagTemp)>.GetInstance();
-            // use site diagnostics will have been produced during binding of the patterns, so can be discarded here
-            HashSet<DiagnosticInfo> discardedUseSiteDiagnostics = null;
             var rootIdentifier = new BoundDagTemp(input.Syntax, input.Type, null, 0);
-            MakeDecisionsAndBindings(rootIdentifier, pattern, decisionBuilder, bindingBuilder, ref discardedUseSiteDiagnostics);
-            decisions = decisionBuilder.ToImmutableAndFree();
-            bindings = bindingBuilder.ToImmutableAndFree();
+            MakeAndSimplifyDecisionsAndBindings(rootIdentifier, pattern, out decisions, out bindings);
             return rootIdentifier;
         }
 
@@ -65,20 +60,92 @@ namespace Microsoft.CodeAnalysis.CSharp
 
         private PartialCaseDecision MakePartialCaseDecision(int index, BoundDagTemp input, BoundPatternSwitchLabel label)
         {
-            var decisions = ArrayBuilder<BoundDagDecision>.GetInstance();
-            var bindings = ArrayBuilder<(BoundExpression, BoundDagTemp)>.GetInstance();
+            MakeAndSimplifyDecisionsAndBindings(input, label.Pattern, out var decisions, out var bindings);
+            return new PartialCaseDecision(index, decisions, bindings, label.Guard, label.Label);
+        }
+
+        private void MakeAndSimplifyDecisionsAndBindings(
+            BoundDagTemp input,
+            BoundPattern pattern,
+            out ImmutableArray<BoundDagDecision> decisions,
+            out ImmutableArray<(BoundExpression, BoundDagTemp)> bindings)
+        {
+            var decisionsBuilder = ArrayBuilder<BoundDagDecision>.GetInstance();
+            var bindingsBuilder = ArrayBuilder<(BoundExpression, BoundDagTemp)>.GetInstance();
             // use site diagnostics will have been produced during binding of the patterns, so can be discarded here
             HashSet<DiagnosticInfo> discardedUseSiteDiagnostics = null;
-            MakeDecisionsAndBindings(input, label.Pattern, decisions, bindings, ref discardedUseSiteDiagnostics);
-            return new PartialCaseDecision(index, decisions.ToImmutableAndFree(), bindings.ToImmutableAndFree(), label.Guard, label.Label);
+            MakeDecisionsAndBindings(input, pattern, decisionsBuilder, bindingsBuilder, ref discardedUseSiteDiagnostics);
+
+            // Now simplify the decisions and bindings. We don't need anything in decisions that does not
+            // contribute to the result. This will, for example, permit us to match `(2, 3) is (2, _)` without
+            // fetching `Item2` from the input.
+            var usedValues = PooledHashSet<BoundDagEvaluation>.GetInstance();
+            foreach (var (_, temp) in bindingsBuilder)
+            {
+                if (temp.Source != (object)null)
+                {
+                    usedValues.Add(temp.Source);
+                }
+            }
+            for (int i = decisionsBuilder.Count - 1; i >= 0; i--)
+            {
+                switch (decisionsBuilder[i])
+                {
+                    case BoundDagEvaluation e:
+                        if (usedValues.Contains(e))
+                        {
+                            if (e.Input.Source != (object)null)
+                            {
+                                usedValues.Add(e.Input.Source);
+                            }
+                        }
+                        else
+                        {
+                            decisionsBuilder.RemoveAt(i);
+                            i++;
+                        }
+                        break;
+                    case BoundDagDecision d:
+                        usedValues.Add(d.Input.Source);
+                        break;
+                    default:
+                        throw ExceptionUtilities.UnexpectedValue(decisionsBuilder[i]);
+                }
+            }
+
+            // We also do not need to compute any result more than once. This will permit us to fetch
+            // a property once even if it is used more than once, e.g. `o is { X: P1, X: P2 }`
+            usedValues.Clear();
+            usedValues.Add(input.Source);
+            for (int i = 0; i < decisionsBuilder.Count; i++)
+            {
+                switch (decisionsBuilder[i])
+                {
+                    case BoundDagEvaluation e:
+                        if (usedValues.Contains(e))
+                        {
+                            decisionsBuilder.RemoveAt(i);
+                            i--;
+                        }
+                        else
+                        {
+                            usedValues.Add(e);
+                        }
+                        break;
+                }
+            }
+
+            usedValues.Free();
+            decisions = decisionsBuilder.ToImmutableAndFree();
+            bindings = bindingsBuilder.ToImmutableAndFree();
         }
 
         private void MakeDecisionsAndBindings(
-            BoundDagTemp input,
-            BoundPattern pattern,
-            ArrayBuilder<BoundDagDecision> decisions,
-            ArrayBuilder<(BoundExpression, BoundDagTemp)> bindings,
-            ref HashSet<DiagnosticInfo> discardedUseSiteDiagnostics)
+                BoundDagTemp input,
+                BoundPattern pattern,
+                ArrayBuilder<BoundDagDecision> decisions,
+                ArrayBuilder<(BoundExpression, BoundDagTemp)> bindings,
+                ref HashSet<DiagnosticInfo> discardedUseSiteDiagnostics)
         {
             switch (pattern)
             {
@@ -281,7 +348,7 @@ namespace Microsoft.CodeAnalysis.CSharp
         }
         public static bool operator ==(BoundDagEvaluation left, BoundDagEvaluation right)
         {
-            return left.Equals(right);
+            return (left == (object)null) ? right == (object)null : left.Equals(right);
         }
         public static bool operator !=(BoundDagEvaluation left, BoundDagEvaluation right)
         {

@@ -21,12 +21,20 @@ namespace Microsoft.CodeAnalysis.CSharp.UnitTests
         {
             var source =
 @"
+using System;
 class Program
 {
     public static void Main()
     {
         Point p = new Point();
-        System.Console.WriteLine(p is Point(3, 4) { Length: 5 });
+        Check(true, p is Point(3, 4) { Length: 5 } q && p == q);
+        Check(false, p is Point(1, 4) { Length: 5 });
+        Check(false, p is Point(3, 1) { Length: 5 });
+        Check(false, p is Point(3, 4) { Length: 1 });
+    }
+    private static void Check(bool expected, bool actual)
+    {
+        if (expected != actual) throw new Exception($""expected: {expected}; actual: {actual}"");
     }
 }
 public class Point
