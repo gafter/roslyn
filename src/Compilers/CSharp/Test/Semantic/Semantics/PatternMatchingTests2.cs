@@ -17,6 +17,28 @@ namespace Microsoft.CodeAnalysis.CSharp.UnitTests
     public class PatternMatchingTests2 : PatternMatchingTestBase
     {
         [Fact]
+        public void DELETEME()
+        {
+            var source =
+@"
+using System;
+class Program
+{
+    public static void Main()
+    {
+        Console.WriteLine(1 is int {} x);
+        Console.WriteLine(x);
+    }
+}
+";
+            var compilation = CreateCompilationWithMscorlib45(source, options: TestOptions.DebugExe, parseOptions: TestOptions.RegularWithRecursivePatterns);
+            compilation.VerifyDiagnostics(
+                );
+            var comp = CompileAndVerify(compilation, expectedOutput: @"True
+1");
+        }
+
+        [Fact]
         public void Patterns2_01()
         {
             var source =
@@ -95,6 +117,48 @@ public static class PointExtensions
         X = 3;
         Y = 4;
     }
+}
+";
+            var compilation = CreateCompilationWithMscorlib45(source, options: TestOptions.DebugExe, parseOptions: TestOptions.RegularWithRecursivePatterns);
+            compilation.VerifyDiagnostics(
+                );
+            var comp = CompileAndVerify(compilation, expectedOutput: "");
+        }
+
+        [Fact]
+        public void Patterns2_DiscardPattern_01()
+        {
+            var source =
+@"
+using System;
+class Program
+{
+    public static void Main()
+    {
+        Point p = new Point();
+        Check(true, p is Point(_, _) { Length: _ } q1 && Check(p, q1));
+        Check(false, p is Point(1, _) { Length: _ });
+        Check(false, p is Point(_, 1) { Length: _ });
+        Check(false, p is Point(_, _) { Length: 1 });
+        Check(true, p is (_, _) { Length: _ } q2 && Check(p, q2));
+        Check(false, p is (1, _) { Length: _ });
+        Check(false, p is (_, 1) { Length: _ });
+        Check(false, p is (_, _) { Length: 1 });
+    }
+    private static bool Check<T>(T expected, T actual)
+    {
+        if (!object.Equals(expected, actual)) throw new Exception($""expected: {expected}; actual: {actual}"");
+        return true;
+    }
+}
+public class Point
+{
+    public void Deconstruct(out int X, out int Y)
+    {
+        X = 3;
+        Y = 4;
+    }
+    public int Length => 5;
 }
 ";
             var compilation = CreateCompilationWithMscorlib45(source, options: TestOptions.DebugExe, parseOptions: TestOptions.RegularWithRecursivePatterns);

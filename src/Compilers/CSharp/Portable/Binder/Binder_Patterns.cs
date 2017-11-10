@@ -47,13 +47,14 @@ namespace Microsoft.CodeAnalysis.CSharp
         {
             switch (node.Kind())
             {
+                case SyntaxKind.DiscardPattern:
+                    return BindDiscardPattern((DiscardPatternSyntax)node, operandType, hasErrors, diagnostics);
+
                 case SyntaxKind.DeclarationPattern:
-                    return BindDeclarationPattern(
-                        (DeclarationPatternSyntax)node, operandType, hasErrors, diagnostics);
+                    return BindDeclarationPattern((DeclarationPatternSyntax)node, operandType, hasErrors, diagnostics);
 
                 case SyntaxKind.ConstantPattern:
-                    return BindConstantPattern(
-                        (ConstantPatternSyntax)node, operandType, hasErrors, diagnostics);
+                    return BindConstantPattern((ConstantPatternSyntax)node, operandType, hasErrors, diagnostics);
 
                 case SyntaxKind.DeconstructionPattern:
                     return BindDeconstructionPattern((DeconstructionPatternSyntax)node, operandType, hasErrors, diagnostics);
@@ -64,6 +65,12 @@ namespace Microsoft.CodeAnalysis.CSharp
                 default:
                     throw ExceptionUtilities.UnexpectedValue(node.Kind());
             }
+        }
+
+        private BoundPattern BindDiscardPattern(DiscardPatternSyntax node, TypeSymbol operandType, bool hasErrors, DiagnosticBag diagnostics)
+        {
+            // TODO(patterns2): give an error if there is a bindable `_` in scope.
+            return new BoundWildcardPattern(node);
         }
 
         private BoundConstantPattern BindConstantPattern(

@@ -38,6 +38,17 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
                     break;
             }
 
+            if (tk == SyntaxKind.IdentifierToken && this.CurrentToken.Text == "_")
+            {
+                // In a pattern, we reserve `_` as a wildcard. It cannot be used (with that spelling) as the
+                // type of a declaration or recursive pattern, nor as a type in an in-type expression starting
+                // in C# 7. The binder will give a diagnostic if
+                // there is a usable symbol in scope by that name. You can always escape it, using `@_`.
+                // TODO(patterns2): Should we use the "contextual keyword" infrastructure for this?
+                var node = _syntaxFactory.DiscardPattern(this.EatToken(SyntaxKind.IdentifierToken));
+                return this.CheckFeatureAvailability(node, MessageID.IDS_FeatureRecursivePatterns);
+            }
+
             // If it starts with 'nameof(', skip the 'if' and parse as a constant pattern.
             if (SyntaxFacts.IsPredefinedType(tk) ||
                 (tk == SyntaxKind.IdentifierToken &&
@@ -253,6 +264,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
         /// 	| constant_pattern
         /// 	| deconstruction_pattern
         /// 	| property_pattern
+        /// 	| discard_pattern
         /// 	;
         /// declaration_pattern
         /// 	: type identifier
@@ -277,6 +289,9 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
         /// property_pattern
         /// 	: property_subpattern identifier?
         /// 	;
+        /// discard_pattern
+        /// 	: '_'
+        /// 	;
         /// ```
         ///
         /// Priority is the ExpressionSyntax. It might return ExpressionSyntax which might be a constant pattern such as 'case 3:' 
@@ -289,7 +304,8 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
         private CSharpSyntaxNode ParseExpressionOrPattern(bool forCase)
         {
             // handle common error recovery situations during typing
-            switch (this.CurrentToken.Kind)
+            var tk = this.CurrentToken.Kind;
+            switch (tk)
             {
                 case SyntaxKind.CommaToken:
                 case SyntaxKind.SemicolonToken:
@@ -300,11 +316,21 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
                     return this.ParseIdentifierName(ErrorCode.ERR_MissingArgument);
             }
 
+            if (tk == SyntaxKind.IdentifierToken && this.CurrentToken.Text == "_")
+            {
+                // In a pattern, we reserve `_` as a wildcard. It cannot be used (with that spelling) as the
+                // type of a declaration or recursive pattern, nor as a type in an in-type expression starting
+                // in C# 7. The binder will give a diagnostic if
+                // there is a usable symbol in scope by that name. You can always escape it, using `@_`.
+                // TODO(patterns2): Should we use the "contextual keyword" infrastructure for this?
+                var node = _syntaxFactory.DiscardPattern(this.EatToken(SyntaxKind.IdentifierToken));
+                return this.CheckFeatureAvailability(node, MessageID.IDS_FeatureRecursivePatterns);
+            }
+
             var resetPoint = this.GetResetPoint();
             try
             {
                 TypeSyntax type = null;
-                var tk = this.CurrentToken.Kind;
                 if ((SyntaxFacts.IsPredefinedType(tk) || tk == SyntaxKind.IdentifierToken) &&
                       // If it is a nameof, skip the 'if' and parse as an expression. 
                       (this.CurrentToken.ContextualKind != SyntaxKind.NameOfKeyword || this.PeekToken(1).Kind != SyntaxKind.OpenParenToken))

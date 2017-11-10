@@ -102,7 +102,6 @@ namespace Microsoft.CodeAnalysis.CSharp
                         else
                         {
                             decisionsBuilder.RemoveAt(i);
-                            i++;
                         }
                         break;
                     case BoundDagDecision d:
@@ -183,10 +182,15 @@ namespace Microsoft.CodeAnalysis.CSharp
                 input = ConvertToType(input, declaration.Syntax, type, decisions, ref discardedUseSiteDiagnostics);
             }
 
+            Debug.Assert(declaration.VariableAccess.Type == input.Type);
             var left = declaration.VariableAccess;
             if (left != null)
             {
                 bindings.Add((declaration.VariableAccess, input));
+            }
+            else
+            {
+                Debug.Assert(declaration.Variable == null);
             }
         }
 
