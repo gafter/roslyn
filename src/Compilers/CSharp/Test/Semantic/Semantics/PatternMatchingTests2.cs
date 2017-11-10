@@ -27,14 +27,19 @@ class Program
     public static void Main()
     {
         Point p = new Point();
-        Check(true, p is Point(3, 4) { Length: 5 } q && p == q);
+        Check(true, p is Point(3, 4) { Length: 5 } q1 && Check(p, q1));
         Check(false, p is Point(1, 4) { Length: 5 });
         Check(false, p is Point(3, 1) { Length: 5 });
         Check(false, p is Point(3, 4) { Length: 1 });
+        Check(true, p is (3, 4) { Length: 5 } q2 && Check(p, q2));
+        Check(false, p is (1, 4) { Length: 5 });
+        Check(false, p is (3, 1) { Length: 5 });
+        Check(false, p is (3, 4) { Length: 1 });
     }
-    private static void Check(bool expected, bool actual)
+    private static bool Check<T>(T expected, T actual)
     {
-        if (expected != actual) throw new Exception($""expected: {expected}; actual: {actual}"");
+        if (!object.Equals(expected, actual)) throw new Exception($""expected: {expected}; actual: {actual}"");
+        return true;
     }
 }
 public class Point
@@ -50,11 +55,56 @@ public class Point
             var compilation = CreateCompilationWithMscorlib45(source, options: TestOptions.DebugExe, parseOptions: TestOptions.RegularWithRecursivePatterns);
             compilation.VerifyDiagnostics(
                 );
-            var comp = CompileAndVerify(compilation, expectedOutput: "True");
+            var comp = CompileAndVerify(compilation, expectedOutput: "");
         }
 
         [Fact]
         public void Patterns2_02()
+        {
+            var source =
+@"
+using System;
+class Program
+{
+    public static void Main()
+    {
+        Point p = new Point();
+        Check(true, p is Point(3, 4) { Length: 5 } q1 && Check(p, q1));
+        Check(false, p is Point(1, 4) { Length: 5 });
+        Check(false, p is Point(3, 1) { Length: 5 });
+        Check(false, p is Point(3, 4) { Length: 1 });
+        Check(true, p is (3, 4) { Length: 5 } q2 && Check(p, q2));
+        Check(false, p is (1, 4) { Length: 5 });
+        Check(false, p is (3, 1) { Length: 5 });
+        Check(false, p is (3, 4) { Length: 1 });
+    }
+    private static bool Check<T>(T expected, T actual)
+    {
+        if (!object.Equals(expected, actual)) throw new Exception($""expected: {expected}; actual: {actual}"");
+        return true;
+    }
+}
+public class Point
+{
+    public int Length => 5;
+}
+public static class PointExtensions
+{
+    public static void Deconstruct(this Point p, out int X, out int Y)
+    {
+        X = 3;
+        Y = 4;
+    }
+}
+";
+            var compilation = CreateCompilationWithMscorlib45(source, options: TestOptions.DebugExe, parseOptions: TestOptions.RegularWithRecursivePatterns);
+            compilation.VerifyDiagnostics(
+                );
+            var comp = CompileAndVerify(compilation, expectedOutput: "");
+        }
+
+        [Fact(Skip = "Pattern-based switch with recursive patterns is not yet implemented")]
+        public void Patterns2_Switch_Later()
         {
             var source =
 @"

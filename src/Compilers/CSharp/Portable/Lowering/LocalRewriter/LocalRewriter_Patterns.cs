@@ -116,29 +116,68 @@ namespace Microsoft.CodeAnalysis.CSharp
                             }
                             break;
                         case BoundDagEvaluation e:
-                            // e.Symbol is used as follows:
-                            // 1. if it is a Deconstruct method, in indicates an invocation of that deconstruct and creation of N new temps.
-                            // 2. if it is a Type, it indicates a type cast to that type, and the creation of one new temp of that type.
-                            // 3. if it is a Field or Property symbol, it indicates a fetch and the creation of one new temp.
-                            // 4. We ignore ITuple-based deconstruction for now.
-                            switch (e.Symbol)
                             {
-                                case FieldSymbol field:
-                                    throw new NotImplementedException();
-                                case PropertySymbol property:
-                                    {
-                                        var input = _factory.Local(tempAllocator.GetTemp(e.Input));
-                                        var outputTemp = new BoundDagTemp(e.Syntax, property.Type, e, 0);
-                                        var output = _factory.Local(tempAllocator.GetTemp(outputTemp));
-                                        resultBuilder.Add(_factory.AssignmentExpression(output, _factory.Property(input, property)));
-                                        break;
-                                    }
-                                case MethodSymbol method:
-                                    throw new NotImplementedException();
-                                case TypeSymbol type:
-                                    throw new NotImplementedException();
-                                default:
-                                    throw new NotImplementedException();
+                                // e.Symbol is used as follows:
+                                // 1. if it is a Deconstruct method, in indicates an invocation of that deconstruct and creation of N new temps.
+                                // 2. if it is a Type, it indicates a type cast to that type, and the creation of one new temp of that type.
+                                // 3. if it is a Field or Property symbol, it indicates a fetch and the creation of one new temp.
+                                // 4. We ignore ITuple-based deconstruction for now.
+                                var input = _factory.Local(tempAllocator.GetTemp(e.Input));
+                                switch (e.Symbol)
+                                {
+                                    case FieldSymbol field:
+                                        {
+                                            var outputTemp = new BoundDagTemp(e.Syntax, field.Type, e, 0);
+                                            var output = _factory.Local(tempAllocator.GetTemp(outputTemp));
+                                            resultBuilder.Add(_factory.AssignmentExpression(output, _factory.Field(input, field)));
+                                            break;
+                                        }
+                                    case PropertySymbol property:
+                                        {
+                                            var outputTemp = new BoundDagTemp(e.Syntax, property.Type, e, 0);
+                                            var output = _factory.Local(tempAllocator.GetTemp(outputTemp));
+                                            resultBuilder.Add(_factory.AssignmentExpression(output, _factory.Property(input, property)));
+                                            break;
+                                        }
+                                    case MethodSymbol method:
+                                        {
+                                            var refKindBuilder = ArrayBuilder<RefKind>.GetInstance();
+                                            var argBuilder = ArrayBuilder<BoundExpression>.GetInstance();
+                                            BoundExpression receiver;
+                                            void addArg(RefKind refKind, BoundExpression expression)
+                                            {
+                                                refKindBuilder.Add(refKind);
+                                                argBuilder.Add(expression);
+                                            }
+                                            Debug.Assert(method.Name == "Deconstruct");
+                                            int extensionExtra;
+                                            if (method.IsStatic)
+                                            {
+                                                Debug.Assert(method.IsExtensionMethod);
+                                                receiver = _factory.Type(method.ContainingType);
+                                                addArg(RefKind.None, input);
+                                                extensionExtra = 1;
+                                            }
+                                            else
+                                            {
+                                                receiver = input;
+                                                extensionExtra = 0;
+                                            }
+                                            for (int i = extensionExtra; i < method.ParameterCount; i++)
+                                            {
+                                                var parameter = method.Parameters[i];
+                                                Debug.Assert(parameter.RefKind == RefKind.Out);
+                                                var outputTemp = new BoundDagTemp(e.Syntax, parameter.Type, e, i - extensionExtra);
+                                                addArg(RefKind.Out, _factory.Local(tempAllocator.GetTemp(outputTemp)));
+                                            }
+                                            resultBuilder.Add(_factory.Call(receiver, method, refKindBuilder.ToImmutableAndFree(), argBuilder.ToImmutableAndFree()));
+                                            break;
+                                        }
+                                    case TypeSymbol type:
+                                        throw new NotImplementedException();
+                                    default:
+                                        throw new NotImplementedException();
+                                }
                             }
                             break;
                     }
@@ -150,8 +189,15 @@ namespace Microsoft.CodeAnalysis.CSharp
                     result = (result == null) ? conjunct : _factory.LogicalAnd(result, conjunct);
                 }
 
-                var temps = tempAllocator.AllTemps();
-                return _factory.Sequence(temps, ImmutableArray<BoundExpression>.Empty, result ?? _factory.Literal(true));
+                var bindingsBuilder = ArrayBuilder<BoundExpression>.GetInstance();
+                foreach (var (left, right) in bindings)
+                {
+                    bindingsBuilder.Add(_factory.AssignmentExpression(left, _factory.Local(tempAllocator.GetTemp(right))));
+                }
+
+                var c = _factory.Sequence(ImmutableArray<LocalSymbol>.Empty, bindingsBuilder.ToImmutableAndFree(), _factory.Literal(true));
+                result = (result == null) ? c : (BoundExpression)_factory.LogicalAnd(result, c);
+                return _factory.Sequence(tempAllocator.AllTemps(), ImmutableArray<BoundExpression>.Empty, result);
             }
             finally
             {
@@ -253,6 +299,10 @@ namespace Microsoft.CodeAnalysis.CSharp
                     {
                         var declPattern = (BoundDeclarationPattern)pattern;
                         return declPattern.Update(declPattern.Variable, VisitExpression(declPattern.VariableAccess), declPattern.DeclaredType, declPattern.IsVar);
+                    }
+                case BoundKind.RecursivePattern:
+                    {
+                        throw ExceptionUtilities.UnexpectedValue(pattern.Kind);
                     }
                 case BoundKind.ConstantPattern:
                     {

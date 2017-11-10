@@ -244,7 +244,7 @@ namespace Microsoft.CodeAnalysis.CSharp
         {
             Debug.Assert(input.Type == recursive.InputType);
             NullCheck(input, recursive.Syntax, decisions);
-            if (recursive.DeclaredType != null)
+            if (recursive.DeclaredType != null && recursive.DeclaredType.Type != input.Type)
             {
                 input = ConvertToType(input, recursive.Syntax, recursive.DeclaredType.Type, decisions, ref discardedUseSiteDiagnostics);
             }
@@ -257,12 +257,13 @@ namespace Microsoft.CodeAnalysis.CSharp
                     var evaluation = new BoundDagEvaluation(recursive.Syntax, recursive.DeconstructMethodOpt, input);
                     decisions.Add(evaluation);
                     var method = recursive.DeconstructMethodOpt;
-                    int count = Math.Min(method.ParameterCount, recursive.Deconstruction.Length);
+                    int extensionExtra = method.IsStatic ? 1 : 0;
+                    int count = Math.Min(method.ParameterCount - extensionExtra, recursive.Deconstruction.Length);
                     for (int i = 0; i < count; i++)
                     {
                         var pattern = recursive.Deconstruction[i];
                         var syntax = pattern.Syntax;
-                        var output = new BoundDagTemp(syntax, method.Parameters[i].Type, evaluation, i);
+                        var output = new BoundDagTemp(syntax, method.Parameters[i + extensionExtra].Type, evaluation, i);
                         MakeDecisionsAndBindings(output, pattern, decisions, bindings, ref discardedUseSiteDiagnostics);
                     }
                 }
@@ -283,7 +284,8 @@ namespace Microsoft.CodeAnalysis.CSharp
                 }
                 else
                 {
-                    // This should not occur except in error cases. Perhaps this will be used to handle the ITuple case.
+                    // TODO(patterns2): This should not occur except in error cases. Perhaps this will be used to handle the ITuple case.
+                    throw new NotImplementedException();
                 }
             }
 

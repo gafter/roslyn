@@ -402,7 +402,8 @@ namespace Microsoft.CodeAnalysis.CSharp
                 var inputPlaceholder = new BoundImplicitReceiver(node, declType); // A fake receiver expression to permit us to reuse binding logic
                 var deconstruct = MakeDeconstructInvocationExpression(
                     node.SubPatterns.Count, inputPlaceholder, node, diagnostics, out var outPlaceholders, requireTwoOrMoreElements: false);
-                // PROTOTYPE(patterns2): Set deconstructMethod
+                deconstructMethod = deconstruct.ExpressionSymbol as MethodSymbol;
+                // PROTOTYPE(patterns2): Set and check the deconstructMethod
 
                 for (int i = 0; i < node.SubPatterns.Count; i++)
                 {
