@@ -154,7 +154,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                 case BoundConstantPattern constant:
                     MakeDecisionsAndBindings(input, constant, decisions, bindings, ref discardedUseSiteDiagnostics);
                     break;
-                case BoundWildcardPattern wildcard:
+                case BoundDiscardPattern wildcard:
                     // Nothing to do. It always matches.
                     break;
                 case BoundRecursivePattern recursive:
@@ -182,11 +182,11 @@ namespace Microsoft.CodeAnalysis.CSharp
                 input = ConvertToType(input, declaration.Syntax, type, decisions, ref discardedUseSiteDiagnostics);
             }
 
-            Debug.Assert(declaration.VariableAccess.Type == input.Type);
             var left = declaration.VariableAccess;
             if (left != null)
             {
-                bindings.Add((declaration.VariableAccess, input));
+                Debug.Assert(left.Type == input.Type);
+                bindings.Add((left, input));
             }
             else
             {

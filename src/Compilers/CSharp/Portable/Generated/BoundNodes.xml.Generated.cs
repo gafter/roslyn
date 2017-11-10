@@ -172,7 +172,7 @@ namespace Microsoft.CodeAnalysis.CSharp
         StringInsert,
         IsPatternExpression,
         ConstantPattern,
-        WildcardPattern,
+        DiscardPattern,
         DeclarationPattern,
         RecursivePattern,
         DiscardExpression,
@@ -6290,22 +6290,22 @@ namespace Microsoft.CodeAnalysis.CSharp
         }
     }
 
-    internal sealed partial class BoundWildcardPattern : BoundPattern
+    internal sealed partial class BoundDiscardPattern : BoundPattern
     {
-        public BoundWildcardPattern(SyntaxNode syntax, bool hasErrors)
-            : base(BoundKind.WildcardPattern, syntax, hasErrors)
+        public BoundDiscardPattern(SyntaxNode syntax, bool hasErrors)
+            : base(BoundKind.DiscardPattern, syntax, hasErrors)
         {
         }
 
-        public BoundWildcardPattern(SyntaxNode syntax)
-            : base(BoundKind.WildcardPattern, syntax)
+        public BoundDiscardPattern(SyntaxNode syntax)
+            : base(BoundKind.DiscardPattern, syntax)
         {
         }
 
 
         public override BoundNode Accept(BoundTreeVisitor visitor)
         {
-            return visitor.VisitWildcardPattern(this);
+            return visitor.VisitDiscardPattern(this);
         }
     }
 
@@ -6353,7 +6353,6 @@ namespace Microsoft.CodeAnalysis.CSharp
         {
 
             Debug.Assert(inputType != null, "Field 'inputType' cannot be null (use Null=\"allow\" in BoundNodes.xml to remove this check)");
-            Debug.Assert(!deconstruction.IsDefault, "Field 'deconstruction' cannot be null (use Null=\"allow\" in BoundNodes.xml to remove this check)");
 
             this.DeclaredType = declaredType;
             this.InputType = inputType;
@@ -6867,8 +6866,8 @@ namespace Microsoft.CodeAnalysis.CSharp
                     return VisitIsPatternExpression(node as BoundIsPatternExpression, arg);
                 case BoundKind.ConstantPattern: 
                     return VisitConstantPattern(node as BoundConstantPattern, arg);
-                case BoundKind.WildcardPattern: 
-                    return VisitWildcardPattern(node as BoundWildcardPattern, arg);
+                case BoundKind.DiscardPattern: 
+                    return VisitDiscardPattern(node as BoundDiscardPattern, arg);
                 case BoundKind.DeclarationPattern: 
                     return VisitDeclarationPattern(node as BoundDeclarationPattern, arg);
                 case BoundKind.RecursivePattern: 
@@ -7499,7 +7498,7 @@ namespace Microsoft.CodeAnalysis.CSharp
         {
             return this.DefaultVisit(node, arg);
         }
-        public virtual R VisitWildcardPattern(BoundWildcardPattern node, A arg)
+        public virtual R VisitDiscardPattern(BoundDiscardPattern node, A arg)
         {
             return this.DefaultVisit(node, arg);
         }
@@ -8143,7 +8142,7 @@ namespace Microsoft.CodeAnalysis.CSharp
         {
             return this.DefaultVisit(node);
         }
-        public virtual BoundNode VisitWildcardPattern(BoundWildcardPattern node)
+        public virtual BoundNode VisitDiscardPattern(BoundDiscardPattern node)
         {
             return this.DefaultVisit(node);
         }
@@ -8969,7 +8968,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             this.Visit(node.Value);
             return null;
         }
-        public override BoundNode VisitWildcardPattern(BoundWildcardPattern node)
+        public override BoundNode VisitDiscardPattern(BoundDiscardPattern node)
         {
             return null;
         }
@@ -9908,7 +9907,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             BoundExpression value = (BoundExpression)this.Visit(node.Value);
             return node.Update(value, node.ConstantValue);
         }
-        public override BoundNode VisitWildcardPattern(BoundWildcardPattern node)
+        public override BoundNode VisitDiscardPattern(BoundDiscardPattern node)
         {
             return node;
         }
@@ -11545,9 +11544,9 @@ namespace Microsoft.CodeAnalysis.CSharp
             }
             );
         }
-        public override TreeDumperNode VisitWildcardPattern(BoundWildcardPattern node, object arg)
+        public override TreeDumperNode VisitDiscardPattern(BoundDiscardPattern node, object arg)
         {
-            return new TreeDumperNode("wildcardPattern", null, Array.Empty<TreeDumperNode>()
+            return new TreeDumperNode("discardPattern", null, Array.Empty<TreeDumperNode>()
             );
         }
         public override TreeDumperNode VisitDeclarationPattern(BoundDeclarationPattern node, object arg)
@@ -11568,7 +11567,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                 new TreeDumperNode("declaredType", null, new TreeDumperNode[] { Visit(node.DeclaredType, null) }),
                 new TreeDumperNode("inputType", node.InputType, null),
                 new TreeDumperNode("deconstructMethodOpt", node.DeconstructMethodOpt, null),
-                new TreeDumperNode("deconstruction", null, from x in node.Deconstruction select Visit(x, null)),
+                new TreeDumperNode("deconstruction", null, node.Deconstruction.IsDefault ? Array.Empty<TreeDumperNode>() : from x in node.Deconstruction select Visit(x, null)),
                 new TreeDumperNode("propertiesOpt", node.PropertiesOpt, null),
                 new TreeDumperNode("variable", node.Variable, null),
                 new TreeDumperNode("variableAccess", null, new TreeDumperNode[] { Visit(node.VariableAccess, null) })

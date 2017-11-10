@@ -70,7 +70,7 @@ namespace Microsoft.CodeAnalysis.CSharp
         private BoundPattern BindDiscardPattern(DiscardPatternSyntax node, TypeSymbol operandType, bool hasErrors, DiagnosticBag diagnostics)
         {
             // TODO(patterns2): give an error if there is a bindable `_` in scope.
-            return new BoundWildcardPattern(node);
+            return new BoundDiscardPattern(node);
         }
 
         private BoundConstantPattern BindConstantPattern(

@@ -11,10 +11,9 @@ using Xunit;
 
 namespace Microsoft.CodeAnalysis.CSharp.UnitTests.CodeGen
 {
-    public class CodeGenOperatorTests : CSharpTestBase
+    public class CodeGenOperators : CSharpTestBase
     {
-
-        [Fact]
+        [Fact(Skip = "PROTOTYPE(patterns2): code quality")]
         public void TestIsNullPattern()
         {
             var source = @"
@@ -90,7 +89,7 @@ class C
                 Diagnostic(ErrorCode.ERR_TypeVarCantBeNull, "null").WithArguments("T").WithLocation(8, 18));
         }
 
-        [Fact]
+        [Fact(Skip = "PROTOTYPE(patterns2): code quality")]
         public void TestIsNullPatternGenericParamClass()
         {
             var source = @"
@@ -158,7 +157,7 @@ class C
 }");
         }
 
-        [Fact]
+        [Fact(Skip = "PROTOTYPE(patterns2): code quality")]
         public void TestIsNullPatternNullable()
         {
             var source = @"
@@ -238,7 +237,7 @@ class C
 }");
         }
 
-        [Fact]
+        [Fact(Skip = "PROTOTYPE(patterns2): code quality")]
         public void TestIsNullPatternObjectLiteral()
         {
             var source = @"
@@ -258,15 +257,13 @@ class C
             // Release
             var compilation = CompileAndVerify(source, expectedOutput: "True Branch taken", options: TestOptions.ReleaseExe);
             compilation.VerifyIL("C.Main", @"{
-    // Code size       20 (0x14)
-    .maxstack  2
-    IL_0000:  ldnull
-    IL_0001:  ldnull
-    IL_0002:  ceq
-    IL_0004:  call       ""void System.Console.Write(bool)""
-    IL_0009:  ldstr      "" Branch taken""
-    IL_000e:  call       ""void System.Console.Write(string)""
-    IL_0013:  ret
+  // Code size       17 (0x11)
+  .maxstack  1
+  IL_0000:  ldc.i4.1
+  IL_0001:  call       ""void System.Console.Write(bool)""
+  IL_0006:  ldstr      "" Branch taken""
+  IL_000b:  call       ""void System.Console.Write(string)""
+  IL_0010:  ret
 }");
             // Debug
             compilation = CompileAndVerify(source, expectedOutput: "True Branch taken", options: TestOptions.DebugExe);
@@ -295,7 +292,7 @@ class C
 }");
         }
 
-        [Fact]
+        [Fact(Skip = "PROTOTYPE(patterns2): code quality")]
         public void TestIsNullPatternStringConstant()
         {
             var source = @"
@@ -316,15 +313,13 @@ class C
             // Release
             var compilation = CompileAndVerify(source, expectedOutput: "True Branch taken", options: TestOptions.ReleaseExe);
             compilation.VerifyIL("C.Main", @"{
-    // Code size       20 (0x14)
-    .maxstack  2
-    IL_0000:  ldnull
-    IL_0001:  ldnull
-    IL_0002:  ceq
-    IL_0004:  call       ""void System.Console.Write(bool)""
-    IL_0009:  ldstr      "" Branch taken""
-    IL_000e:  call       ""void System.Console.Write(string)""
-    IL_0013:  ret
+  // Code size       17 (0x11)
+  .maxstack  1
+  IL_0000:  ldc.i4.1
+  IL_0001:  call       ""void System.Console.Write(bool)""
+  IL_0006:  ldstr      "" Branch taken""
+  IL_000b:  call       ""void System.Console.Write(string)""
+  IL_0010:  ret
 }");
             // Debug
             compilation = CompileAndVerify(source, expectedOutput: "True Branch taken", options: TestOptions.DebugExe);

@@ -271,7 +271,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                                 throw ExceptionUtilities.UnexpectedValue(decisionTree.Kind);
                         }
                     }
-                case BoundKind.WildcardPattern:
+                case BoundKind.DiscardPattern:
                     // because we always handle `default:` last, and that is the only way to get a wildcard pattern,
                     // we should never need to see if it subsumes something else.
                     throw ExceptionUtilities.UnexpectedValue(decisionTree.Kind);

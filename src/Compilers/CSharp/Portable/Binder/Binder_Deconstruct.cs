@@ -691,9 +691,12 @@ namespace Microsoft.CodeAnalysis.CSharp
         private BoundBadExpression MissingDeconstruct(BoundExpression receiver, SyntaxNode rightSyntax, int numParameters, DiagnosticBag diagnostics,
                                     out ImmutableArray<BoundDeconstructValuePlaceholder> outPlaceholders, BoundExpression childNode)
         {
-            Error(diagnostics, ErrorCode.ERR_MissingDeconstruct, rightSyntax, receiver.Type, numParameters);
-            outPlaceholders = default;
+            if (!receiver.Type.IsErrorType())
+            {
+                Error(diagnostics, ErrorCode.ERR_MissingDeconstruct, rightSyntax, receiver.Type, numParameters);
+            }
 
+            outPlaceholders = default;
             return BadExpression(rightSyntax, childNode);
         }
 

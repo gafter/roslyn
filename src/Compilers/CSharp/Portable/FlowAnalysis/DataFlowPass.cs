@@ -1495,7 +1495,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                         Assign(pat, null, RefKind.None, false);
                         break;
                     }
-                case BoundKind.WildcardPattern:
+                case BoundKind.DiscardPattern:
                     break;
                 case BoundKind.ConstantPattern:
                     {

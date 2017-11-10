@@ -17,7 +17,7 @@ namespace Microsoft.CodeAnalysis.CSharp.UnitTests
     public class PatternMatchingTests2 : PatternMatchingTestBase
     {
         [Fact]
-        public void DELETEME()
+        public void Patterns2_00()
         {
             var source =
 @"
@@ -26,16 +26,14 @@ class Program
 {
     public static void Main()
     {
-        Console.WriteLine(1 is int {} x);
-        Console.WriteLine(x);
+        Console.WriteLine(1 is int {} x ? x : -1);
     }
 }
 ";
             var compilation = CreateCompilationWithMscorlib45(source, options: TestOptions.DebugExe, parseOptions: TestOptions.RegularWithRecursivePatterns);
             compilation.VerifyDiagnostics(
                 );
-            var comp = CompileAndVerify(compilation, expectedOutput: @"True
-1");
+            var comp = CompileAndVerify(compilation, expectedOutput: @"1");
         }
 
         [Fact]

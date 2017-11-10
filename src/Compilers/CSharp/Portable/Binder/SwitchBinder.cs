@@ -58,6 +58,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                         {
                             case SyntaxKind.DeconstructionPattern:
                             case SyntaxKind.PropertyPattern:
+                            case SyntaxKind.DiscardPattern:
                                 return true;
                         }
                     }

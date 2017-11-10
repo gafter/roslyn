@@ -158,7 +158,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                 {
                     patternMatches = null;
                 }
-                else if (boundLabel.Pattern.Kind == BoundKind.WildcardPattern)
+                else if (boundLabel.Pattern.Kind == BoundKind.DiscardPattern)
                 {
                     // wildcard pattern matches anything
                     patternMatches = true;
@@ -238,7 +238,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                 case SyntaxKind.DefaultSwitchLabel:
                     {
                         var defaultLabelSyntax = (DefaultSwitchLabelSyntax)node;
-                        var pattern = new BoundWildcardPattern(node);
+                        var pattern = new BoundDiscardPattern(node);
                         bool hasErrors = pattern.HasErrors;
                         if (defaultLabel != null)
                         {

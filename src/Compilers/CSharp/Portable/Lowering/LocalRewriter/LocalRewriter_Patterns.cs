@@ -41,6 +41,7 @@ namespace Microsoft.CodeAnalysis.CSharp
         public override BoundNode VisitIsPatternExpression(BoundIsPatternExpression node)
         {
             var decisionBuilder = new DecisionDagBuilder(this._compilation);
+            var loweredInput = VisitExpression(node.Expression);
             var inputTemp = decisionBuilder.LowerPattern(node.Expression, node.Pattern, out var decisions, out var bindings);
             var tempAllocator = new DagTempAllocator(this._factory);
             var conjunctBuilder = ArrayBuilder<BoundExpression>.GetInstance();
@@ -49,7 +50,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             try
             {
                 // first, copy the input expression into the input temp
-                resultBuilder.Add(_factory.AssignmentExpression(tempAllocator.GetTemp(inputTemp), node.Expression));
+                resultBuilder.Add(_factory.AssignmentExpression(tempAllocator.GetTemp(inputTemp), loweredInput));
 
                 void addConjunct(BoundExpression expression)
                 {
@@ -82,7 +83,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                             else
                             {
                                 var input = _factory.Local(tempAllocator.GetTemp(d.Input));
-                                addConjunct(MakeNullCheck(input.Syntax, input, input.Type.IsNullableType() ? BinaryOperatorKind.NullableNullNotEqual : BinaryOperatorKind.NotEqual));
+                                addConjunct(MakeNullCheck(d.Syntax, input, input.Type.IsNullableType() ? BinaryOperatorKind.NullableNullNotEqual : BinaryOperatorKind.NotEqual));
                             }
                             break;
                         case BoundTypeDecision d:
@@ -105,7 +106,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                             else if (d.Value == ConstantValue.Null)
                             {
                                 var input = _factory.Local(tempAllocator.GetTemp(d.Input));
-                                addConjunct(MakeNullCheck(input.Syntax, input, input.Type.IsNullableType() ? BinaryOperatorKind.NullableNullEqual : BinaryOperatorKind.Equal));
+                                addConjunct(MakeNullCheck(d.Syntax, input, input.Type.IsNullableType() ? BinaryOperatorKind.NullableNullEqual : BinaryOperatorKind.Equal));
                             }
                             else
                             {
@@ -130,15 +131,15 @@ namespace Microsoft.CodeAnalysis.CSharp
                                             var outputTemp = new BoundDagTemp(e.Syntax, field.Type, e, 0);
                                             var output = _factory.Local(tempAllocator.GetTemp(outputTemp));
                                             resultBuilder.Add(_factory.AssignmentExpression(output, _factory.Field(input, field)));
-                                            break;
                                         }
+                                        break;
                                     case PropertySymbol property:
                                         {
                                             var outputTemp = new BoundDagTemp(e.Syntax, property.Type, e, 0);
                                             var output = _factory.Local(tempAllocator.GetTemp(outputTemp));
                                             resultBuilder.Add(_factory.AssignmentExpression(output, _factory.Property(input, property)));
-                                            break;
                                         }
+                                        break;
                                     case MethodSymbol method:
                                         {
                                             var refKindBuilder = ArrayBuilder<RefKind>.GetInstance();
@@ -171,18 +172,28 @@ namespace Microsoft.CodeAnalysis.CSharp
                                                 addArg(RefKind.Out, _factory.Local(tempAllocator.GetTemp(outputTemp)));
                                             }
                                             resultBuilder.Add(_factory.Call(receiver, method, refKindBuilder.ToImmutableAndFree(), argBuilder.ToImmutableAndFree()));
-                                            break;
                                         }
+                                        break;
                                     case TypeSymbol type:
-                                        throw new NotImplementedException();
+                                        {
+                                            var outputTemp = new BoundDagTemp(e.Syntax, type, e, 0);
+                                            var output = _factory.Local(tempAllocator.GetTemp(outputTemp));
+                                            resultBuilder.Add(_factory.AssignmentExpression(output, _factory.As(input, type)));
+                                        }
+                                        break;
                                     default:
-                                        throw new NotImplementedException();
+                                        throw ExceptionUtilities.UnexpectedValue(e.Symbol?.Kind);
                                 }
                             }
                             break;
                     }
                 }
 
+                if (resultBuilder.Count != 0)
+                {
+                    conjunctBuilder.Add(_factory.Sequence(ImmutableArray<LocalSymbol>.Empty, resultBuilder.ToImmutable(), _factory.Literal(true)));
+                    resultBuilder.Clear();
+                }
                 BoundExpression result = null;
                 foreach (var conjunct in conjunctBuilder)
                 {
