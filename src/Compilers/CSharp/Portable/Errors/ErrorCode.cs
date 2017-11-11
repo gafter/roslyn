@@ -1544,7 +1544,7 @@ namespace Microsoft.CodeAnalysis.CSharp
         ERR_InferredRecursivePatternType = 8501,
         ERR_WrongNumberOfSubpatterns = 8502,
         ERR_PropertyPatternNameMissing = 8503,
-        ERR_FeatureIsUnimplemented = 8504, // PROTOTYPE(patterns2): get rid of this by implementing the unimplemented parts.
+        //ERR_FeatureIsUnimplemented = 8504,
         #endregion diagnostics introduced for recursive patterns
 
     }
