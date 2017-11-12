@@ -12,211 +12,277 @@ namespace Microsoft.CodeAnalysis.CSharp
 {
     internal sealed partial class LocalRewriter
     {
-        public class DagTempAllocator
+        private struct IsPatternTranslator : IDisposable
         {
+            private readonly LocalRewriter _localRewriter;
             private readonly SyntheticBoundNodeFactory _factory;
-            private readonly Dictionary<BoundDagTemp, BoundExpression> map = new Dictionary<BoundDagTemp, BoundExpression>();
-            private readonly ArrayBuilder<LocalSymbol> temps = new ArrayBuilder<LocalSymbol>();
 
-            public DagTempAllocator(SyntheticBoundNodeFactory factory)
+            private readonly ArrayBuilder<BoundExpression> _conjunctBuilder;
+            private readonly ArrayBuilder<BoundExpression> _sideEffectBuilder;
+            private readonly DagTempAllocator _tempAllocator;
+
+            private readonly BoundExpression _loweredInput;
+            private readonly BoundDagTemp _inputTemp;
+
+            public IsPatternTranslator(LocalRewriter localRewriter, BoundExpression loweredInput)
             {
-                this._factory = factory;
+                this._localRewriter = localRewriter;
+                this._factory = localRewriter._factory;
+                this._tempAllocator = new DagTempAllocator(localRewriter._factory);
+                this._loweredInput = loweredInput;
+                this._inputTemp = new BoundDagTemp(loweredInput.Syntax, loweredInput.Type, null, 0);
+                this._conjunctBuilder = ArrayBuilder<BoundExpression>.GetInstance();
+                this._sideEffectBuilder = ArrayBuilder<BoundExpression>.GetInstance();
             }
 
-            public BoundExpression GetTemp(BoundDagTemp dagTemp)
+            public void Dispose()
             {
-                if (!map.TryGetValue(dagTemp, out var result))
+                _conjunctBuilder.Free();
+                _sideEffectBuilder.Free();
+                _tempAllocator.Dispose();
+            }
+
+            public class DagTempAllocator : IDisposable
+            {
+                private readonly SyntheticBoundNodeFactory _factory;
+                private readonly PooledDictionary<BoundDagTemp, BoundExpression> _map = PooledDictionary<BoundDagTemp, BoundExpression>.GetInstance();
+                private readonly ArrayBuilder<LocalSymbol> _temps = ArrayBuilder<LocalSymbol>.GetInstance();
+
+                public DagTempAllocator(SyntheticBoundNodeFactory factory)
                 {
-                    // PROTOTYPE(patterns2): Not sure what temp kind should be used for `is pattern`.
-                    var temp = _factory.SynthesizedLocal(dagTemp.Type, syntax: _factory.Syntax, kind: SynthesizedLocalKind.SwitchCasePatternMatching);
-                    map.Add(dagTemp, _factory.Local(temp));
-                    temps.Add(temp);
-                    result = _factory.Local(temp);
+                    this._factory = factory;
                 }
 
+                public void Dispose()
+                {
+                    _temps.Free();
+                    _map.Free();
+                }
+
+                public BoundExpression GetTemp(BoundDagTemp dagTemp)
+                {
+                    if (!_map.TryGetValue(dagTemp, out var result))
+                    {
+                        // PROTOTYPE(patterns2): Not sure what temp kind should be used for `is pattern`.
+                        var temp = _factory.SynthesizedLocal(dagTemp.Type, syntax: _factory.Syntax, kind: SynthesizedLocalKind.SwitchCasePatternMatching);
+                        _map.Add(dagTemp, _factory.Local(temp));
+                        _temps.Add(temp);
+                        result = _factory.Local(temp);
+                    }
+
+                    return result;
+                }
+
+                public ImmutableArray<LocalSymbol> AllTemps()
+                {
+                    return _temps.ToImmutableArray();
+                }
+
+                public void AssignTemp(BoundDagTemp dagTemp, BoundExpression value)
+                {
+                    _map.Add(dagTemp, value);
+                }
+            }
+
+            private bool LowerDecision(BoundDagDecision decision)
+            {
+                var oldSyntax = _factory.Syntax;
+                _factory.Syntax = decision.Syntax;
+                var result = LowerDecisionCore(decision);
+                _factory.Syntax = oldSyntax;
                 return result;
             }
 
-            public ImmutableArray<LocalSymbol> AllTemps()
+            private bool LowerDecisionCore(BoundDagDecision decision)
             {
-                return temps.ToImmutableArray();
-            }
-
-            public void AssignTemp(BoundDagTemp dagTemp, BoundExpression value)
-            {
-                map.Add(dagTemp, value);
-            }
-        }
-
-        public override BoundNode VisitIsPatternExpression(BoundIsPatternExpression node)
-        {
-            var decisionBuilder = new DecisionDagBuilder(this._compilation);
-            var loweredInput = VisitExpression(node.Expression);
-            var inputTemp = decisionBuilder.LowerPattern(node.Expression, node.Pattern, out var decisions, out var bindings);
-            var tempAllocator = new DagTempAllocator(this._factory);
-            var conjunctBuilder = ArrayBuilder<BoundExpression>.GetInstance();
-            var resultBuilder = ArrayBuilder<BoundExpression>.GetInstance();
-
-            void addConjunct(BoundExpression expression)
-            {
-                // PROTOTYPE(patterns2): could handle constant expressions more efficiently.
-                if (resultBuilder.Count != 0)
+                void addConjunct(ref IsPatternTranslator self, BoundExpression expression)
                 {
-                    expression = _factory.Sequence(ImmutableArray<LocalSymbol>.Empty, resultBuilder.ToImmutable(), expression);
-                    resultBuilder.Clear();
+                    // PROTOTYPE(patterns2): could handle constant expressions more efficiently.
+                    if (self._sideEffectBuilder.Count != 0)
+                    {
+                        expression = self._factory.Sequence(ImmutableArray<LocalSymbol>.Empty, self._sideEffectBuilder.ToImmutable(), expression);
+                        self._sideEffectBuilder.Clear();
+                    }
+
+                    self._conjunctBuilder.Add(expression);
                 }
 
-                conjunctBuilder.Add(expression);
+                switch (decision)
+                {
+                    case BoundNonNullDecision d:
+                        // If the actual input is a constant, short-circuit this test
+                        if (d.Input == _inputTemp && _loweredInput.ConstantValue != null)
+                        {
+                            var decisionResult = _loweredInput.ConstantValue != ConstantValue.Null;
+                            if (!decisionResult)
+                            {
+                                _conjunctBuilder.Add(_factory.Literal(decisionResult));
+                                return true;
+                            }
+                        }
+                        else
+                        {
+                            // PROTOTYPE(patterns2): combine null test and type test when possible for improved code
+                            var input = _tempAllocator.GetTemp(d.Input);
+                            addConjunct(ref this, _localRewriter.MakeNullCheck(d.Syntax, input, input.Type.IsNullableType() ? BinaryOperatorKind.NullableNullNotEqual : BinaryOperatorKind.NotEqual));
+                        }
+                        break;
+                    case BoundTypeDecision d:
+                        {
+                            var input = _tempAllocator.GetTemp(d.Input);
+                            addConjunct(ref this, _factory.Is(input, d.Type));
+                        }
+                        break;
+                    case BoundValueDecision d:
+                        // If the actual input is a constant, short-circuit this test
+                        if (d.Input == _inputTemp && _loweredInput.ConstantValue != null)
+                        {
+                            var decisionResult = _loweredInput.ConstantValue == d.Value;
+                            if (!decisionResult)
+                            {
+                                _conjunctBuilder.Add(_factory.Literal(decisionResult));
+                                return true;
+                            }
+                        }
+                        else if (d.Value == ConstantValue.Null)
+                        {
+                            var input = _tempAllocator.GetTemp(d.Input);
+                            addConjunct(ref this, _localRewriter.MakeNullCheck(d.Syntax, input, input.Type.IsNullableType() ? BinaryOperatorKind.NullableNullEqual : BinaryOperatorKind.Equal));
+                        }
+                        else
+                        {
+                            var input = _tempAllocator.GetTemp(d.Input);
+                            var systemObject = _factory.SpecialType(SpecialType.System_Object);
+                            addConjunct(ref this, _localRewriter.MakeEqual(_factory.Literal(d.Value, input.Type), input));
+                        }
+                        break;
+                    case BoundDagTypeTestAndCast c:
+                        {
+                            var input = _tempAllocator.GetTemp(c.Input);
+                            var outputTemp = new BoundDagTemp(c.Syntax, c.Type, c, 0);
+                            var output = _tempAllocator.GetTemp(outputTemp);
+                            addConjunct(ref this, _localRewriter.MakeTypeTestAndAssignment(output, input, c.Type));
+                        }
+                        break;
+                    case BoundDagEvaluation e:
+                        {
+                            // e.Symbol is used as follows:
+                            // 1. if it is a Deconstruct method, in indicates an invocation of that deconstruct and creation of N new temps.
+                            // 2. if it is a Type, it indicates a type cast to that type, and the creation of one new temp of that type.
+                            // 3. if it is a Field or Property symbol, it indicates a fetch and the creation of one new temp.
+                            // 4. We ignore ITuple-based deconstruction for now.
+                            var input = _tempAllocator.GetTemp(e.Input);
+                            switch (e.Symbol)
+                            {
+                                case FieldSymbol field:
+                                    {
+                                        var outputTemp = new BoundDagTemp(e.Syntax, field.Type, e, 0);
+                                        var output = _tempAllocator.GetTemp(outputTemp);
+                                        _sideEffectBuilder.Add(_factory.AssignmentExpression(output, _factory.Field(input, field)));
+                                    }
+                                    break;
+                                case PropertySymbol property:
+                                    {
+                                        var outputTemp = new BoundDagTemp(e.Syntax, property.Type, e, 0);
+                                        var output = _tempAllocator.GetTemp(outputTemp);
+                                        _sideEffectBuilder.Add(_factory.AssignmentExpression(output, _factory.Property(input, property)));
+                                    }
+                                    break;
+                                case MethodSymbol method:
+                                    {
+                                        var refKindBuilder = ArrayBuilder<RefKind>.GetInstance();
+                                        var argBuilder = ArrayBuilder<BoundExpression>.GetInstance();
+                                        BoundExpression receiver;
+                                        void addArg(RefKind refKind, BoundExpression expression)
+                                        {
+                                            refKindBuilder.Add(refKind);
+                                            argBuilder.Add(expression);
+                                        }
+                                        Debug.Assert(method.Name == "Deconstruct");
+                                        int extensionExtra;
+                                        if (method.IsStatic)
+                                        {
+                                            Debug.Assert(method.IsExtensionMethod);
+                                            receiver = _factory.Type(method.ContainingType);
+                                            addArg(RefKind.None, input);
+                                            extensionExtra = 1;
+                                        }
+                                        else
+                                        {
+                                            receiver = input;
+                                            extensionExtra = 0;
+                                        }
+                                        for (int i = extensionExtra; i < method.ParameterCount; i++)
+                                        {
+                                            var parameter = method.Parameters[i];
+                                            Debug.Assert(parameter.RefKind == RefKind.Out);
+                                            var outputTemp = new BoundDagTemp(e.Syntax, parameter.Type, e, i - extensionExtra);
+                                            addArg(RefKind.Out, _tempAllocator.GetTemp(outputTemp));
+                                        }
+                                        _sideEffectBuilder.Add(_factory.Call(receiver, method, refKindBuilder.ToImmutableAndFree(), argBuilder.ToImmutableAndFree()));
+                                    }
+                                    break;
+                                case TypeSymbol type:
+                                    {
+                                        var outputTemp = new BoundDagTemp(e.Syntax, type, e, 0);
+                                        var output = _tempAllocator.GetTemp(outputTemp);
+                                        var conversion = _factory.Compilation.ClassifyConversion(input.Type, output.Type);
+                                        if (conversion.Exists)
+                                        {
+                                            _sideEffectBuilder.Add(_factory.AssignmentExpression(output, _factory.Convert(type, input, conversion)));
+                                        }
+                                        else
+                                        {
+                                            _sideEffectBuilder.Add(_factory.AssignmentExpression(output, _factory.As(input, type)));
+                                        }
+                                    }
+                                    break;
+                                default:
+                                    throw ExceptionUtilities.UnexpectedValue(e.Symbol?.Kind);
+                            }
+                        }
+                        break;
+                }
+
+                return false;
             }
 
-            try
+            public BoundExpression LowerIsPattern(BoundPattern pattern, CSharpCompilation compilation)
             {
+                var decisionBuilder = new DecisionDagBuilder(compilation);
+                var inputTemp = decisionBuilder.LowerPattern(_loweredInput, pattern, out var decisions, out var bindings);
+                Debug.Assert(inputTemp == _inputTemp);
+
                 // first, copy the input expression into the input temp
-                if (node.Pattern.Kind != BoundKind.RecursivePattern &&
-                    (loweredInput.Kind == BoundKind.Local || loweredInput.Kind == BoundKind.Parameter || loweredInput.ConstantValue != null))
+                if (pattern.Kind != BoundKind.RecursivePattern &&
+                    (_loweredInput.Kind == BoundKind.Local || _loweredInput.Kind == BoundKind.Parameter || _loweredInput.ConstantValue != null))
                 {
                     // Since non-recursive patterns cannot have side-effects on locals, we reuse an existing local
                     // if present. A recursive pattern, on the other hand, may mutate a local through a captured lambda
                     // when a `Deconstruct` method is invoked.
-                    tempAllocator.AssignTemp(inputTemp, loweredInput);
+                    _tempAllocator.AssignTemp(inputTemp, _loweredInput);
                 }
                 else
                 {
-                    resultBuilder.Add(_factory.AssignmentExpression(tempAllocator.GetTemp(inputTemp), loweredInput));
+                    _sideEffectBuilder.Add(_factory.AssignmentExpression(_tempAllocator.GetTemp(inputTemp), _loweredInput));
                 }
 
                 // then process all of the individual decisions
                 foreach (var decision in decisions)
                 {
-                    switch (decision)
+                    if (LowerDecision(decision))
                     {
-                        case BoundNonNullDecision d:
-                            // If the actual input is a constant, short-circuit this test
-                            if (d.Input == inputTemp && loweredInput.ConstantValue != null)
-                            {
-                                var decisionResult = loweredInput.ConstantValue != ConstantValue.Null;
-                                if (!decisionResult)
-                                {
-                                    // short-circuit the whole thing and return the constant result (e.g. `null is string s`)
-                                    // No need to do the other tests or bindings.
-                                    return _factory.Literal(decisionResult);
-                                }
-                            }
-                            else
-                            {
-                                var input =tempAllocator.GetTemp(d.Input);
-                                addConjunct(MakeNullCheck(d.Syntax, input, input.Type.IsNullableType() ? BinaryOperatorKind.NullableNullNotEqual : BinaryOperatorKind.NotEqual));
-                            }
-                            break;
-                        case BoundTypeDecision d:
-                            {
-                                var input = tempAllocator.GetTemp(d.Input);
-                                addConjunct(_factory.Is(input, d.Type));
-                            }
-                            break;
-                        case BoundValueDecision d:
-                            // If the actual input is a constant, short-circuit this test
-                            if (d.Input == inputTemp && loweredInput.ConstantValue != null)
-                            {
-                                var decisionResult = loweredInput.ConstantValue == d.Value;
-                                if (!decisionResult)
-                                {
-                                    // short-circuit the whole thing and return the constant result (e.g. `3 is 4`)
-                                    return _factory.Literal(decisionResult);
-                                }
-                            }
-                            else if (d.Value == ConstantValue.Null)
-                            {
-                                var input = tempAllocator.GetTemp(d.Input);
-                                addConjunct(MakeNullCheck(d.Syntax, input, input.Type.IsNullableType() ? BinaryOperatorKind.NullableNullEqual : BinaryOperatorKind.Equal));
-                            }
-                            else
-                            {
-                                var input = tempAllocator.GetTemp(d.Input);
-                                var systemObject = _factory.SpecialType(SpecialType.System_Object);
-                                addConjunct(MakeEqual(_factory.Literal(d.Value, input.Type), input));
-                            }
-                            break;
-                        case BoundDagEvaluation e:
-                            {
-                                // e.Symbol is used as follows:
-                                // 1. if it is a Deconstruct method, in indicates an invocation of that deconstruct and creation of N new temps.
-                                // 2. if it is a Type, it indicates a type cast to that type, and the creation of one new temp of that type.
-                                // 3. if it is a Field or Property symbol, it indicates a fetch and the creation of one new temp.
-                                // 4. We ignore ITuple-based deconstruction for now.
-                                var input = tempAllocator.GetTemp(e.Input);
-                                switch (e.Symbol)
-                                {
-                                    case FieldSymbol field:
-                                        {
-                                            var outputTemp = new BoundDagTemp(e.Syntax, field.Type, e, 0);
-                                            var output = tempAllocator.GetTemp(outputTemp);
-                                            resultBuilder.Add(_factory.AssignmentExpression(output, _factory.Field(input, field)));
-                                        }
-                                        break;
-                                    case PropertySymbol property:
-                                        {
-                                            var outputTemp = new BoundDagTemp(e.Syntax, property.Type, e, 0);
-                                            var output = tempAllocator.GetTemp(outputTemp);
-                                            resultBuilder.Add(_factory.AssignmentExpression(output, _factory.Property(input, property)));
-                                        }
-                                        break;
-                                    case MethodSymbol method:
-                                        {
-                                            var refKindBuilder = ArrayBuilder<RefKind>.GetInstance();
-                                            var argBuilder = ArrayBuilder<BoundExpression>.GetInstance();
-                                            BoundExpression receiver;
-                                            void addArg(RefKind refKind, BoundExpression expression)
-                                            {
-                                                refKindBuilder.Add(refKind);
-                                                argBuilder.Add(expression);
-                                            }
-                                            Debug.Assert(method.Name == "Deconstruct");
-                                            int extensionExtra;
-                                            if (method.IsStatic)
-                                            {
-                                                Debug.Assert(method.IsExtensionMethod);
-                                                receiver = _factory.Type(method.ContainingType);
-                                                addArg(RefKind.None, input);
-                                                extensionExtra = 1;
-                                            }
-                                            else
-                                            {
-                                                receiver = input;
-                                                extensionExtra = 0;
-                                            }
-                                            for (int i = extensionExtra; i < method.ParameterCount; i++)
-                                            {
-                                                var parameter = method.Parameters[i];
-                                                Debug.Assert(parameter.RefKind == RefKind.Out);
-                                                var outputTemp = new BoundDagTemp(e.Syntax, parameter.Type, e, i - extensionExtra);
-                                                addArg(RefKind.Out, tempAllocator.GetTemp(outputTemp));
-                                            }
-                                            resultBuilder.Add(_factory.Call(receiver, method, refKindBuilder.ToImmutableAndFree(), argBuilder.ToImmutableAndFree()));
-                                        }
-                                        break;
-                                    case TypeSymbol type:
-                                        {
-                                            var outputTemp = new BoundDagTemp(e.Syntax, type, e, 0);
-                                            var output = tempAllocator.GetTemp(outputTemp);
-                                            resultBuilder.Add(_factory.AssignmentExpression(output, _factory.As(input, type)));
-                                        }
-                                        break;
-                                    default:
-                                        throw ExceptionUtilities.UnexpectedValue(e.Symbol?.Kind);
-                                }
-                            }
-                            break;
+                        break;
                     }
                 }
 
-                if (resultBuilder.Count != 0)
+                if (_sideEffectBuilder.Count != 0)
                 {
-                    conjunctBuilder.Add(_factory.Sequence(ImmutableArray<LocalSymbol>.Empty, resultBuilder.ToImmutable(), _factory.Literal(true)));
-                    resultBuilder.Clear();
+                    _conjunctBuilder.Add(_factory.Sequence(ImmutableArray<LocalSymbol>.Empty, _sideEffectBuilder.ToImmutable(), _factory.Literal(true)));
+                    _sideEffectBuilder.Clear();
                 }
                 BoundExpression result = null;
-                foreach (var conjunct in conjunctBuilder)
+                foreach (var conjunct in _conjunctBuilder)
                 {
                     result = (result == null) ? conjunct : _factory.LogicalAnd(result, conjunct);
                 }
@@ -224,7 +290,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                 var bindingsBuilder = ArrayBuilder<BoundExpression>.GetInstance();
                 foreach (var (left, right) in bindings)
                 {
-                    bindingsBuilder.Add(_factory.AssignmentExpression(left, tempAllocator.GetTemp(right)));
+                    bindingsBuilder.Add(_factory.AssignmentExpression(left, _tempAllocator.GetTemp(right)));
                 }
 
                 if (bindingsBuilder.Count > 0)
@@ -237,12 +303,79 @@ namespace Microsoft.CodeAnalysis.CSharp
                     result = _factory.Literal(true);
                 }
 
-                return _factory.Sequence(tempAllocator.AllTemps(), ImmutableArray<BoundExpression>.Empty, result);
+                return _factory.Sequence(_tempAllocator.AllTemps(), ImmutableArray<BoundExpression>.Empty, result);
             }
-            finally
+        }
+
+        private BoundExpression MakeTypeTestAndAssignment(BoundExpression loweredTarget, BoundExpression loweredInput, TypeSymbol type)
+        {
+            Debug.Assert(type == loweredTarget.Type);
+
+            // If the match is impossible, we simply evaluate the input and yield false.
+            var matchConstantValue = MatchConstantValue(loweredInput, type, false);
+            if (matchConstantValue == false)
             {
-                conjunctBuilder.Free();
-                resultBuilder.Free();
+                return _factory.MakeSequence(loweredInput, _factory.Literal(false));
+            }
+
+            // It is possible that the input value is already of the correct type, in which case the pattern
+            // is irrefutable, and we can just do the assignment and return true (or perform the null test).
+            if (matchConstantValue == true)
+            {
+                BoundExpression convertedInput;
+                if (loweredInput.Type.IsNullableType())
+                {
+                    var getValueOrDefault = _factory.SpecialMethod(SpecialMember.System_Nullable_T_GetValueOrDefault).AsMember((NamedTypeSymbol)loweredInput.Type);
+                    convertedInput = _factory.Convert(type, _factory.Call(loweredInput, getValueOrDefault));
+                }
+                else
+                {
+                    convertedInput = _factory.Convert(type, loweredInput);
+                }
+                var assignment = _factory.AssignmentExpression(loweredTarget, convertedInput);
+                return _factory.MakeSequence(assignment, _factory.Literal(true));
+            }
+
+            // a pattern match of the form "expression is Type identifier" is equivalent to
+            // an invocation of one of these helpers:
+            if (type.IsReferenceType)
+            {
+                // bool Is<T>(object e, out T t) where T : class // reference type
+                // {
+                //     t = e as T;
+                //     return t != null;
+                // }
+
+                return _factory.ObjectNotEqual(
+                    _factory.AssignmentExpression(loweredTarget, _factory.As(loweredInput, type)),
+                    _factory.Null(type));
+            }
+            else // type parameter or value type
+            {
+                // bool Is<T>(this object i, out T o)
+                // {
+                //     // inefficient because it performs the type test twice, and also because it boxes the input.
+                //     bool s;
+                //     o = (s = i is T) ? (T)i : default(T);
+                //     return s;
+                // }
+
+                // Because a cast involving a type parameter is not necessarily a valid conversion (or, if it is, it might not
+                // be of a kind appropriate for pattern-matching), we use `object` as an intermediate type for the input expression.
+                var objectType = _factory.SpecialType(SpecialType.System_Object);
+                var s = _factory.SynthesizedLocal(_factory.SpecialType(SpecialType.System_Boolean), loweredTarget.Syntax);
+                var i = _factory.SynthesizedLocal(objectType, loweredTarget.Syntax); // we copy the input to avoid double evaluation
+                return _factory.Sequence(
+                    ImmutableArray.Create(s, i),
+                    ImmutableArray.Create<BoundExpression>(
+                        _factory.AssignmentExpression(_factory.Local(i), _factory.Convert(objectType, loweredInput)),
+                        _factory.AssignmentExpression(loweredTarget, _factory.Conditional(
+                            _factory.AssignmentExpression(_factory.Local(s), _factory.Is(_factory.Local(i), type)),
+                            _factory.Convert(type, _factory.Local(i)),
+                            _factory.Default(type), type))
+                        ),
+                    _factory.Local(s)
+                    );
             }
         }
 
@@ -295,6 +428,14 @@ namespace Microsoft.CodeAnalysis.CSharp
                         _factory.Convert(systemObject, boundLiteral),
                         _factory.Convert(systemObject, input)
                         );
+            }
+        }
+
+        public override BoundNode VisitIsPatternExpression(BoundIsPatternExpression node)
+        {
+            using (var x = new IsPatternTranslator(this, VisitExpression(node.Expression)))
+            {
+                return x.LowerIsPattern(node.Pattern, this._compilation);
             }
         }
 

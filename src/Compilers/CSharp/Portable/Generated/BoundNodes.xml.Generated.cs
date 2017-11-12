@@ -93,6 +93,7 @@ namespace Microsoft.CodeAnalysis.CSharp
         DecisionPoint,
         WhereClause,
         DagEvaluation,
+        DagTypeTest,
         NonNullDecision,
         TypeDecision,
         ValueDecision,
@@ -3018,8 +3019,18 @@ namespace Microsoft.CodeAnalysis.CSharp
         }
     }
 
-    internal sealed partial class BoundDagEvaluation : BoundDagDecision
+    internal partial class BoundDagEvaluation : BoundDagDecision
     {
+        protected BoundDagEvaluation(BoundKind kind, SyntaxNode syntax, Symbol symbol, BoundDagTemp input, bool hasErrors = false)
+            : base(kind, syntax, input, hasErrors)
+        {
+
+            Debug.Assert(symbol != null, "Field 'symbol' cannot be null (use Null=\"allow\" in BoundNodes.xml to remove this check)");
+            Debug.Assert(input != null, "Field 'input' cannot be null (use Null=\"allow\" in BoundNodes.xml to remove this check)");
+
+            this.Symbol = symbol;
+        }
+
         public BoundDagEvaluation(SyntaxNode syntax, Symbol symbol, BoundDagTemp input, bool hasErrors = false)
             : base(BoundKind.DagEvaluation, syntax, input, hasErrors || input.HasErrors())
         {
@@ -3043,6 +3054,39 @@ namespace Microsoft.CodeAnalysis.CSharp
             if (symbol != this.Symbol || input != this.Input)
             {
                 var result = new BoundDagEvaluation(this.Syntax, symbol, input, this.HasErrors);
+                result.WasCompilerGenerated = this.WasCompilerGenerated;
+                return result;
+            }
+            return this;
+        }
+    }
+
+    internal sealed partial class BoundDagTypeTestAndCast : BoundDagEvaluation
+    {
+        public BoundDagTypeTestAndCast(SyntaxNode syntax, TypeSymbol type, Symbol symbol, BoundDagTemp input, bool hasErrors = false)
+            : base(BoundKind.DagTypeTest, syntax, symbol, input, hasErrors || input.HasErrors())
+        {
+
+            Debug.Assert(type != null, "Field 'type' cannot be null (use Null=\"allow\" in BoundNodes.xml to remove this check)");
+            Debug.Assert(symbol != null, "Field 'symbol' cannot be null (use Null=\"allow\" in BoundNodes.xml to remove this check)");
+            Debug.Assert(input != null, "Field 'input' cannot be null (use Null=\"allow\" in BoundNodes.xml to remove this check)");
+
+            this.Type = type;
+        }
+
+
+        public TypeSymbol Type { get; }
+
+        public override BoundNode Accept(BoundTreeVisitor visitor)
+        {
+            return visitor.VisitDagTypeTest(this);
+        }
+
+        public BoundDagTypeTestAndCast Update(TypeSymbol type, Symbol symbol, BoundDagTemp input)
+        {
+            if (type != this.Type || symbol != this.Symbol || input != this.Input)
+            {
+                var result = new BoundDagTypeTestAndCast(this.Syntax, type, symbol, input, this.HasErrors);
                 result.WasCompilerGenerated = this.WasCompilerGenerated;
                 return result;
             }
@@ -6708,6 +6752,8 @@ namespace Microsoft.CodeAnalysis.CSharp
                     return VisitWhereClause(node as BoundWhereClause, arg);
                 case BoundKind.DagEvaluation: 
                     return VisitDagEvaluation(node as BoundDagEvaluation, arg);
+                case BoundKind.DagTypeTest: 
+                    return VisitDagTypeTest(node as BoundDagTypeTestAndCast, arg);
                 case BoundKind.NonNullDecision: 
                     return VisitNonNullDecision(node as BoundNonNullDecision, arg);
                 case BoundKind.TypeDecision: 
@@ -7179,6 +7225,10 @@ namespace Microsoft.CodeAnalysis.CSharp
             return this.DefaultVisit(node, arg);
         }
         public virtual R VisitDagEvaluation(BoundDagEvaluation node, A arg)
+        {
+            return this.DefaultVisit(node, arg);
+        }
+        public virtual R VisitDagTypeTest(BoundDagTypeTestAndCast node, A arg)
         {
             return this.DefaultVisit(node, arg);
         }
@@ -7823,6 +7873,10 @@ namespace Microsoft.CodeAnalysis.CSharp
             return this.DefaultVisit(node);
         }
         public virtual BoundNode VisitDagEvaluation(BoundDagEvaluation node)
+        {
+            return this.DefaultVisit(node);
+        }
+        public virtual BoundNode VisitDagTypeTest(BoundDagTypeTestAndCast node)
         {
             return this.DefaultVisit(node);
         }
@@ -8547,6 +8601,11 @@ namespace Microsoft.CodeAnalysis.CSharp
             return null;
         }
         public override BoundNode VisitDagEvaluation(BoundDagEvaluation node)
+        {
+            this.Visit(node.Input);
+            return null;
+        }
+        public override BoundNode VisitDagTypeTest(BoundDagTypeTestAndCast node)
         {
             this.Visit(node.Input);
             return null;
@@ -9428,6 +9487,12 @@ namespace Microsoft.CodeAnalysis.CSharp
         {
             BoundDagTemp input = (BoundDagTemp)this.Visit(node.Input);
             return node.Update(node.Symbol, input);
+        }
+        public override BoundNode VisitDagTypeTest(BoundDagTypeTestAndCast node)
+        {
+            BoundDagTemp input = (BoundDagTemp)this.Visit(node.Input);
+            TypeSymbol type = this.VisitType(node.Type);
+            return node.Update(type, node.Symbol, input);
         }
         public override BoundNode VisitNonNullDecision(BoundNonNullDecision node)
         {
@@ -10686,6 +10751,16 @@ namespace Microsoft.CodeAnalysis.CSharp
         {
             return new TreeDumperNode("dagEvaluation", null, new TreeDumperNode[]
             {
+                new TreeDumperNode("symbol", node.Symbol, null),
+                new TreeDumperNode("input", null, new TreeDumperNode[] { Visit(node.Input, null) })
+            }
+            );
+        }
+        public override TreeDumperNode VisitDagTypeTest(BoundDagTypeTestAndCast node, object arg)
+        {
+            return new TreeDumperNode("dagTypeTest", null, new TreeDumperNode[]
+            {
+                new TreeDumperNode("type", node.Type, null),
                 new TreeDumperNode("symbol", node.Symbol, null),
                 new TreeDumperNode("input", null, new TreeDumperNode[] { Visit(node.Input, null) })
             }

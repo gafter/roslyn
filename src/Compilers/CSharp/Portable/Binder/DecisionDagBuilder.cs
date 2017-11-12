@@ -92,20 +92,33 @@ namespace Microsoft.CodeAnalysis.CSharp
                 switch (decisionsBuilder[i])
                 {
                     case BoundDagEvaluation e:
-                        if (usedValues.Contains(e))
                         {
-                            if (e.Input.Source != (object)null)
+                            if (usedValues.Contains(e))
                             {
-                                usedValues.Add(e.Input.Source);
+                                if (e.Input.Source != (object)null)
+                                {
+                                    usedValues.Add(e.Input.Source);
+                                }
                             }
-                        }
-                        else
-                        {
-                            decisionsBuilder.RemoveAt(i);
+                            else if (e is BoundDagTypeTestAndCast t)
+                            {
+                                // replace a type test and cast with a type test if the casted value is unused
+                                decisionsBuilder[i] = new BoundTypeDecision(t.Syntax, t.Type, t.Input);
+                                if (e.Input.Source != (object)null)
+                                {
+                                    usedValues.Add(e.Input.Source);
+                                }
+                            }
+                            else
+                            {
+                                decisionsBuilder.RemoveAt(i);
+                            }
                         }
                         break;
                     case BoundDagDecision d:
-                        usedValues.Add(d.Input.Source);
+                        {
+                            usedValues.Add(d.Input.Source);
+                        }
                         break;
                     default:
                         throw ExceptionUtilities.UnexpectedValue(decisionsBuilder[i]);
@@ -215,14 +228,22 @@ namespace Microsoft.CodeAnalysis.CSharp
         {
             if (input.Type != type)
             {
-                if (Binder.ExpressionOfTypeMatchesPatternType(Conversions, input.Type, type, ref discardedUseSiteDiagnostics, out Conversion conversion, operandCouldBeNull: false) != true)
+                var inputType = input.Type.StrippedType(); // since a null check has already been done
+                var conversion = Conversions.ClassifyBuiltInConversion(inputType, type, ref discardedUseSiteDiagnostics);
+                if (conversion.IsImplicit && !input.Type.IsDynamic())
                 {
-                    decisions.Add(new BoundTypeDecision(syntax, type, input));
+                    // type test not needed, only the type cast
+                    var evaluation = new BoundDagEvaluation(syntax, type, input);
+                    input = new BoundDagTemp(syntax, type, evaluation, 0);
+                    decisions.Add(evaluation);
                 }
-
-                var evaluation = new BoundDagEvaluation(syntax, type, input);
-                input = new BoundDagTemp(syntax, type, evaluation, 0);
-                decisions.Add(evaluation);
+                else
+                {
+                    // both type test and cast needed
+                    var evaluation = new BoundDagTypeTestAndCast(syntax, type, type, input);
+                    input = new BoundDagTemp(syntax, type, evaluation, 0);
+                    decisions.Add(evaluation);
+                }
             }
 
             return input;

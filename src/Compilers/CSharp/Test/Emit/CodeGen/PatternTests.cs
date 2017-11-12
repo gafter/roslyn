@@ -99,7 +99,10 @@ static class C {
         }").WithArguments("System.Nullable`1", "GetValueOrDefault").WithLocation(12, 9),
                 // (17,36): error CS0656: Missing compiler required member 'System.Nullable`1.get_HasValue'
                 //     static bool M2(int? x) => x is int i;
-                Diagnostic(ErrorCode.ERR_MissingPredefinedMember, "int i").WithArguments("System.Nullable`1", "get_HasValue").WithLocation(17, 36)
+                Diagnostic(ErrorCode.ERR_MissingPredefinedMember, "int i").WithArguments("System.Nullable`1", "get_HasValue").WithLocation(17, 36),
+                // (17,36): error CS0656: Missing compiler required member 'System.Nullable`1.get_Value'
+                //     static bool M2(int? x) => x is int i;
+                Diagnostic(ErrorCode.ERR_MissingPredefinedMember, "int i").WithArguments("System.Nullable`1", "get_Value").WithLocation(17, 36)
                 );
         }
 
@@ -138,7 +141,10 @@ static class C {
         }").WithArguments("System.Nullable`1", "get_HasValue").WithLocation(12, 9),
                 // (17,36): error CS0656: Missing compiler required member 'System.Nullable`1.get_HasValue'
                 //     static bool M2(int? x) => x is int i;
-                Diagnostic(ErrorCode.ERR_MissingPredefinedMember, "int i").WithArguments("System.Nullable`1", "get_HasValue").WithLocation(17, 36)
+                Diagnostic(ErrorCode.ERR_MissingPredefinedMember, "int i").WithArguments("System.Nullable`1", "get_HasValue").WithLocation(17, 36),
+                // (17,36): error CS0656: Missing compiler required member 'System.Nullable`1.get_Value'
+                //     static bool M2(int? x) => x is int i;
+                Diagnostic(ErrorCode.ERR_MissingPredefinedMember, "int i").WithArguments("System.Nullable`1", "get_Value").WithLocation(17, 36)
                 );
         }
 
