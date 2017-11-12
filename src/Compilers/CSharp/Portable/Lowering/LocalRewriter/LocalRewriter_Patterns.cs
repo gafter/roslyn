@@ -107,6 +107,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                     self._conjunctBuilder.Add(expression);
                 }
 
+                var input = _tempAllocator.GetTemp(decision.Input);
                 switch (decision)
                 {
                     case BoundNonNullDecision d:
@@ -123,13 +124,11 @@ namespace Microsoft.CodeAnalysis.CSharp
                         else
                         {
                             // PROTOTYPE(patterns2): combine null test and type test when possible for improved code
-                            var input = _tempAllocator.GetTemp(d.Input);
                             addConjunct(ref this, _localRewriter.MakeNullCheck(d.Syntax, input, input.Type.IsNullableType() ? BinaryOperatorKind.NullableNullNotEqual : BinaryOperatorKind.NotEqual));
                         }
                         break;
                     case BoundTypeDecision d:
                         {
-                            var input = _tempAllocator.GetTemp(d.Input);
                             addConjunct(ref this, _factory.Is(input, d.Type));
                         }
                         break;
@@ -146,99 +145,84 @@ namespace Microsoft.CodeAnalysis.CSharp
                         }
                         else if (d.Value == ConstantValue.Null)
                         {
-                            var input = _tempAllocator.GetTemp(d.Input);
                             addConjunct(ref this, _localRewriter.MakeNullCheck(d.Syntax, input, input.Type.IsNullableType() ? BinaryOperatorKind.NullableNullEqual : BinaryOperatorKind.Equal));
                         }
                         else
                         {
-                            var input = _tempAllocator.GetTemp(d.Input);
                             var systemObject = _factory.SpecialType(SpecialType.System_Object);
                             addConjunct(ref this, _localRewriter.MakeEqual(_factory.Literal(d.Value, input.Type), input));
                         }
                         break;
-                    case BoundDagTypeTestAndCast c:
+                    case BoundDagFieldEvaluation f:
                         {
-                            var input = _tempAllocator.GetTemp(c.Input);
-                            var outputTemp = new BoundDagTemp(c.Syntax, c.Type, c, 0);
+                            var field = f.Field;
+                            var outputTemp = new BoundDagTemp(f.Syntax, field.Type, f, 0);
                             var output = _tempAllocator.GetTemp(outputTemp);
-                            addConjunct(ref this, _localRewriter.MakeTypeTestAndAssignment(output, input, c.Type));
+                            _sideEffectBuilder.Add(_factory.AssignmentExpression(output, _factory.Field(input, field)));
                         }
                         break;
-                    case BoundDagEvaluation e:
+                    case BoundDagPropertyEvaluation p:
                         {
-                            // e.Symbol is used as follows:
-                            // 1. if it is a Deconstruct method, in indicates an invocation of that deconstruct and creation of N new temps.
-                            // 2. if it is a Type, it indicates a type cast to that type, and the creation of one new temp of that type.
-                            // 3. if it is a Field or Property symbol, it indicates a fetch and the creation of one new temp.
-                            // 4. We ignore ITuple-based deconstruction for now.
-                            var input = _tempAllocator.GetTemp(e.Input);
-                            switch (e.Symbol)
+                            var property = p.Property;
+                            var outputTemp = new BoundDagTemp(p.Syntax, property.Type, p, 0);
+                            var output = _tempAllocator.GetTemp(outputTemp);
+                            _sideEffectBuilder.Add(_factory.AssignmentExpression(output, _factory.Property(input, property)));
+                        }
+                        break;
+                    case BoundDagDeconstructEvaluation d:
+                        {
+                            var method = d.DeconstructMethod;
+                            var refKindBuilder = ArrayBuilder<RefKind>.GetInstance();
+                            var argBuilder = ArrayBuilder<BoundExpression>.GetInstance();
+                            BoundExpression receiver;
+                            void addArg(RefKind refKind, BoundExpression expression)
                             {
-                                case FieldSymbol field:
-                                    {
-                                        var outputTemp = new BoundDagTemp(e.Syntax, field.Type, e, 0);
-                                        var output = _tempAllocator.GetTemp(outputTemp);
-                                        _sideEffectBuilder.Add(_factory.AssignmentExpression(output, _factory.Field(input, field)));
-                                    }
-                                    break;
-                                case PropertySymbol property:
-                                    {
-                                        var outputTemp = new BoundDagTemp(e.Syntax, property.Type, e, 0);
-                                        var output = _tempAllocator.GetTemp(outputTemp);
-                                        _sideEffectBuilder.Add(_factory.AssignmentExpression(output, _factory.Property(input, property)));
-                                    }
-                                    break;
-                                case MethodSymbol method:
-                                    {
-                                        var refKindBuilder = ArrayBuilder<RefKind>.GetInstance();
-                                        var argBuilder = ArrayBuilder<BoundExpression>.GetInstance();
-                                        BoundExpression receiver;
-                                        void addArg(RefKind refKind, BoundExpression expression)
-                                        {
-                                            refKindBuilder.Add(refKind);
-                                            argBuilder.Add(expression);
-                                        }
-                                        Debug.Assert(method.Name == "Deconstruct");
-                                        int extensionExtra;
-                                        if (method.IsStatic)
-                                        {
-                                            Debug.Assert(method.IsExtensionMethod);
-                                            receiver = _factory.Type(method.ContainingType);
-                                            addArg(RefKind.None, input);
-                                            extensionExtra = 1;
-                                        }
-                                        else
-                                        {
-                                            receiver = input;
-                                            extensionExtra = 0;
-                                        }
-                                        for (int i = extensionExtra; i < method.ParameterCount; i++)
-                                        {
-                                            var parameter = method.Parameters[i];
-                                            Debug.Assert(parameter.RefKind == RefKind.Out);
-                                            var outputTemp = new BoundDagTemp(e.Syntax, parameter.Type, e, i - extensionExtra);
-                                            addArg(RefKind.Out, _tempAllocator.GetTemp(outputTemp));
-                                        }
-                                        _sideEffectBuilder.Add(_factory.Call(receiver, method, refKindBuilder.ToImmutableAndFree(), argBuilder.ToImmutableAndFree()));
-                                    }
-                                    break;
-                                case TypeSymbol type:
-                                    {
-                                        var outputTemp = new BoundDagTemp(e.Syntax, type, e, 0);
-                                        var output = _tempAllocator.GetTemp(outputTemp);
-                                        var conversion = _factory.Compilation.ClassifyConversion(input.Type, output.Type);
-                                        if (conversion.Exists)
-                                        {
-                                            _sideEffectBuilder.Add(_factory.AssignmentExpression(output, _factory.Convert(type, input, conversion)));
-                                        }
-                                        else
-                                        {
-                                            _sideEffectBuilder.Add(_factory.AssignmentExpression(output, _factory.As(input, type)));
-                                        }
-                                    }
-                                    break;
-                                default:
-                                    throw ExceptionUtilities.UnexpectedValue(e.Symbol?.Kind);
+                                refKindBuilder.Add(refKind);
+                                argBuilder.Add(expression);
+                            }
+                            Debug.Assert(method.Name == "Deconstruct");
+                            int extensionExtra;
+                            if (method.IsStatic)
+                            {
+                                Debug.Assert(method.IsExtensionMethod);
+                                receiver = _factory.Type(method.ContainingType);
+                                addArg(RefKind.None, input);
+                                extensionExtra = 1;
+                            }
+                            else
+                            {
+                                receiver = input;
+                                extensionExtra = 0;
+                            }
+                            for (int i = extensionExtra; i < method.ParameterCount; i++)
+                            {
+                                var parameter = method.Parameters[i];
+                                Debug.Assert(parameter.RefKind == RefKind.Out);
+                                var outputTemp = new BoundDagTemp(d.Syntax, parameter.Type, d, i - extensionExtra);
+                                addArg(RefKind.Out, _tempAllocator.GetTemp(outputTemp));
+                            }
+                            _sideEffectBuilder.Add(_factory.Call(receiver, method, refKindBuilder.ToImmutableAndFree(), argBuilder.ToImmutableAndFree()));
+                        }
+                        break;
+                    case BoundDagTypeEvaluation t:
+                        {
+                            var inputType = input.Type;
+                            if (inputType.IsDynamic())
+                            {
+                                inputType = _factory.SpecialType(SpecialType.System_Object);
+                            }
+
+                            var type = t.Type;
+                            var outputTemp = new BoundDagTemp(t.Syntax, type, t, 0);
+                            var output = _tempAllocator.GetTemp(outputTemp);
+                            var conversion = _factory.Compilation.ClassifyConversion(inputType, output.Type);
+                            if (conversion.Exists)
+                            {
+                                _sideEffectBuilder.Add(_factory.AssignmentExpression(output, _factory.Convert(type, input, conversion)));
+                            }
+                            else
+                            {
+                                _sideEffectBuilder.Add(_factory.AssignmentExpression(output, _factory.As(input, type)));
                             }
                         }
                         break;

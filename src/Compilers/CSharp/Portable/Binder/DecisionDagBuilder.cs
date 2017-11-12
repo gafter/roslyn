@@ -100,15 +100,6 @@ namespace Microsoft.CodeAnalysis.CSharp
                                     usedValues.Add(e.Input.Source);
                                 }
                             }
-                            else if (e is BoundDagTypeTestAndCast t)
-                            {
-                                // replace a type test and cast with a type test if the casted value is unused
-                                decisionsBuilder[i] = new BoundTypeDecision(t.Syntax, t.Type, t.Input);
-                                if (e.Input.Source != (object)null)
-                                {
-                                    usedValues.Add(e.Input.Source);
-                                }
-                            }
                             else
                             {
                                 decisionsBuilder.RemoveAt(i);
@@ -230,20 +221,19 @@ namespace Microsoft.CodeAnalysis.CSharp
             {
                 var inputType = input.Type.StrippedType(); // since a null check has already been done
                 var conversion = Conversions.ClassifyBuiltInConversion(inputType, type, ref discardedUseSiteDiagnostics);
-                if (conversion.IsImplicit && !input.Type.IsDynamic())
+                if (input.Type.IsDynamic() ? type.SpecialType == SpecialType.System_Object : conversion.IsImplicit)
                 {
                     // type test not needed, only the type cast
-                    var evaluation = new BoundDagEvaluation(syntax, type, input);
-                    input = new BoundDagTemp(syntax, type, evaluation, 0);
-                    decisions.Add(evaluation);
                 }
                 else
                 {
                     // both type test and cast needed
-                    var evaluation = new BoundDagTypeTestAndCast(syntax, type, type, input);
-                    input = new BoundDagTemp(syntax, type, evaluation, 0);
-                    decisions.Add(evaluation);
+                    decisions.Add(new BoundTypeDecision(syntax, type, input));
                 }
+
+                var evaluation = new BoundDagTypeEvaluation(syntax, type, type, input);
+                input = new BoundDagTemp(syntax, type, evaluation, 0);
+                decisions.Add(evaluation);
             }
 
             return input;
@@ -279,9 +269,9 @@ namespace Microsoft.CodeAnalysis.CSharp
                 // we have a "deconstruction" form, which is either an invocation of a Deconstruct method, or a disassembly of a tuple
                 if (recursive.DeconstructMethodOpt != null)
                 {
-                    var evaluation = new BoundDagEvaluation(recursive.Syntax, recursive.DeconstructMethodOpt, input);
-                    decisions.Add(evaluation);
                     var method = recursive.DeconstructMethodOpt;
+                    var evaluation = new BoundDagDeconstructEvaluation(recursive.Syntax, method, method, input);
+                    decisions.Add(evaluation);
                     int extensionExtra = method.IsStatic ? 1 : 0;
                     int count = Math.Min(method.ParameterCount - extensionExtra, recursive.Deconstruction.Length);
                     for (int i = 0; i < count; i++)
@@ -301,9 +291,10 @@ namespace Microsoft.CodeAnalysis.CSharp
                     {
                         var pattern = recursive.Deconstruction[i];
                         var syntax = pattern.Syntax;
-                        var evaluation = new BoundDagEvaluation(syntax, elements[i], input); // fetch the ItemN field
+                        var field = elements[i];
+                        var evaluation = new BoundDagFieldEvaluation(syntax, field, field, input); // fetch the ItemN field
                         decisions.Add(evaluation);
-                        var output = new BoundDagTemp(syntax, elementTypes[i], evaluation, 0);
+                        var output = new BoundDagTemp(syntax, field.Type, evaluation, 0);
                         MakeDecisionsAndBindings(output, pattern, decisions, bindings, ref discardedUseSiteDiagnostics);
                     }
                 }
@@ -320,7 +311,19 @@ namespace Microsoft.CodeAnalysis.CSharp
                 for (int i = 0; i < recursive.PropertiesOpt.Length; i++)
                 {
                     var prop = recursive.PropertiesOpt[i];
-                    var evaluation = new BoundDagEvaluation(prop.pattern.Syntax, prop.symbol, input);
+                    var symbol = prop.symbol;
+                    BoundDagEvaluation evaluation;
+                    switch (symbol)
+                    {
+                        case PropertySymbol property:
+                            evaluation = new BoundDagPropertyEvaluation(prop.pattern.Syntax, property, property, input);
+                            break;
+                        case FieldSymbol field:
+                            evaluation = new BoundDagFieldEvaluation(prop.pattern.Syntax, field, field, input);
+                            break;
+                        default:
+                            throw ExceptionUtilities.UnexpectedValue(symbol.Kind);
+                    }
                     decisions.Add(evaluation);
                     var output = new BoundDagTemp(prop.pattern.Syntax, prop.symbol.GetTypeOrReturnType(), evaluation, 0);
                     MakeDecisionsAndBindings(output, prop.pattern, decisions, bindings, ref discardedUseSiteDiagnostics);
@@ -367,7 +370,7 @@ namespace Microsoft.CodeAnalysis.CSharp
         public override bool Equals(object obj) => obj is BoundDagEvaluation other && this.Equals(other);
         public bool Equals(BoundDagEvaluation other)
         {
-            return other != (object)null && this.Input.Equals(other.Input) && this.Symbol == other.Symbol;
+            return other != (object)null && this.Kind == other.Kind && this.Input.Equals(other.Input) && this.Symbol == other.Symbol;
         }
         public override int GetHashCode()
         {

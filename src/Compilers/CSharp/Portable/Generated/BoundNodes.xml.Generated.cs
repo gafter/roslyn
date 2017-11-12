@@ -92,13 +92,15 @@ namespace Microsoft.CodeAnalysis.CSharp
         EvaluationPoint,
         DecisionPoint,
         WhereClause,
-        DagEvaluation,
-        DagTypeTest,
+        Decision,
+        DagTemp,
         NonNullDecision,
         TypeDecision,
         ValueDecision,
-        DagTemp,
-        Decision,
+        DagDeconstructEvaluation,
+        DagTypeEvaluation,
+        DagFieldEvaluation,
+        DagPropertyEvaluation,
         PatternSwitchSection,
         PatternSwitchLabel,
         IfStatement,
@@ -3019,74 +3021,35 @@ namespace Microsoft.CodeAnalysis.CSharp
         }
     }
 
-    internal partial class BoundDagEvaluation : BoundDagDecision
+    internal sealed partial class BoundDecision : BoundDecisionDag
     {
-        protected BoundDagEvaluation(BoundKind kind, SyntaxNode syntax, Symbol symbol, BoundDagTemp input, bool hasErrors = false)
-            : base(kind, syntax, input, hasErrors)
+        public BoundDecision(SyntaxNode syntax, LabelSymbol label, bool hasErrors)
+            : base(BoundKind.Decision, syntax, label, hasErrors)
         {
 
-            Debug.Assert(symbol != null, "Field 'symbol' cannot be null (use Null=\"allow\" in BoundNodes.xml to remove this check)");
-            Debug.Assert(input != null, "Field 'input' cannot be null (use Null=\"allow\" in BoundNodes.xml to remove this check)");
+            Debug.Assert(label != null, "Field 'label' cannot be null (use Null=\"allow\" in BoundNodes.xml to remove this check)");
 
-            this.Symbol = symbol;
         }
 
-        public BoundDagEvaluation(SyntaxNode syntax, Symbol symbol, BoundDagTemp input, bool hasErrors = false)
-            : base(BoundKind.DagEvaluation, syntax, input, hasErrors || input.HasErrors())
+        public BoundDecision(SyntaxNode syntax, LabelSymbol label)
+            : base(BoundKind.Decision, syntax, label)
         {
 
-            Debug.Assert(symbol != null, "Field 'symbol' cannot be null (use Null=\"allow\" in BoundNodes.xml to remove this check)");
-            Debug.Assert(input != null, "Field 'input' cannot be null (use Null=\"allow\" in BoundNodes.xml to remove this check)");
+            Debug.Assert(label != null, "Field 'label' cannot be null (use Null=\"allow\" in BoundNodes.xml to remove this check)");
 
-            this.Symbol = symbol;
         }
 
-
-        public Symbol Symbol { get; }
 
         public override BoundNode Accept(BoundTreeVisitor visitor)
         {
-            return visitor.VisitDagEvaluation(this);
+            return visitor.VisitDecision(this);
         }
 
-        public BoundDagEvaluation Update(Symbol symbol, BoundDagTemp input)
+        public BoundDecision Update(LabelSymbol label)
         {
-            if (symbol != this.Symbol || input != this.Input)
+            if (label != this.Label)
             {
-                var result = new BoundDagEvaluation(this.Syntax, symbol, input, this.HasErrors);
-                result.WasCompilerGenerated = this.WasCompilerGenerated;
-                return result;
-            }
-            return this;
-        }
-    }
-
-    internal sealed partial class BoundDagTypeTestAndCast : BoundDagEvaluation
-    {
-        public BoundDagTypeTestAndCast(SyntaxNode syntax, TypeSymbol type, Symbol symbol, BoundDagTemp input, bool hasErrors = false)
-            : base(BoundKind.DagTypeTest, syntax, symbol, input, hasErrors || input.HasErrors())
-        {
-
-            Debug.Assert(type != null, "Field 'type' cannot be null (use Null=\"allow\" in BoundNodes.xml to remove this check)");
-            Debug.Assert(symbol != null, "Field 'symbol' cannot be null (use Null=\"allow\" in BoundNodes.xml to remove this check)");
-            Debug.Assert(input != null, "Field 'input' cannot be null (use Null=\"allow\" in BoundNodes.xml to remove this check)");
-
-            this.Type = type;
-        }
-
-
-        public TypeSymbol Type { get; }
-
-        public override BoundNode Accept(BoundTreeVisitor visitor)
-        {
-            return visitor.VisitDagTypeTest(this);
-        }
-
-        public BoundDagTypeTestAndCast Update(TypeSymbol type, Symbol symbol, BoundDagTemp input)
-        {
-            if (type != this.Type || symbol != this.Symbol || input != this.Input)
-            {
-                var result = new BoundDagTypeTestAndCast(this.Syntax, type, symbol, input, this.HasErrors);
+                var result = new BoundDecision(this.Syntax, label, this.HasErrors);
                 result.WasCompilerGenerated = this.WasCompilerGenerated;
                 return result;
             }
@@ -3107,6 +3070,40 @@ namespace Microsoft.CodeAnalysis.CSharp
 
 
         public BoundDagTemp Input { get; }
+    }
+
+    internal sealed partial class BoundDagTemp : BoundNode
+    {
+        public BoundDagTemp(SyntaxNode syntax, TypeSymbol type, BoundDagEvaluation source, int index, bool hasErrors = false)
+            : base(BoundKind.DagTemp, syntax, hasErrors || source.HasErrors())
+        {
+            this.Type = type;
+            this.Source = source;
+            this.Index = index;
+        }
+
+
+        public TypeSymbol Type { get; }
+
+        public BoundDagEvaluation Source { get; }
+
+        public int Index { get; }
+
+        public override BoundNode Accept(BoundTreeVisitor visitor)
+        {
+            return visitor.VisitDagTemp(this);
+        }
+
+        public BoundDagTemp Update(TypeSymbol type, BoundDagEvaluation source, int index)
+        {
+            if (type != this.Type || source != this.Source || index != this.Index)
+            {
+                var result = new BoundDagTemp(this.Syntax, type, source, index, this.HasErrors);
+                result.WasCompilerGenerated = this.WasCompilerGenerated;
+                return result;
+            }
+            return this;
+        }
     }
 
     internal sealed partial class BoundNonNullDecision : BoundDagDecision
@@ -3201,33 +3198,48 @@ namespace Microsoft.CodeAnalysis.CSharp
         }
     }
 
-    internal sealed partial class BoundDagTemp : BoundNode
+    internal abstract partial class BoundDagEvaluation : BoundDagDecision
     {
-        public BoundDagTemp(SyntaxNode syntax, TypeSymbol type, BoundDagEvaluation source, int index, bool hasErrors = false)
-            : base(BoundKind.DagTemp, syntax, hasErrors || source.HasErrors())
+        protected BoundDagEvaluation(BoundKind kind, SyntaxNode syntax, Symbol symbol, BoundDagTemp input, bool hasErrors = false)
+            : base(kind, syntax, input, hasErrors)
         {
-            this.Type = type;
-            this.Source = source;
-            this.Index = index;
+
+            Debug.Assert(symbol != null, "Field 'symbol' cannot be null (use Null=\"allow\" in BoundNodes.xml to remove this check)");
+            Debug.Assert(input != null, "Field 'input' cannot be null (use Null=\"allow\" in BoundNodes.xml to remove this check)");
+
+            this.Symbol = symbol;
         }
 
 
-        public TypeSymbol Type { get; }
+        public Symbol Symbol { get; }
+    }
 
-        public BoundDagEvaluation Source { get; }
+    internal sealed partial class BoundDagDeconstructEvaluation : BoundDagEvaluation
+    {
+        public BoundDagDeconstructEvaluation(SyntaxNode syntax, MethodSymbol deconstructMethod, Symbol symbol, BoundDagTemp input, bool hasErrors = false)
+            : base(BoundKind.DagDeconstructEvaluation, syntax, symbol, input, hasErrors || input.HasErrors())
+        {
 
-        public int Index { get; }
+            Debug.Assert(deconstructMethod != null, "Field 'deconstructMethod' cannot be null (use Null=\"allow\" in BoundNodes.xml to remove this check)");
+            Debug.Assert(symbol != null, "Field 'symbol' cannot be null (use Null=\"allow\" in BoundNodes.xml to remove this check)");
+            Debug.Assert(input != null, "Field 'input' cannot be null (use Null=\"allow\" in BoundNodes.xml to remove this check)");
+
+            this.DeconstructMethod = deconstructMethod;
+        }
+
+
+        public MethodSymbol DeconstructMethod { get; }
 
         public override BoundNode Accept(BoundTreeVisitor visitor)
         {
-            return visitor.VisitDagTemp(this);
+            return visitor.VisitDagDeconstructEvaluation(this);
         }
 
-        public BoundDagTemp Update(TypeSymbol type, BoundDagEvaluation source, int index)
+        public BoundDagDeconstructEvaluation Update(MethodSymbol deconstructMethod, Symbol symbol, BoundDagTemp input)
         {
-            if (type != this.Type || source != this.Source || index != this.Index)
+            if (deconstructMethod != this.DeconstructMethod || symbol != this.Symbol || input != this.Input)
             {
-                var result = new BoundDagTemp(this.Syntax, type, source, index, this.HasErrors);
+                var result = new BoundDagDeconstructEvaluation(this.Syntax, deconstructMethod, symbol, input, this.HasErrors);
                 result.WasCompilerGenerated = this.WasCompilerGenerated;
                 return result;
             }
@@ -3235,35 +3247,98 @@ namespace Microsoft.CodeAnalysis.CSharp
         }
     }
 
-    internal sealed partial class BoundDecision : BoundDecisionDag
+    internal sealed partial class BoundDagTypeEvaluation : BoundDagEvaluation
     {
-        public BoundDecision(SyntaxNode syntax, LabelSymbol label, bool hasErrors)
-            : base(BoundKind.Decision, syntax, label, hasErrors)
+        public BoundDagTypeEvaluation(SyntaxNode syntax, TypeSymbol type, Symbol symbol, BoundDagTemp input, bool hasErrors = false)
+            : base(BoundKind.DagTypeEvaluation, syntax, symbol, input, hasErrors || input.HasErrors())
         {
 
-            Debug.Assert(label != null, "Field 'label' cannot be null (use Null=\"allow\" in BoundNodes.xml to remove this check)");
+            Debug.Assert(type != null, "Field 'type' cannot be null (use Null=\"allow\" in BoundNodes.xml to remove this check)");
+            Debug.Assert(symbol != null, "Field 'symbol' cannot be null (use Null=\"allow\" in BoundNodes.xml to remove this check)");
+            Debug.Assert(input != null, "Field 'input' cannot be null (use Null=\"allow\" in BoundNodes.xml to remove this check)");
 
+            this.Type = type;
         }
 
-        public BoundDecision(SyntaxNode syntax, LabelSymbol label)
-            : base(BoundKind.Decision, syntax, label)
-        {
 
-            Debug.Assert(label != null, "Field 'label' cannot be null (use Null=\"allow\" in BoundNodes.xml to remove this check)");
-
-        }
-
+        public TypeSymbol Type { get; }
 
         public override BoundNode Accept(BoundTreeVisitor visitor)
         {
-            return visitor.VisitDecision(this);
+            return visitor.VisitDagTypeEvaluation(this);
         }
 
-        public BoundDecision Update(LabelSymbol label)
+        public BoundDagTypeEvaluation Update(TypeSymbol type, Symbol symbol, BoundDagTemp input)
         {
-            if (label != this.Label)
+            if (type != this.Type || symbol != this.Symbol || input != this.Input)
             {
-                var result = new BoundDecision(this.Syntax, label, this.HasErrors);
+                var result = new BoundDagTypeEvaluation(this.Syntax, type, symbol, input, this.HasErrors);
+                result.WasCompilerGenerated = this.WasCompilerGenerated;
+                return result;
+            }
+            return this;
+        }
+    }
+
+    internal sealed partial class BoundDagFieldEvaluation : BoundDagEvaluation
+    {
+        public BoundDagFieldEvaluation(SyntaxNode syntax, FieldSymbol field, Symbol symbol, BoundDagTemp input, bool hasErrors = false)
+            : base(BoundKind.DagFieldEvaluation, syntax, symbol, input, hasErrors || input.HasErrors())
+        {
+
+            Debug.Assert(field != null, "Field 'field' cannot be null (use Null=\"allow\" in BoundNodes.xml to remove this check)");
+            Debug.Assert(symbol != null, "Field 'symbol' cannot be null (use Null=\"allow\" in BoundNodes.xml to remove this check)");
+            Debug.Assert(input != null, "Field 'input' cannot be null (use Null=\"allow\" in BoundNodes.xml to remove this check)");
+
+            this.Field = field;
+        }
+
+
+        public FieldSymbol Field { get; }
+
+        public override BoundNode Accept(BoundTreeVisitor visitor)
+        {
+            return visitor.VisitDagFieldEvaluation(this);
+        }
+
+        public BoundDagFieldEvaluation Update(FieldSymbol field, Symbol symbol, BoundDagTemp input)
+        {
+            if (field != this.Field || symbol != this.Symbol || input != this.Input)
+            {
+                var result = new BoundDagFieldEvaluation(this.Syntax, field, symbol, input, this.HasErrors);
+                result.WasCompilerGenerated = this.WasCompilerGenerated;
+                return result;
+            }
+            return this;
+        }
+    }
+
+    internal sealed partial class BoundDagPropertyEvaluation : BoundDagEvaluation
+    {
+        public BoundDagPropertyEvaluation(SyntaxNode syntax, PropertySymbol property, Symbol symbol, BoundDagTemp input, bool hasErrors = false)
+            : base(BoundKind.DagPropertyEvaluation, syntax, symbol, input, hasErrors || input.HasErrors())
+        {
+
+            Debug.Assert(property != null, "Field 'property' cannot be null (use Null=\"allow\" in BoundNodes.xml to remove this check)");
+            Debug.Assert(symbol != null, "Field 'symbol' cannot be null (use Null=\"allow\" in BoundNodes.xml to remove this check)");
+            Debug.Assert(input != null, "Field 'input' cannot be null (use Null=\"allow\" in BoundNodes.xml to remove this check)");
+
+            this.Property = property;
+        }
+
+
+        public PropertySymbol Property { get; }
+
+        public override BoundNode Accept(BoundTreeVisitor visitor)
+        {
+            return visitor.VisitDagPropertyEvaluation(this);
+        }
+
+        public BoundDagPropertyEvaluation Update(PropertySymbol property, Symbol symbol, BoundDagTemp input)
+        {
+            if (property != this.Property || symbol != this.Symbol || input != this.Input)
+            {
+                var result = new BoundDagPropertyEvaluation(this.Syntax, property, symbol, input, this.HasErrors);
                 result.WasCompilerGenerated = this.WasCompilerGenerated;
                 return result;
             }
@@ -6750,20 +6825,24 @@ namespace Microsoft.CodeAnalysis.CSharp
                     return VisitDecisionPoint(node as BoundDecisionPoint, arg);
                 case BoundKind.WhereClause: 
                     return VisitWhereClause(node as BoundWhereClause, arg);
-                case BoundKind.DagEvaluation: 
-                    return VisitDagEvaluation(node as BoundDagEvaluation, arg);
-                case BoundKind.DagTypeTest: 
-                    return VisitDagTypeTest(node as BoundDagTypeTestAndCast, arg);
+                case BoundKind.Decision: 
+                    return VisitDecision(node as BoundDecision, arg);
+                case BoundKind.DagTemp: 
+                    return VisitDagTemp(node as BoundDagTemp, arg);
                 case BoundKind.NonNullDecision: 
                     return VisitNonNullDecision(node as BoundNonNullDecision, arg);
                 case BoundKind.TypeDecision: 
                     return VisitTypeDecision(node as BoundTypeDecision, arg);
                 case BoundKind.ValueDecision: 
                     return VisitValueDecision(node as BoundValueDecision, arg);
-                case BoundKind.DagTemp: 
-                    return VisitDagTemp(node as BoundDagTemp, arg);
-                case BoundKind.Decision: 
-                    return VisitDecision(node as BoundDecision, arg);
+                case BoundKind.DagDeconstructEvaluation: 
+                    return VisitDagDeconstructEvaluation(node as BoundDagDeconstructEvaluation, arg);
+                case BoundKind.DagTypeEvaluation: 
+                    return VisitDagTypeEvaluation(node as BoundDagTypeEvaluation, arg);
+                case BoundKind.DagFieldEvaluation: 
+                    return VisitDagFieldEvaluation(node as BoundDagFieldEvaluation, arg);
+                case BoundKind.DagPropertyEvaluation: 
+                    return VisitDagPropertyEvaluation(node as BoundDagPropertyEvaluation, arg);
                 case BoundKind.PatternSwitchSection: 
                     return VisitPatternSwitchSection(node as BoundPatternSwitchSection, arg);
                 case BoundKind.PatternSwitchLabel: 
@@ -7224,11 +7303,11 @@ namespace Microsoft.CodeAnalysis.CSharp
         {
             return this.DefaultVisit(node, arg);
         }
-        public virtual R VisitDagEvaluation(BoundDagEvaluation node, A arg)
+        public virtual R VisitDecision(BoundDecision node, A arg)
         {
             return this.DefaultVisit(node, arg);
         }
-        public virtual R VisitDagTypeTest(BoundDagTypeTestAndCast node, A arg)
+        public virtual R VisitDagTemp(BoundDagTemp node, A arg)
         {
             return this.DefaultVisit(node, arg);
         }
@@ -7244,11 +7323,19 @@ namespace Microsoft.CodeAnalysis.CSharp
         {
             return this.DefaultVisit(node, arg);
         }
-        public virtual R VisitDagTemp(BoundDagTemp node, A arg)
+        public virtual R VisitDagDeconstructEvaluation(BoundDagDeconstructEvaluation node, A arg)
         {
             return this.DefaultVisit(node, arg);
         }
-        public virtual R VisitDecision(BoundDecision node, A arg)
+        public virtual R VisitDagTypeEvaluation(BoundDagTypeEvaluation node, A arg)
+        {
+            return this.DefaultVisit(node, arg);
+        }
+        public virtual R VisitDagFieldEvaluation(BoundDagFieldEvaluation node, A arg)
+        {
+            return this.DefaultVisit(node, arg);
+        }
+        public virtual R VisitDagPropertyEvaluation(BoundDagPropertyEvaluation node, A arg)
         {
             return this.DefaultVisit(node, arg);
         }
@@ -7872,11 +7959,11 @@ namespace Microsoft.CodeAnalysis.CSharp
         {
             return this.DefaultVisit(node);
         }
-        public virtual BoundNode VisitDagEvaluation(BoundDagEvaluation node)
+        public virtual BoundNode VisitDecision(BoundDecision node)
         {
             return this.DefaultVisit(node);
         }
-        public virtual BoundNode VisitDagTypeTest(BoundDagTypeTestAndCast node)
+        public virtual BoundNode VisitDagTemp(BoundDagTemp node)
         {
             return this.DefaultVisit(node);
         }
@@ -7892,11 +7979,19 @@ namespace Microsoft.CodeAnalysis.CSharp
         {
             return this.DefaultVisit(node);
         }
-        public virtual BoundNode VisitDagTemp(BoundDagTemp node)
+        public virtual BoundNode VisitDagDeconstructEvaluation(BoundDagDeconstructEvaluation node)
         {
             return this.DefaultVisit(node);
         }
-        public virtual BoundNode VisitDecision(BoundDecision node)
+        public virtual BoundNode VisitDagTypeEvaluation(BoundDagTypeEvaluation node)
+        {
+            return this.DefaultVisit(node);
+        }
+        public virtual BoundNode VisitDagFieldEvaluation(BoundDagFieldEvaluation node)
+        {
+            return this.DefaultVisit(node);
+        }
+        public virtual BoundNode VisitDagPropertyEvaluation(BoundDagPropertyEvaluation node)
         {
             return this.DefaultVisit(node);
         }
@@ -8600,14 +8695,13 @@ namespace Microsoft.CodeAnalysis.CSharp
             this.Visit(node.WhenFalse);
             return null;
         }
-        public override BoundNode VisitDagEvaluation(BoundDagEvaluation node)
+        public override BoundNode VisitDecision(BoundDecision node)
         {
-            this.Visit(node.Input);
             return null;
         }
-        public override BoundNode VisitDagTypeTest(BoundDagTypeTestAndCast node)
+        public override BoundNode VisitDagTemp(BoundDagTemp node)
         {
-            this.Visit(node.Input);
+            this.Visit(node.Source);
             return null;
         }
         public override BoundNode VisitNonNullDecision(BoundNonNullDecision node)
@@ -8625,13 +8719,24 @@ namespace Microsoft.CodeAnalysis.CSharp
             this.Visit(node.Input);
             return null;
         }
-        public override BoundNode VisitDagTemp(BoundDagTemp node)
+        public override BoundNode VisitDagDeconstructEvaluation(BoundDagDeconstructEvaluation node)
         {
-            this.Visit(node.Source);
+            this.Visit(node.Input);
             return null;
         }
-        public override BoundNode VisitDecision(BoundDecision node)
+        public override BoundNode VisitDagTypeEvaluation(BoundDagTypeEvaluation node)
         {
+            this.Visit(node.Input);
+            return null;
+        }
+        public override BoundNode VisitDagFieldEvaluation(BoundDagFieldEvaluation node)
+        {
+            this.Visit(node.Input);
+            return null;
+        }
+        public override BoundNode VisitDagPropertyEvaluation(BoundDagPropertyEvaluation node)
+        {
+            this.Visit(node.Input);
             return null;
         }
         public override BoundNode VisitPatternSwitchSection(BoundPatternSwitchSection node)
@@ -9483,16 +9588,15 @@ namespace Microsoft.CodeAnalysis.CSharp
             BoundDecisionDag whenFalse = (BoundDecisionDag)this.Visit(node.WhenFalse);
             return node.Update(node.Bindings, @where, whenTrue, whenFalse, node.Label);
         }
-        public override BoundNode VisitDagEvaluation(BoundDagEvaluation node)
+        public override BoundNode VisitDecision(BoundDecision node)
         {
-            BoundDagTemp input = (BoundDagTemp)this.Visit(node.Input);
-            return node.Update(node.Symbol, input);
+            return node;
         }
-        public override BoundNode VisitDagTypeTest(BoundDagTypeTestAndCast node)
+        public override BoundNode VisitDagTemp(BoundDagTemp node)
         {
-            BoundDagTemp input = (BoundDagTemp)this.Visit(node.Input);
+            BoundDagEvaluation source = (BoundDagEvaluation)this.Visit(node.Source);
             TypeSymbol type = this.VisitType(node.Type);
-            return node.Update(type, node.Symbol, input);
+            return node.Update(type, source, node.Index);
         }
         public override BoundNode VisitNonNullDecision(BoundNonNullDecision node)
         {
@@ -9510,15 +9614,26 @@ namespace Microsoft.CodeAnalysis.CSharp
             BoundDagTemp input = (BoundDagTemp)this.Visit(node.Input);
             return node.Update(node.Value, input);
         }
-        public override BoundNode VisitDagTemp(BoundDagTemp node)
+        public override BoundNode VisitDagDeconstructEvaluation(BoundDagDeconstructEvaluation node)
         {
-            BoundDagEvaluation source = (BoundDagEvaluation)this.Visit(node.Source);
-            TypeSymbol type = this.VisitType(node.Type);
-            return node.Update(type, source, node.Index);
+            BoundDagTemp input = (BoundDagTemp)this.Visit(node.Input);
+            return node.Update(node.DeconstructMethod, node.Symbol, input);
         }
-        public override BoundNode VisitDecision(BoundDecision node)
+        public override BoundNode VisitDagTypeEvaluation(BoundDagTypeEvaluation node)
         {
-            return node;
+            BoundDagTemp input = (BoundDagTemp)this.Visit(node.Input);
+            TypeSymbol type = this.VisitType(node.Type);
+            return node.Update(type, node.Symbol, input);
+        }
+        public override BoundNode VisitDagFieldEvaluation(BoundDagFieldEvaluation node)
+        {
+            BoundDagTemp input = (BoundDagTemp)this.Visit(node.Input);
+            return node.Update(node.Field, node.Symbol, input);
+        }
+        public override BoundNode VisitDagPropertyEvaluation(BoundDagPropertyEvaluation node)
+        {
+            BoundDagTemp input = (BoundDagTemp)this.Visit(node.Input);
+            return node.Update(node.Property, node.Symbol, input);
         }
         public override BoundNode VisitPatternSwitchSection(BoundPatternSwitchSection node)
         {
@@ -10747,22 +10862,21 @@ namespace Microsoft.CodeAnalysis.CSharp
             }
             );
         }
-        public override TreeDumperNode VisitDagEvaluation(BoundDagEvaluation node, object arg)
+        public override TreeDumperNode VisitDecision(BoundDecision node, object arg)
         {
-            return new TreeDumperNode("dagEvaluation", null, new TreeDumperNode[]
+            return new TreeDumperNode("decision", null, new TreeDumperNode[]
             {
-                new TreeDumperNode("symbol", node.Symbol, null),
-                new TreeDumperNode("input", null, new TreeDumperNode[] { Visit(node.Input, null) })
+                new TreeDumperNode("label", node.Label, null)
             }
             );
         }
-        public override TreeDumperNode VisitDagTypeTest(BoundDagTypeTestAndCast node, object arg)
+        public override TreeDumperNode VisitDagTemp(BoundDagTemp node, object arg)
         {
-            return new TreeDumperNode("dagTypeTest", null, new TreeDumperNode[]
+            return new TreeDumperNode("dagTemp", null, new TreeDumperNode[]
             {
                 new TreeDumperNode("type", node.Type, null),
-                new TreeDumperNode("symbol", node.Symbol, null),
-                new TreeDumperNode("input", null, new TreeDumperNode[] { Visit(node.Input, null) })
+                new TreeDumperNode("source", null, new TreeDumperNode[] { Visit(node.Source, null) }),
+                new TreeDumperNode("index", node.Index, null)
             }
             );
         }
@@ -10792,21 +10906,43 @@ namespace Microsoft.CodeAnalysis.CSharp
             }
             );
         }
-        public override TreeDumperNode VisitDagTemp(BoundDagTemp node, object arg)
+        public override TreeDumperNode VisitDagDeconstructEvaluation(BoundDagDeconstructEvaluation node, object arg)
         {
-            return new TreeDumperNode("dagTemp", null, new TreeDumperNode[]
+            return new TreeDumperNode("dagDeconstructEvaluation", null, new TreeDumperNode[]
             {
-                new TreeDumperNode("type", node.Type, null),
-                new TreeDumperNode("source", null, new TreeDumperNode[] { Visit(node.Source, null) }),
-                new TreeDumperNode("index", node.Index, null)
+                new TreeDumperNode("deconstructMethod", node.DeconstructMethod, null),
+                new TreeDumperNode("symbol", node.Symbol, null),
+                new TreeDumperNode("input", null, new TreeDumperNode[] { Visit(node.Input, null) })
             }
             );
         }
-        public override TreeDumperNode VisitDecision(BoundDecision node, object arg)
+        public override TreeDumperNode VisitDagTypeEvaluation(BoundDagTypeEvaluation node, object arg)
         {
-            return new TreeDumperNode("decision", null, new TreeDumperNode[]
+            return new TreeDumperNode("dagTypeEvaluation", null, new TreeDumperNode[]
             {
-                new TreeDumperNode("label", node.Label, null)
+                new TreeDumperNode("type", node.Type, null),
+                new TreeDumperNode("symbol", node.Symbol, null),
+                new TreeDumperNode("input", null, new TreeDumperNode[] { Visit(node.Input, null) })
+            }
+            );
+        }
+        public override TreeDumperNode VisitDagFieldEvaluation(BoundDagFieldEvaluation node, object arg)
+        {
+            return new TreeDumperNode("dagFieldEvaluation", null, new TreeDumperNode[]
+            {
+                new TreeDumperNode("field", node.Field, null),
+                new TreeDumperNode("symbol", node.Symbol, null),
+                new TreeDumperNode("input", null, new TreeDumperNode[] { Visit(node.Input, null) })
+            }
+            );
+        }
+        public override TreeDumperNode VisitDagPropertyEvaluation(BoundDagPropertyEvaluation node, object arg)
+        {
+            return new TreeDumperNode("dagPropertyEvaluation", null, new TreeDumperNode[]
+            {
+                new TreeDumperNode("property", node.Property, null),
+                new TreeDumperNode("symbol", node.Symbol, null),
+                new TreeDumperNode("input", null, new TreeDumperNode[] { Visit(node.Input, null) })
             }
             );
         }

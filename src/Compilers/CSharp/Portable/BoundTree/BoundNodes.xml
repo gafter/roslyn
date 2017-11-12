@@ -829,42 +829,46 @@
     <Field Name="WhenTrue" Type="BoundDecisionDag" Null="disallow"/>
     <Field Name="WhenFalse" Type="BoundDecisionDag" Null="allow"/>
   </Node>
-  <Node Name="BoundDagEvaluation" Base="BoundDagDecision">
-    <!-- Symbol is used as follows:
-         1. if it is a Deconstruct method, in indicates an invocation of that deconstruct and creation of N new temps.
-         2. if it is a Type, it indicates a type cast to that type, and the creation of one new temp of that type.
-         3. if it is a Field or Property symbol, it indicates a fetch and the creation of one new temp.
-         4. We ignore ITuple-based deconstruction for now. -->
-    <Field Name="Symbol" Type="Symbol"/>
-    <!-- As a decision, an evaluation is considered to always succeed (except a BoundDagTypeTest). -->
+  <!-- This node is used to indicate a point in the decision dag where the decision has been completed. -->
+  <Node Name="BoundDecision" Base="BoundDecisionDag">
   </Node>
-  <Node Name="BoundDagTypeTestAndCast" Base="BoundDagEvaluation">
-    <!-- A test test and cast. This is both a decision (whether the type test is satisfied)
-         and an evaluation (producing a converted value). -->
-    <Field Name="Type" Type="TypeSymbol"/>
-  </Node>
+
   <AbstractNode Name="BoundDagDecision" Base="BoundNode">
-    <!-- Input is the input to the decision point. -->
+     Input is the input to the decision point. 
     <Field Name="Input" Type="BoundDagTemp"/>
   </AbstractNode>
-  <Node Name="BoundNonNullDecision" Base="BoundDagDecision">
-    <!-- Check that the input is not null. -->
-  </Node>
-  <Node Name="BoundTypeDecision" Base="BoundDagDecision">
-    <!-- Check that the input is of the given type. Null check is separate. -->
-    <Field Name="Type" Type="TypeSymbol" Null="disallow"/>
-  </Node>
-  <Node Name="BoundValueDecision" Base="BoundDagDecision">
-    <!-- Check that the input is the same as the given constant value. -->
-    <Field Name="Value" Type="ConstantValue" Null="disallow"/>
-  </Node>
   <Node Name="BoundDagTemp" Base="BoundNode">
     <Field Name="Type" Type="TypeSymbol" Null="allow"/>
     <Field Name="Source" Type="BoundDagEvaluation" Null="allow"/>
     <Field Name="Index" Type="int"/>
   </Node>
-  <!-- This node is used to indicate a point in the decision dag where the decision has been completed. -->
-  <Node Name="BoundDecision" Base="BoundDecisionDag">
+  <Node Name="BoundNonNullDecision" Base="BoundDagDecision">
+     <!--Check that the input is not null.--> 
+  </Node>
+  <Node Name="BoundTypeDecision" Base="BoundDagDecision">
+     <!--Check that the input is of the given type. Null check is separate.--> 
+    <Field Name="Type" Type="TypeSymbol" Null="disallow"/>
+  </Node>
+  <Node Name="BoundValueDecision" Base="BoundDagDecision">
+     <!--Check that the input is the same as the given constant value.--> 
+    <Field Name="Value" Type="ConstantValue" Null="disallow"/>
+  </Node>
+  <!-- As a decision, an evaluation is considered to always succeed. -->
+  <AbstractNode Name="BoundDagEvaluation" Base="BoundDagDecision">
+    <Field Name="Symbol" Type="Symbol" Null="disallow"/>
+  </AbstractNode>
+  <Node Name="BoundDagDeconstructEvaluation" Base="BoundDagEvaluation">
+    <Field Name="DeconstructMethod" Type="MethodSymbol" Null="disallow"/>
+  </Node>
+  <Node Name="BoundDagTypeEvaluation" Base="BoundDagEvaluation">
+   <!--Cast to the given type, assumed to be used after a successful type check.--> 
+    <Field Name="Type" Type="TypeSymbol" Null="disallow"/>
+  </Node>
+  <Node Name="BoundDagFieldEvaluation" Base="BoundDagEvaluation">
+    <Field Name="Field" Type="FieldSymbol" Null="disallow"/>
+  </Node>
+  <Node Name="BoundDagPropertyEvaluation" Base="BoundDagEvaluation">
+    <Field Name="Property" Type="PropertySymbol" Null="disallow"/>
   </Node>
 
   <Node Name="BoundPatternSwitchSection" Base="BoundStatementList">
