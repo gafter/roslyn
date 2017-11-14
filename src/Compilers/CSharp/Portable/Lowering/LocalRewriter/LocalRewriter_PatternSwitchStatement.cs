@@ -360,7 +360,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                 requiresNullTest = requiresNullTest && loweredInput.Type.CanContainNull();
 
                 // If the match is impossible, we simply evaluate the input and yield false.
-                var matchConstantValue = _localRewriter.MatchConstantValue(loweredInput, type, false);
+                var matchConstantValue = MatchConstantValue(loweredInput, type, false);
                 if (matchConstantValue == false)
                 {
                     return _factory.MakeSequence(loweredInput, _factory.Literal(false));
@@ -370,7 +370,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                 // is irrefutable, and we can just do the assignment and return true (or perform the null test).
                 if (matchConstantValue == true)
                 {
-                    requiresNullTest = requiresNullTest && _localRewriter.MatchConstantValue(loweredInput, type, true) != true;
+                    requiresNullTest = requiresNullTest && MatchConstantValue(loweredInput, type, true) != true;
                     if (loweredInput.Type.IsNullableType())
                     {
                         var getValueOrDefault = _factory.SpecialMethod(SpecialMember.System_Nullable_T_GetValueOrDefault).AsMember((NamedTypeSymbol)loweredInput.Type);
@@ -448,6 +448,20 @@ namespace Microsoft.CodeAnalysis.CSharp
                         _factory.Local(s)
                         );
                 }
+            }
+
+            private bool? MatchConstantValue(BoundExpression source, TypeSymbol targetType, bool requiredNullTest)
+            {
+                // use site diagnostics will already have been reported during binding.
+                HashSet<DiagnosticInfo> ignoredDiagnostics = null;
+                var sourceType = source.Type.IsDynamic() ? _factory.SpecialType(SpecialType.System_Object) : source.Type;
+                var conversionKind = _factory.Compilation.Conversions.ClassifyConversionFromType(sourceType, targetType, ref ignoredDiagnostics).Kind;
+                var constantResult = Binder.GetIsOperatorConstantResult(sourceType, targetType, conversionKind, source.ConstantValue, requiredNullTest);
+                return
+                    constantResult == ConstantValue.True ? true :
+                    constantResult == ConstantValue.False ? false :
+                    constantResult == null ? (bool?)null :
+                    throw ExceptionUtilities.UnexpectedValue(constantResult);
             }
 
             private void LowerDecisionTree(DecisionTree.ByValue byValue)
@@ -699,13 +713,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                         Debug.Assert(boundSwitchLabel.ConstantValueOpt != null);
                         // generate (if (value.Equals(input)) goto label;
                         var literal = _localRewriter.MakeLiteral(_factory.Syntax, boundSwitchLabel.ConstantValueOpt, expression.Type);
-                        var condition = _factory.InstanceCall(literal, "Equals", expression);
-                        if (!condition.HasErrors && condition.Type.SpecialType != SpecialType.System_Boolean)
-                        {
-                            var call = (BoundCall)condition;
-                            // '{1} {0}' has the wrong return type
-                            _factory.Diagnostics.Add(ErrorCode.ERR_BadRetType, boundSwitchLabel.Syntax.GetLocation(), call.Method, call.Type);
-                        }
+                        var condition = _localRewriter.MakeEqual(literal, expression);
 
                         builder.Add(_factory.ConditionalGoto(condition, boundSwitchLabel.Label, true));
                         builder.Add(_factory.Goto(nextLabel));

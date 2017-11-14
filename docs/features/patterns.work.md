@@ -1,6 +1,16 @@
-# Open issues for the design and implementation of pattern-matching extensions for C# 8
+# Open issues for pattern-matching extensions for C# 8
 
+### Specification
 - [ ] The specification needs to be updated with the additional syntax forms being added. See https://github.com/dotnet/csharplang/issues/1054 for a summary of the proposed changes vs C# 7.
+
+### Unimplemented parts
+- [ ] Fallback to a recursive pattern when a parenthesized expression is used.
+- [ ] Give an error when a wildcard is used but something named `_` is in scope.
+- [ ] Implement the match expression
+  - [ ] Parsing
+  - [ ] Binding
+  - [ ] Lowering
+  - [ ] Code-gen
 
 ### Test plan needed
 - [ ] We need a test plan for these additions. Here is a high-level list of some tests that are needed
