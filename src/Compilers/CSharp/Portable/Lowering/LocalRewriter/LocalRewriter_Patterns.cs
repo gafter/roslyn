@@ -160,6 +160,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                     case BoundDagFieldEvaluation f:
                         {
                             var field = f.Field;
+                            field = field.TupleUnderlyingField ?? field;
                             var outputTemp = new BoundDagTemp(f.Syntax, field.Type, f, 0);
                             var output = _tempAllocator.GetTemp(outputTemp);
                             _sideEffectBuilder.Add(_factory.AssignmentExpression(output, _factory.Field(input, field)));
@@ -168,6 +169,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                     case BoundDagPropertyEvaluation p:
                         {
                             var property = p.Property;
+                            property = property.TupleUnderlyingProperty ?? property;
                             var outputTemp = new BoundDagTemp(p.Syntax, property.Type, p, 0);
                             var output = _tempAllocator.GetTemp(outputTemp);
                             _sideEffectBuilder.Add(_factory.AssignmentExpression(output, _factory.Property(input, property)));
@@ -238,7 +240,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             public BoundExpression LowerIsPattern(BoundPattern pattern, CSharpCompilation compilation)
             {
                 var decisionBuilder = new DecisionDagBuilder(compilation);
-                var inputTemp = decisionBuilder.LowerPattern(_loweredInput, pattern, out var decisions, out var bindings);
+                var inputTemp = decisionBuilder.TranslatePattern(_loweredInput, pattern, out var decisions, out var bindings);
                 Debug.Assert(inputTemp == _inputTemp);
 
                 // first, copy the input expression into the input temp
