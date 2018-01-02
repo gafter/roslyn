@@ -5,6 +5,7 @@ using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using Microsoft.CodeAnalysis.CSharp.Symbols;
 using Microsoft.CodeAnalysis.PooledObjects;
 using Roslyn.Utilities;
@@ -338,6 +339,147 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             return false;
         }
 
+        private void CheckMemberAgainstBaseType(
+            Symbol member,
+            DiagnosticBag diagnostics)
+        {
+            bool suppressAccessors;
+            switch (member.Kind)
+            {
+                case SymbolKind.Method:
+                    var method = (MethodSymbol)member;
+                    if (MethodSymbol.CanOverrideOrHide(method.MethodKind) && !method.IsAccessor())
+                    {
+                        if (member.IsOverride)
+                        {
+                            CheckOverrideMember(method, method.OverriddenOrHiddenMembers, diagnostics, out suppressAccessors);
+                        }
+                        else
+                        {
+                            var sourceMethod = method as SourceMemberMethodSymbol;
+                            if ((object)sourceMethod != null) // skip submission initializer
+                            {
+                                var isNew = sourceMethod.IsNew;
+                                CheckNonOverrideMember(method, isNew, method.OverriddenOrHiddenMembers, diagnostics, out suppressAccessors);
+                            }
+                        }
+                    }
+                    else if (method.MethodKind == MethodKind.Destructor)
+                    {
+                        // NOTE: Normal finalize methods CanOverrideOrHide and will go through the normal code path.
+
+                        // First is fine, since there should only be one, since there are no parameters.
+                        MethodSymbol overridden = method.GetFirstRuntimeOverriddenMethodIgnoringNewSlot(ignoreInterfaceImplementationChanges: true);
+
+                        // NOTE: Dev11 doesn't expose symbols, so it can treat destructors as override and let them go through the normal
+                        // checks.  Roslyn can't, since the language says they are not virtual/override and that's what we need to expose
+                        // in the symbol model.  Having said that, Dev11 doesn't seem to produce override errors other than this one
+                        // (see SymbolPreparer::prepareOperator).
+                        if ((object)overridden != null && overridden.IsMetadataFinal)
+                        {
+                            diagnostics.Add(ErrorCode.ERR_CantOverrideSealed, method.Locations[0], method, overridden);
+                        }
+                    }
+                    break;
+                case SymbolKind.Property:
+                    var property = (PropertySymbol)member;
+                    var getMethod = property.GetMethod;
+                    var setMethod = property.SetMethod;
+
+                    // Handle the accessors here, instead of in the loop, so that we can ensure that
+                    // they're checked *after* the corresponding property.
+                    if (member.IsOverride)
+                    {
+                        CheckOverrideMember(property, property.OverriddenOrHiddenMembers, diagnostics, out suppressAccessors);
+
+                        if (!suppressAccessors)
+                        {
+                            if ((object)getMethod != null)
+                            {
+                                CheckOverrideMember(getMethod, getMethod.OverriddenOrHiddenMembers, diagnostics, out suppressAccessors);
+                            }
+                            if ((object)setMethod != null)
+                            {
+                                CheckOverrideMember(setMethod, setMethod.OverriddenOrHiddenMembers, diagnostics, out suppressAccessors);
+                            }
+                        }
+                    }
+                    else
+                    {
+                        var isNewProperty = ((SourcePropertySymbol)property).IsNew;
+                        CheckNonOverrideMember(property, isNewProperty, property.OverriddenOrHiddenMembers, diagnostics, out suppressAccessors);
+
+                        if (!suppressAccessors)
+                        {
+                            if ((object)getMethod != null)
+                            {
+                                CheckNonOverrideMember(getMethod, isNewProperty, getMethod.OverriddenOrHiddenMembers, diagnostics, out suppressAccessors);
+                            }
+                            if ((object)setMethod != null)
+                            {
+                                CheckNonOverrideMember(setMethod, isNewProperty, setMethod.OverriddenOrHiddenMembers, diagnostics, out suppressAccessors);
+                            }
+                        }
+                    }
+                    break;
+                case SymbolKind.Event:
+                    var @event = (EventSymbol)member;
+                    var addMethod = @event.AddMethod;
+                    var removeMethod = @event.RemoveMethod;
+
+                    // Handle the accessors here, instead of in the loop, so that we can ensure that
+                    // they're checked *after* the corresponding event.
+                    if (member.IsOverride)
+                    {
+                        CheckOverrideMember(@event, @event.OverriddenOrHiddenMembers, diagnostics, out suppressAccessors);
+
+                        if (!suppressAccessors)
+                        {
+                            if ((object)addMethod != null)
+                            {
+                                CheckOverrideMember(addMethod, addMethod.OverriddenOrHiddenMembers, diagnostics, out suppressAccessors);
+                            }
+                            if ((object)removeMethod != null)
+                            {
+                                CheckOverrideMember(removeMethod, removeMethod.OverriddenOrHiddenMembers, diagnostics, out suppressAccessors);
+                            }
+                        }
+                    }
+                    else
+                    {
+                        var isNewEvent = ((SourceEventSymbol)@event).IsNew;
+                        CheckNonOverrideMember(@event, isNewEvent, @event.OverriddenOrHiddenMembers, diagnostics, out suppressAccessors);
+
+                        if (!suppressAccessors)
+                        {
+                            if ((object)addMethod != null)
+                            {
+                                CheckNonOverrideMember(addMethod, isNewEvent, addMethod.OverriddenOrHiddenMembers, diagnostics, out suppressAccessors);
+                            }
+                            if ((object)removeMethod != null)
+                            {
+                                CheckNonOverrideMember(removeMethod, isNewEvent, removeMethod.OverriddenOrHiddenMembers, diagnostics, out suppressAccessors);
+                            }
+                        }
+                    }
+                    break;
+                case SymbolKind.Field:
+                    var sourceField = member as SourceFieldSymbol;
+                    var isNewField = (object)sourceField != null && sourceField.IsNew;
+
+                    // We don't want to report diagnostics for field-like event backing fields (redundant),
+                    // but that shouldn't be an issue since they shouldn't be in the member list.
+                    Debug.Assert((object)sourceField == null || (object)sourceField.AssociatedSymbol == null ||
+                        sourceField.AssociatedSymbol.Kind != SymbolKind.Event);
+
+                    CheckNewModifier(member, isNewField, diagnostics);
+                    break;
+                case SymbolKind.NamedType:
+                    CheckNewModifier(member, ((SourceMemberContainerTypeSymbol)member).IsNew, diagnostics);
+                    break;
+            }
+        }
+
         private void CheckMembersAgainstBaseType(
             DiagnosticBag diagnostics,
             CancellationToken cancellationToken)
@@ -359,144 +501,26 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                     throw ExceptionUtilities.UnexpectedValue(this.TypeKind);
             }
 
-            foreach (var member in this.GetMembersUnordered())
+            // When there are more than 500 members in a class, we use concurrency to process its members here.
+            ImmutableArray<Symbol> members = this.GetMembersUnordered();
+            if (this.DeclaringCompilation.Options.ConcurrentBuild && members.Length > 500)
             {
-                cancellationToken.ThrowIfCancellationRequested();
+                var po = cancellationToken.CanBeCanceled
+                    ? new ParallelOptions() { CancellationToken = cancellationToken }
+                    : CSharpCompilation.DefaultParallelOptions;
 
-                bool suppressAccessors;
-                switch (member.Kind)
+                Parallel.For(0, members.Length, po, UICultureUtilities.WithCurrentUICulture<int>(i =>
                 {
-                    case SymbolKind.Method:
-                        var method = (MethodSymbol)member;
-                        if (MethodSymbol.CanOverrideOrHide(method.MethodKind) && !method.IsAccessor())
-                        {
-                            if (member.IsOverride)
-                            {
-                                CheckOverrideMember(method, method.OverriddenOrHiddenMembers, diagnostics, out suppressAccessors);
-                            }
-                            else
-                            {
-                                var sourceMethod = method as SourceMemberMethodSymbol;
-                                if ((object)sourceMethod != null) // skip submission initializer
-                                {
-                                    var isNew = sourceMethod.IsNew;
-                                    CheckNonOverrideMember(method, isNew, method.OverriddenOrHiddenMembers, diagnostics, out suppressAccessors);
-                                }
-                            }
-                        }
-                        else if (method.MethodKind == MethodKind.Destructor)
-                        {
-                            // NOTE: Normal finalize methods CanOverrideOrHide and will go through the normal code path.
-
-                            // First is fine, since there should only be one, since there are no parameters.
-                            MethodSymbol overridden = method.GetFirstRuntimeOverriddenMethodIgnoringNewSlot(ignoreInterfaceImplementationChanges: true);
-
-                            // NOTE: Dev11 doesn't expose symbols, so it can treat destructors as override and let them go through the normal
-                            // checks.  Roslyn can't, since the language says they are not virtual/override and that's what we need to expose
-                            // in the symbol model.  Having said that, Dev11 doesn't seem to produce override errors other than this one
-                            // (see SymbolPreparer::prepareOperator).
-                            if ((object)overridden != null && overridden.IsMetadataFinal)
-                            {
-                                diagnostics.Add(ErrorCode.ERR_CantOverrideSealed, method.Locations[0], method, overridden);
-                            }
-                        }
-                        break;
-                    case SymbolKind.Property:
-                        var property = (PropertySymbol)member;
-                        var getMethod = property.GetMethod;
-                        var setMethod = property.SetMethod;
-
-                        // Handle the accessors here, instead of in the loop, so that we can ensure that
-                        // they're checked *after* the corresponding property.
-                        if (member.IsOverride)
-                        {
-                            CheckOverrideMember(property, property.OverriddenOrHiddenMembers, diagnostics, out suppressAccessors);
-
-                            if (!suppressAccessors)
-                            {
-                                if ((object)getMethod != null)
-                                {
-                                    CheckOverrideMember(getMethod, getMethod.OverriddenOrHiddenMembers, diagnostics, out suppressAccessors);
-                                }
-                                if ((object)setMethod != null)
-                                {
-                                    CheckOverrideMember(setMethod, setMethod.OverriddenOrHiddenMembers, diagnostics, out suppressAccessors);
-                                }
-                            }
-                        }
-                        else
-                        {
-                            var isNewProperty = ((SourcePropertySymbol)property).IsNew;
-                            CheckNonOverrideMember(property, isNewProperty, property.OverriddenOrHiddenMembers, diagnostics, out suppressAccessors);
-
-                            if (!suppressAccessors)
-                            {
-                                if ((object)getMethod != null)
-                                {
-                                    CheckNonOverrideMember(getMethod, isNewProperty, getMethod.OverriddenOrHiddenMembers, diagnostics, out suppressAccessors);
-                                }
-                                if ((object)setMethod != null)
-                                {
-                                    CheckNonOverrideMember(setMethod, isNewProperty, setMethod.OverriddenOrHiddenMembers, diagnostics, out suppressAccessors);
-                                }
-                            }
-                        }
-                        break;
-                    case SymbolKind.Event:
-                        var @event = (EventSymbol)member;
-                        var addMethod = @event.AddMethod;
-                        var removeMethod = @event.RemoveMethod;
-
-                        // Handle the accessors here, instead of in the loop, so that we can ensure that
-                        // they're checked *after* the corresponding event.
-                        if (member.IsOverride)
-                        {
-                            CheckOverrideMember(@event, @event.OverriddenOrHiddenMembers, diagnostics, out suppressAccessors);
-
-                            if (!suppressAccessors)
-                            {
-                                if ((object)addMethod != null)
-                                {
-                                    CheckOverrideMember(addMethod, addMethod.OverriddenOrHiddenMembers, diagnostics, out suppressAccessors);
-                                }
-                                if ((object)removeMethod != null)
-                                {
-                                    CheckOverrideMember(removeMethod, removeMethod.OverriddenOrHiddenMembers, diagnostics, out suppressAccessors);
-                                }
-                            }
-                        }
-                        else
-                        {
-                            var isNewEvent = ((SourceEventSymbol)@event).IsNew;
-                            CheckNonOverrideMember(@event, isNewEvent, @event.OverriddenOrHiddenMembers, diagnostics, out suppressAccessors);
-
-                            if (!suppressAccessors)
-                            {
-                                if ((object)addMethod != null)
-                                {
-                                    CheckNonOverrideMember(addMethod, isNewEvent, addMethod.OverriddenOrHiddenMembers, diagnostics, out suppressAccessors);
-                                }
-                                if ((object)removeMethod != null)
-                                {
-                                    CheckNonOverrideMember(removeMethod, isNewEvent, removeMethod.OverriddenOrHiddenMembers, diagnostics, out suppressAccessors);
-                                }
-                            }
-                        }
-                        break;
-                    case SymbolKind.Field:
-                        var sourceField = member as SourceFieldSymbol;
-                        var isNewField = (object)sourceField != null && sourceField.IsNew;
-
-                        // We don't want to report diagnostics for field-like event backing fields (redundant),
-                        // but that shouldn't be an issue since they shouldn't be in the member list.
-                        Debug.Assert((object)sourceField == null || (object)sourceField.AssociatedSymbol == null ||
-                            sourceField.AssociatedSymbol.Kind != SymbolKind.Event);
-
-                        CheckNewModifier(member, isNewField, diagnostics);
-                        break;
-                    case SymbolKind.NamedType:
-                        CheckNewModifier(member, ((SourceMemberContainerTypeSymbol)member).IsNew, diagnostics);
-                        break;
+                    var member = members[i];
+                    CheckMemberAgainstBaseType(member, diagnostics);
+                }));
+            }
+            else
+            {
+                foreach (var member in this.GetMembersUnordered())
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    CheckMemberAgainstBaseType(member, diagnostics);
                 }
             }
         }
