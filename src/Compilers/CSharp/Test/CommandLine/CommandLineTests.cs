@@ -1,5 +1,6 @@
 ﻿// Copyright (c) Microsoft.  All Rights Reserved.  Licensed under the Apache License, Version 2.0.  See License.txt in the project root for license information.
 
+extern alias CscExe;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -29,6 +30,7 @@ using Roslyn.Utilities;
 using Xunit;
 using static Microsoft.CodeAnalysis.CommonDiagnosticAnalyzers;
 using static Roslyn.Test.Utilities.SharedResourceHelpers;
+using CscExe.Microsoft.CodeAnalysis.CSharp.CommandLine;
 
 namespace Microsoft.CodeAnalysis.CSharp.CommandLine.UnitTests
 {
@@ -282,6 +284,24 @@ d.cs
             args = DefaultParse(new[] { "/m:\"решения.Class1\"", "a.cs" }, folder.Path);
             args.Errors.Verify();
             Assert.Equal("решения.Class1", args.CompilationOptions.MainTypeName);
+        }
+
+        [Fact]
+        [WorkItem(21508, "https://github.com/dotnet/roslyn/issues/21508")]
+        public void ArgumentStartWithDashAndContainingSlash()
+        {
+            CSharpCommandLineArguments args;
+            var folder = Temp.CreateDirectory();
+
+            args = DefaultParse(new[] { "-debug+/debug:portable" }, folder.Path);
+            args.Errors.Verify(
+                // error CS2007: Unrecognized option: '-debug+/debug:portable'
+                Diagnostic(ErrorCode.ERR_BadSwitch).WithArguments("-debug+/debug:portable").WithLocation(1, 1),
+                // warning CS2008: No source files specified.
+                Diagnostic(ErrorCode.WRN_NoSources).WithLocation(1, 1),
+                // error CS1562: Outputs without source must have the /out option specified
+                Diagnostic(ErrorCode.ERR_OutputNeedsName).WithLocation(1, 1)
+                );
         }
 
         [WorkItem(546009, "http://vstfdevdiv:8080/DevDiv2/DevDiv/_workitems/edit/546009")]
@@ -4368,6 +4388,24 @@ C:\*.cs(100,7): error CS0103: The name 'Goo' does not exist in the current conte
             Assert.Equal(Path.Combine(_baseDirectory, "test.snk"), parsedArgs.CompilationOptions.CryptoKeyFile);
         }
 
+        [Fact]
+        [WorkItem(11497, "https://github.com/dotnet/roslyn/issues/11497")]
+        public void PublicSignWithEmptyKeyPath()
+        {
+            DefaultParse(new[] { "/publicsign", "/keyfile:", "a.cs" }, _baseDirectory).Errors.Verify(
+                // error CS2005: Missing file specification for 'keyfile' option
+                Diagnostic(ErrorCode.ERR_NoFileSpec).WithArguments("keyfile").WithLocation(1, 1));
+        }
+
+        [Fact]
+        [WorkItem(11497, "https://github.com/dotnet/roslyn/issues/11497")]
+        public void PublicSignWithEmptyKeyPath2()
+        {
+            DefaultParse(new[] { "/publicsign", "/keyfile:\"\"", "a.cs" }, _baseDirectory).Errors.Verify(
+                // error CS2005: Missing file specification for 'keyfile' option
+                Diagnostic(ErrorCode.ERR_NoFileSpec).WithArguments("keyfile").WithLocation(1, 1));
+        }
+
         [WorkItem(546301, "http://vstfdevdiv:8080/DevDiv2/DevDiv/_workitems/edit/546301")]
         [Fact]
         public void SubsystemVersionTests()
@@ -5827,7 +5865,7 @@ public class C
             Assert.Equal(1, peHeaders.PEHeader.MinorSubsystemVersion);
         }
 
-        [Fact]
+        [Fact(Skip = "https://github.com/dotnet/roslyn/pull/23529")]
         public void CreateCompilationWithKeyFile()
         {
             string source = @"
@@ -7878,7 +7916,8 @@ public class C { }
 
             var outWriter = new StringWriter(CultureInfo.InvariantCulture);
             var csc = new MockCSharpCompiler(null, _baseDirectory, new[] { "/t:library", srcFile.Path },
-               analyzers: ImmutableArray.Create<DiagnosticAnalyzer>(new AnalyzerThatThrowsInGetMessage()));
+               analyzers: ImmutableArray.Create<DiagnosticAnalyzer>(new AnalyzerThatThrowsInGetMessage()),
+               loader: new DesktopAnalyzerAssemblyLoader());
 
             var exitCode = csc.Run(outWriter);
             Assert.Equal(0, exitCode);
@@ -7903,7 +7942,8 @@ public class C { }
 
             var outWriter = new StringWriter(CultureInfo.InvariantCulture);
             var csc = new MockCSharpCompiler(null, _baseDirectory, new[] { "/t:library", $"/warnaserror:{AnalyzerExecutor.AnalyzerExceptionDiagnosticId}", srcFile.Path },
-               analyzers: ImmutableArray.Create<DiagnosticAnalyzer>(new AnalyzerThatThrowsInGetMessage()));
+               analyzers: ImmutableArray.Create<DiagnosticAnalyzer>(new AnalyzerThatThrowsInGetMessage()),
+               loader: new DesktopAnalyzerAssemblyLoader());
 
             var exitCode = csc.Run(outWriter);
             Assert.NotEqual(0, exitCode);
@@ -7925,7 +7965,8 @@ public class C { }
 
             var outWriter = new StringWriter(CultureInfo.InvariantCulture);
             var csc = new MockCSharpCompiler(null, _baseDirectory, new[] { "/t:library", srcFile.Path },
-               analyzers: ImmutableArray.Create<DiagnosticAnalyzer>(new AnalyzerReportingMisformattedDiagnostic()));
+               analyzers: ImmutableArray.Create<DiagnosticAnalyzer>(new AnalyzerReportingMisformattedDiagnostic()),
+               loader: new DesktopAnalyzerAssemblyLoader());
 
             var exitCode = csc.Run(outWriter);
             Assert.Equal(0, exitCode);

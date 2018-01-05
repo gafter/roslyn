@@ -52,6 +52,7 @@ Microsoft.CodeAnalysis.IOperation.Syntax.get -> Microsoft.CodeAnalysis.SyntaxNod
 Microsoft.CodeAnalysis.IOperation.Type.get -> Microsoft.CodeAnalysis.ITypeSymbol
 Microsoft.CodeAnalysis.IPropertySymbol.RefKind.get -> Microsoft.CodeAnalysis.RefKind
 Microsoft.CodeAnalysis.IPropertySymbol.ReturnsByRefReadonly.get -> bool
+Microsoft.CodeAnalysis.ModuleMetadata.IsDisposed.get -> bool
 Microsoft.CodeAnalysis.OperationKind
 Microsoft.CodeAnalysis.OperationKind.AddressOf = 64 -> Microsoft.CodeAnalysis.OperationKind
 Microsoft.CodeAnalysis.OperationKind.AnonymousFunction = 35 -> Microsoft.CodeAnalysis.OperationKind
@@ -502,6 +503,8 @@ Microsoft.CodeAnalysis.SyntaxTokenList.SyntaxTokenList(params Microsoft.CodeAnal
 Microsoft.CodeAnalysis.SyntaxTriviaList.SyntaxTriviaList(Microsoft.CodeAnalysis.SyntaxTrivia trivia) -> void
 Microsoft.CodeAnalysis.SyntaxTriviaList.SyntaxTriviaList(System.Collections.Generic.IEnumerable<Microsoft.CodeAnalysis.SyntaxTrivia> trivias) -> void
 Microsoft.CodeAnalysis.SyntaxTriviaList.SyntaxTriviaList(params Microsoft.CodeAnalysis.SyntaxTrivia[] trivias) -> void
+abstract Microsoft.CodeAnalysis.DataFlowAnalysis.CapturedInside.get -> System.Collections.Immutable.ImmutableArray<Microsoft.CodeAnalysis.ISymbol>
+abstract Microsoft.CodeAnalysis.DataFlowAnalysis.CapturedOutside.get -> System.Collections.Immutable.ImmutableArray<Microsoft.CodeAnalysis.ISymbol>
 abstract Microsoft.CodeAnalysis.Diagnostics.OperationBlockStartAnalysisContext.RegisterOperationAction(System.Action<Microsoft.CodeAnalysis.Diagnostics.OperationAnalysisContext> action, System.Collections.Immutable.ImmutableArray<Microsoft.CodeAnalysis.OperationKind> operationKinds) -> void
 abstract Microsoft.CodeAnalysis.Diagnostics.OperationBlockStartAnalysisContext.RegisterOperationBlockEndAction(System.Action<Microsoft.CodeAnalysis.Diagnostics.OperationBlockAnalysisContext> action) -> void
 abstract Microsoft.CodeAnalysis.SemanticModel.GetOperationCore(Microsoft.CodeAnalysis.SyntaxNode node, System.Threading.CancellationToken cancellationToken) -> Microsoft.CodeAnalysis.IOperation
@@ -510,6 +513,8 @@ const Microsoft.CodeAnalysis.WellKnownMemberNames.DeconstructMethodName = "Decon
 override Microsoft.CodeAnalysis.Operations.OperationWalker.DefaultVisit(Microsoft.CodeAnalysis.IOperation operation) -> void
 override Microsoft.CodeAnalysis.Operations.OperationWalker.Visit(Microsoft.CodeAnalysis.IOperation operation) -> void
 override Microsoft.CodeAnalysis.Optional<T>.ToString() -> string
+static Microsoft.CodeAnalysis.Diagnostic.Create(Microsoft.CodeAnalysis.DiagnosticDescriptor descriptor, Microsoft.CodeAnalysis.Location location, Microsoft.CodeAnalysis.DiagnosticSeverity effectiveSeverity, System.Collections.Generic.IEnumerable<Microsoft.CodeAnalysis.Location> additionalLocations, System.Collections.Immutable.ImmutableDictionary<string, string> properties, params object[] messageArgs) -> Microsoft.CodeAnalysis.Diagnostic
+static Microsoft.CodeAnalysis.Emit.EmitBaseline.CreateInitialBaseline(Microsoft.CodeAnalysis.ModuleMetadata module, System.Func<System.Reflection.Metadata.MethodDefinitionHandle, Microsoft.CodeAnalysis.Emit.EditAndContinueMethodDebugInformation> debugInformationProvider, System.Func<System.Reflection.Metadata.MethodDefinitionHandle, System.Reflection.Metadata.StandaloneSignatureHandle> localSignatureProvider, bool hasPortableDebugInformation) -> Microsoft.CodeAnalysis.Emit.EmitBaseline
 static Microsoft.CodeAnalysis.Operations.OperationExtensions.Descendants(this Microsoft.CodeAnalysis.IOperation operation) -> System.Collections.Generic.IEnumerable<Microsoft.CodeAnalysis.IOperation>
 static Microsoft.CodeAnalysis.Operations.OperationExtensions.DescendantsAndSelf(this Microsoft.CodeAnalysis.IOperation operation) -> System.Collections.Generic.IEnumerable<Microsoft.CodeAnalysis.IOperation>
 static Microsoft.CodeAnalysis.Operations.OperationExtensions.GetArgumentName(this Microsoft.CodeAnalysis.Operations.IDynamicIndexerAccessOperation dynamicOperation, int index) -> string

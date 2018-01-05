@@ -76,14 +76,21 @@ namespace Microsoft.CodeAnalysis.CSharp
         private BoundConstantPattern BindConstantPattern(
             ConstantPatternSyntax node,
             TypeSymbol operandType,
+            ExpressionSyntax patternExpression,
             bool hasErrors,
             DiagnosticBag diagnostics)
         {
-            bool wasExpression;
-            return BindConstantPattern(node, operandType, node.Expression, hasErrors, diagnostics, out wasExpression);
+            var innerExpression = node.Expression.SkipParens();
+            if (innerExpression.Kind() == SyntaxKind.DefaultLiteralExpression)
+            {
+                diagnostics.Add(ErrorCode.ERR_DefaultInPattern, innerExpression.Location);
+                hasErrors = true;
+            }
+
+            return BindConstantPattern(node, operandType, node.Expression, hasErrors, diagnostics, out bool wasExpression);
         }
 
-        internal BoundConstantPattern BindConstantPattern(
+        internal BoundConstantPattern BindConstantAsPattern(
             CSharpSyntaxNode node,
             TypeSymbol operandType,
             ExpressionSyntax patternExpression,

@@ -303,7 +303,6 @@ Public Class BuildDevDivInsertionFiles
         "Roslyn.Hosting.Diagnostics.dll",
         "Roslyn.Services.Test.Utilities.dll",
         "Roslyn.Test.PdbUtilities.dll",
-        "Roslyn.Test.Utilities.Desktop.dll",
         "Roslyn.Test.Utilities.dll",
         "vbc.exe",
         "vbc.exe.config",
@@ -807,11 +806,17 @@ Public Class BuildDevDivInsertionFiles
         add("Vsix\VisualStudioSetup\System.Composition.Convention.dll")
         add("Vsix\VisualStudioSetup\System.Composition.Hosting.dll")
         add("Vsix\VisualStudioSetup\System.Composition.TypedParts.dll")
+        add("Vsix\VisualStudioSetup\Mono.Cecil.dll")
+        add("Vsix\VisualStudioSetup\Mono.Cecil.Mdb.dll")
+        add("Vsix\VisualStudioSetup\Mono.Cecil.Pdb.dll")
+        add("Vsix\VisualStudioSetup\Mono.Cecil.Rocks.dll")
+        add("Vsix\VisualStudioSetup\ICSharpCode.Decompiler.dll")
         add("Dlls\BasicExpressionCompiler\Microsoft.CodeAnalysis.VisualBasic.ExpressionEvaluator.ExpressionCompiler.vsdconfig")
         add("Dlls\BasicResultProvider.Portable\Microsoft.CodeAnalysis.VisualBasic.ExpressionEvaluator.ResultProvider.vsdconfig")
         add("Dlls\CSharpExpressionCompiler\Microsoft.CodeAnalysis.CSharp.ExpressionEvaluator.ExpressionCompiler.vsdconfig")
         add("Dlls\CSharpResultProvider.Portable\Microsoft.CodeAnalysis.CSharp.ExpressionEvaluator.ResultProvider.vsdconfig")
         add("Dlls\FunctionResolver\Microsoft.CodeAnalysis.ExpressionEvaluator.FunctionResolver.vsdconfig")
+        add("Dlls\ServicesVisualStudio\Microsoft.VisualStudio.LanguageServices.vsdconfig")
         add("Dlls\MSBuildTask\Microsoft.CSharp.Core.targets")
         add("Dlls\MSBuildTask\Microsoft.VisualBasic.Core.targets")
         add("Dlls\CSharpCompilerTestUtilities\Roslyn.Compilers.CSharp.Test.Utilities.dll")
@@ -820,7 +825,6 @@ Public Class BuildDevDivInsertionFiles
         add("Dlls\ExpressionCompilerTestUtilities\Roslyn.ExpressionEvaluator.ExpressionCompiler.Test.Utilities.dll")
         add("Dlls\ResultProviderTestUtilities\Roslyn.ExpressionEvaluator.ResultProvider.Test.Utilities.dll")
         add("Dlls\PdbUtilities\Roslyn.Test.PdbUtilities.dll")
-        add("Dlls\TestUtilities.Desktop\Roslyn.Test.Utilities.Desktop.dll")
         add("UnitTests\EditorServicesTest\BasicUndo.dll")
         add("UnitTests\EditorServicesTest\Moq.dll")
         add("UnitTests\EditorServicesTest\Microsoft.CodeAnalysis.Test.Resources.Proprietary.dll")
