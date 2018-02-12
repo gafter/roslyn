@@ -864,8 +864,12 @@ namespace Microsoft.CodeAnalysis.CSharp
             diagnostics.Add(delegateMismatchLocation, useSiteDiagnostics);
             if (!conversion.Exists)
             {
-                // No overload for '{0}' matches delegate '{1}'
-                diagnostics.Add(ErrorCode.ERR_MethDelegateMismatch, delegateMismatchLocation, boundMethodGroup.Name, delegateType);
+                if (!Conversions.ReportDelegateMethodGroupDiagnostics(this, boundMethodGroup, delegateType, diagnostics))
+                {
+                    // No overload for '{0}' matches delegate '{1}'
+                    diagnostics.Add(ErrorCode.ERR_MethDelegateMismatch, delegateMismatchLocation, boundMethodGroup.Name, delegateType);
+                }
+
                 return true;
             }
             else
