@@ -57,7 +57,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             ImmutableArray<LocalFunctionSymbol> functions = GetDeclaredLocalFunctionsForScope(node);
             BoundDecisionDag decisionDag = new DecisionDagBuilder(this.Compilation).CreateDecisionDag(
                 syntax: node,
-                switchExpression: boundSwitchGoverningExpression,
+                switchGoverningExpression: boundSwitchGoverningExpression,
                 switchSections: switchSections,
                 // If there is no explicit default label, the default action is to break out of the switch
                 defaultLabel: defaultLabel?.Label ?? BreakLabel);

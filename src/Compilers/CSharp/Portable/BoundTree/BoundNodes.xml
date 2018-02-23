@@ -721,7 +721,8 @@
     <Field Name="Type" Type="TypeSymbol" Override="true" Null="disallow"/>
 
     <Field Name="Locals" Type="ImmutableArray&lt;LocalSymbol&gt;"/>
-    <Field Name="SideEffects" Type="ImmutableArray&lt;BoundExpression&gt;"/>
+    <!-- SideEffects are declared in source so we can add constraints to its contents. -->
+    <!--<Field Name="SideEffects" Type="ImmutableArray&lt;BoundNode&gt;"/>-->
     <Field Name="Value" Type="BoundExpression"/>
   </Node>
 
@@ -767,6 +768,27 @@
     <Field Name="BreakLabel" Type="GeneratedLabelSymbol"/>
     <!-- Well-known member populated during lowering -->
     <Field Name="StringEquality" Type="MethodSymbol" Null="allow" />
+  </Node>
+
+  <!--
+  BoundForwardLabels is used to mark labels in the code that will be the target of backward
+  branches, but should be treated as having the same stack depth as the location where
+  the BoundForwardLabels appears. Although we will necessarily produce some IL instructions
+  for this in order to comply with the verifier constraints, the effect of the code shall be
+  a no-op. The form of the code produced will likely be something of the form
+    ldc.i4.0 // load constant zero
+    switch    (
+        IL_nnnn, // the very next instruction
+        IL_nnnn, // all of the labels of interest
+        IL_nnnn)
+  This instruction is needed for the lowering of the pattern switch expression, which produces
+  a state machine that may contain backward branches. Due to the fact that it is an expression,
+  it may appear where the stack is not empty. A BoundForwardLabels statement (used inside of a
+  BoundSequence containing the state machine) permits us to (cause the verifier to) classify
+  all of the labels as forward labels by producing a dummy inoperable forward jump to them.
+  -->
+  <Node Name="BoundForwardLabels" Base="BoundStatement">
+    <Field Name="Labels" Type="ImmutableArray&lt;LabelSymbol&gt;"/>
   </Node>
 
   <Node Name="BoundSwitchSection" Base="BoundStatementList">
@@ -822,15 +844,17 @@
   </Node>
 
   <Node Name="BoundSwitchExpression" Base="BoundExpression">
-    <Field Name="GoverningExpression" Type="BoundExpression"/>
-    <Field Name="SwitchSections" Type="ImmutableArray&lt;BoundSwitchExpressionArm&gt;"/>
-    <!--<Field Name="DecisionDag" Type="BoundDecisionDag" Null="allow"/>-->
+    <Field Name="Expression" Type="BoundExpression"/>
+    <Field Name="SwitchArms" Type="ImmutableArray&lt;BoundSwitchExpressionArm&gt;"/>
+    <Field Name="DecisionDag" Type="BoundDecisionDag" Null="allow"/>
+    <Field Name="DefaultLabel" Type="LabelSymbol" Null="allow"/>
   </Node>
   <Node Name="BoundSwitchExpressionArm" Base="BoundNode">
     <Field Name="Locals" Type="ImmutableArray&lt;LocalSymbol&gt;"/>
     <Field Name="Pattern" Type="BoundPattern" Null="disallow"/>
     <Field Name="Guard" Type="BoundExpression" Null="allow"/>
     <Field Name="Value" Type="BoundExpression" Null="disallow"/>
+    <Field Name="Label" Type="LabelSymbol" Null="disallow"/>
   </Node>
 
   <AbstractNode Name="BoundDecisionDag" Base="BoundNode">
@@ -866,15 +890,18 @@
     <Field Name="Source" Type="BoundDagEvaluation" Null="allow"/>
     <Field Name="Index" Type="int"/>
   </Node>
+  <Node Name="BoundTypeDecision" Base="BoundDagDecision">
+    <!--Check that the input is of the given type. Null check is separate.-->
+    <Field Name="Type" Type="TypeSymbol" Null="disallow"/>
+  </Node>
   <Node Name="BoundNonNullDecision" Base="BoundDagDecision">
      <!--Check that the input is not null.--> 
   </Node>
-  <Node Name="BoundTypeDecision" Base="BoundDagDecision">
-     <!--Check that the input is of the given type. Null check is separate.--> 
-    <Field Name="Type" Type="TypeSymbol" Null="disallow"/>
+  <Node Name="BoundNullValueDecision" Base="BoundDagDecision">
+    <!--Check that the input is null.-->
   </Node>
-  <Node Name="BoundValueDecision" Base="BoundDagDecision">
-     <!--Check that the input is the same as the given constant value.--> 
+  <Node Name="BoundNonNullValueDecision" Base="BoundDagDecision">
+     <!--Check that the input is the same as the given constant value (other than null).--> 
     <Field Name="Value" Type="ConstantValue" Null="disallow"/>
   </Node>
   <!-- As a decision, an evaluation is considered to always succeed. -->

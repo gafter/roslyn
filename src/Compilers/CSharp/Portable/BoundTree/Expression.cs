@@ -136,7 +136,7 @@ namespace Microsoft.CodeAnalysis.CSharp
 
     internal partial class BoundSequence
     {
-        protected override ImmutableArray<BoundNode> Children => StaticCast<BoundNode>.From(this.SideEffects.Add(this.Value));
+        protected override ImmutableArray<BoundNode> Children => this.SideEffects.Add(this.Value);
     }
 
     internal partial class BoundStatementList

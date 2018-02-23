@@ -688,13 +688,15 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeGen
 
             var origContext = _context;
 
-            var sideeffects = node.SideEffects;
+            var sideeffects = node.SideEffectsExprOnlyUNSAFE;
             ArrayBuilder<BoundExpression> rewrittenSideeffects = null;
             if (!sideeffects.IsDefault)
             {
                 for (int i = 0; i < sideeffects.Length; i++)
                 {
                     var sideeffect = sideeffects[i];
+                    //var rewrittenSideeffect =
+                    //    sideeffect is BoundExpression expr ? this.VisitExpression(expr, ExprContext.Sideeffects) : this.VisitSideEffect(sideeffect);
                     var rewrittenSideeffect = this.VisitExpression(sideeffect, ExprContext.Sideeffects);
 
                     if (rewrittenSideeffects == null && rewrittenSideeffect != sideeffect)
@@ -713,11 +715,9 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeGen
             var value = this.VisitExpression(node.Value, origContext);
 
             return node.Update(node.Locals,
-                                rewrittenSideeffects != null ?
-                                    rewrittenSideeffects.ToImmutableAndFree() :
-                                    sideeffects,
-                                value,
-                                node.Type);
+                               rewrittenSideeffects?.ToImmutableAndFree() ?? sideeffects,
+                               value,
+                               node.Type);
         }
 
         // detect a pattern used in compound operators
@@ -732,7 +732,7 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeGen
             // local must be used as the value of the sequence.
             if (value != null && value.Kind == BoundKind.Local && ((BoundLocal)value).LocalSymbol == local)
             {
-                var sideeffects = node.SideEffects;
+                var sideeffects = node.SideEffectsExprOnlyUNSAFE;
                 var lastSideeffect = sideeffects.LastOrDefault();
 
                 if (lastSideeffect != null)

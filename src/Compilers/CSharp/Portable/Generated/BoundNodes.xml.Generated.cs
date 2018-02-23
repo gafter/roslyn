@@ -84,6 +84,7 @@ namespace Microsoft.CodeAnalysis.CSharp
         ThrowStatement,
         ExpressionStatement,
         SwitchStatement,
+        ForwardLabels,
         SwitchSection,
         SwitchLabel,
         BreakStatement,
@@ -97,9 +98,10 @@ namespace Microsoft.CodeAnalysis.CSharp
         WhenClause,
         Decision,
         DagTemp,
-        NonNullDecision,
         TypeDecision,
-        ValueDecision,
+        NonNullDecision,
+        NullValueDecision,
+        NonNullValueDecision,
         DagDeconstructEvaluation,
         DagTypeEvaluation,
         DagFieldEvaluation,
@@ -2406,24 +2408,20 @@ namespace Microsoft.CodeAnalysis.CSharp
 
     internal sealed partial class BoundSequence : BoundExpression
     {
-        public BoundSequence(SyntaxNode syntax, ImmutableArray<LocalSymbol> locals, ImmutableArray<BoundExpression> sideEffects, BoundExpression value, TypeSymbol type, bool hasErrors = false)
-            : base(BoundKind.Sequence, syntax, type, hasErrors || sideEffects.HasErrors() || value.HasErrors())
+        public BoundSequence(SyntaxNode syntax, ImmutableArray<LocalSymbol> locals, BoundExpression value, TypeSymbol type, bool hasErrors = false)
+            : base(BoundKind.Sequence, syntax, type, hasErrors || value.HasErrors())
         {
 
             Debug.Assert(!locals.IsDefault, "Field 'locals' cannot be null (use Null=\"allow\" in BoundNodes.xml to remove this check)");
-            Debug.Assert(!sideEffects.IsDefault, "Field 'sideEffects' cannot be null (use Null=\"allow\" in BoundNodes.xml to remove this check)");
             Debug.Assert(value != null, "Field 'value' cannot be null (use Null=\"allow\" in BoundNodes.xml to remove this check)");
             Debug.Assert(type != null, "Field 'type' cannot be null (use Null=\"allow\" in BoundNodes.xml to remove this check)");
 
             this.Locals = locals;
-            this.SideEffects = sideEffects;
             this.Value = value;
         }
 
 
         public ImmutableArray<LocalSymbol> Locals { get; }
-
-        public ImmutableArray<BoundExpression> SideEffects { get; }
 
         public BoundExpression Value { get; }
 
@@ -2432,11 +2430,11 @@ namespace Microsoft.CodeAnalysis.CSharp
             return visitor.VisitSequence(this);
         }
 
-        public BoundSequence Update(ImmutableArray<LocalSymbol> locals, ImmutableArray<BoundExpression> sideEffects, BoundExpression value, TypeSymbol type)
+        public BoundSequence Update(ImmutableArray<LocalSymbol> locals, BoundExpression value, TypeSymbol type)
         {
-            if (locals != this.Locals || sideEffects != this.SideEffects || value != this.Value || type != this.Type)
+            if (locals != this.Locals || value != this.Value || type != this.Type)
             {
-                var result = new BoundSequence(this.Syntax, locals, sideEffects, value, type, this.HasErrors);
+                var result = new BoundSequence(this.Syntax, locals, value, type, this.HasErrors);
                 result.WasCompilerGenerated = this.WasCompilerGenerated;
                 return result;
             }
@@ -2667,6 +2665,46 @@ namespace Microsoft.CodeAnalysis.CSharp
             if (loweredPreambleOpt != this.LoweredPreambleOpt || expression != this.Expression || constantTargetOpt != this.ConstantTargetOpt || innerLocals != this.InnerLocals || innerLocalFunctions != this.InnerLocalFunctions || switchSections != this.SwitchSections || breakLabel != this.BreakLabel || stringEquality != this.StringEquality)
             {
                 var result = new BoundSwitchStatement(this.Syntax, loweredPreambleOpt, expression, constantTargetOpt, innerLocals, innerLocalFunctions, switchSections, breakLabel, stringEquality, this.HasErrors);
+                result.WasCompilerGenerated = this.WasCompilerGenerated;
+                return result;
+            }
+            return this;
+        }
+    }
+
+    internal sealed partial class BoundForwardLabels : BoundStatement
+    {
+        public BoundForwardLabels(SyntaxNode syntax, ImmutableArray<LabelSymbol> labels, bool hasErrors)
+            : base(BoundKind.ForwardLabels, syntax, hasErrors)
+        {
+
+            Debug.Assert(!labels.IsDefault, "Field 'labels' cannot be null (use Null=\"allow\" in BoundNodes.xml to remove this check)");
+
+            this.Labels = labels;
+        }
+
+        public BoundForwardLabels(SyntaxNode syntax, ImmutableArray<LabelSymbol> labels)
+            : base(BoundKind.ForwardLabels, syntax)
+        {
+
+            Debug.Assert(!labels.IsDefault, "Field 'labels' cannot be null (use Null=\"allow\" in BoundNodes.xml to remove this check)");
+
+            this.Labels = labels;
+        }
+
+
+        public ImmutableArray<LabelSymbol> Labels { get; }
+
+        public override BoundNode Accept(BoundTreeVisitor visitor)
+        {
+            return visitor.VisitForwardLabels(this);
+        }
+
+        public BoundForwardLabels Update(ImmutableArray<LabelSymbol> labels)
+        {
+            if (labels != this.Labels)
+            {
+                var result = new BoundForwardLabels(this.Syntax, labels, this.HasErrors);
                 result.WasCompilerGenerated = this.WasCompilerGenerated;
                 return result;
             }
@@ -2934,32 +2972,38 @@ namespace Microsoft.CodeAnalysis.CSharp
 
     internal sealed partial class BoundSwitchExpression : BoundExpression
     {
-        public BoundSwitchExpression(SyntaxNode syntax, BoundExpression governingExpression, ImmutableArray<BoundSwitchExpressionArm> switchSections, TypeSymbol type, bool hasErrors = false)
-            : base(BoundKind.SwitchExpression, syntax, type, hasErrors || governingExpression.HasErrors() || switchSections.HasErrors())
+        public BoundSwitchExpression(SyntaxNode syntax, BoundExpression expression, ImmutableArray<BoundSwitchExpressionArm> switchArms, BoundDecisionDag decisionDag, LabelSymbol defaultLabel, TypeSymbol type, bool hasErrors = false)
+            : base(BoundKind.SwitchExpression, syntax, type, hasErrors || expression.HasErrors() || switchArms.HasErrors() || decisionDag.HasErrors())
         {
 
-            Debug.Assert(governingExpression != null, "Field 'governingExpression' cannot be null (use Null=\"allow\" in BoundNodes.xml to remove this check)");
-            Debug.Assert(!switchSections.IsDefault, "Field 'switchSections' cannot be null (use Null=\"allow\" in BoundNodes.xml to remove this check)");
+            Debug.Assert(expression != null, "Field 'expression' cannot be null (use Null=\"allow\" in BoundNodes.xml to remove this check)");
+            Debug.Assert(!switchArms.IsDefault, "Field 'switchArms' cannot be null (use Null=\"allow\" in BoundNodes.xml to remove this check)");
 
-            this.GoverningExpression = governingExpression;
-            this.SwitchSections = switchSections;
+            this.Expression = expression;
+            this.SwitchArms = switchArms;
+            this.DecisionDag = decisionDag;
+            this.DefaultLabel = defaultLabel;
         }
 
 
-        public BoundExpression GoverningExpression { get; }
+        public BoundExpression Expression { get; }
 
-        public ImmutableArray<BoundSwitchExpressionArm> SwitchSections { get; }
+        public ImmutableArray<BoundSwitchExpressionArm> SwitchArms { get; }
+
+        public BoundDecisionDag DecisionDag { get; }
+
+        public LabelSymbol DefaultLabel { get; }
 
         public override BoundNode Accept(BoundTreeVisitor visitor)
         {
             return visitor.VisitSwitchExpression(this);
         }
 
-        public BoundSwitchExpression Update(BoundExpression governingExpression, ImmutableArray<BoundSwitchExpressionArm> switchSections, TypeSymbol type)
+        public BoundSwitchExpression Update(BoundExpression expression, ImmutableArray<BoundSwitchExpressionArm> switchArms, BoundDecisionDag decisionDag, LabelSymbol defaultLabel, TypeSymbol type)
         {
-            if (governingExpression != this.GoverningExpression || switchSections != this.SwitchSections || type != this.Type)
+            if (expression != this.Expression || switchArms != this.SwitchArms || decisionDag != this.DecisionDag || defaultLabel != this.DefaultLabel || type != this.Type)
             {
-                var result = new BoundSwitchExpression(this.Syntax, governingExpression, switchSections, type, this.HasErrors);
+                var result = new BoundSwitchExpression(this.Syntax, expression, switchArms, decisionDag, defaultLabel, type, this.HasErrors);
                 result.WasCompilerGenerated = this.WasCompilerGenerated;
                 return result;
             }
@@ -2969,18 +3013,20 @@ namespace Microsoft.CodeAnalysis.CSharp
 
     internal sealed partial class BoundSwitchExpressionArm : BoundNode
     {
-        public BoundSwitchExpressionArm(SyntaxNode syntax, ImmutableArray<LocalSymbol> locals, BoundPattern pattern, BoundExpression guard, BoundExpression value, bool hasErrors = false)
+        public BoundSwitchExpressionArm(SyntaxNode syntax, ImmutableArray<LocalSymbol> locals, BoundPattern pattern, BoundExpression guard, BoundExpression value, LabelSymbol label, bool hasErrors = false)
             : base(BoundKind.SwitchExpressionArm, syntax, hasErrors || pattern.HasErrors() || guard.HasErrors() || value.HasErrors())
         {
 
             Debug.Assert(!locals.IsDefault, "Field 'locals' cannot be null (use Null=\"allow\" in BoundNodes.xml to remove this check)");
             Debug.Assert(pattern != null, "Field 'pattern' cannot be null (use Null=\"allow\" in BoundNodes.xml to remove this check)");
             Debug.Assert(value != null, "Field 'value' cannot be null (use Null=\"allow\" in BoundNodes.xml to remove this check)");
+            Debug.Assert(label != null, "Field 'label' cannot be null (use Null=\"allow\" in BoundNodes.xml to remove this check)");
 
             this.Locals = locals;
             this.Pattern = pattern;
             this.Guard = guard;
             this.Value = value;
+            this.Label = label;
         }
 
 
@@ -2992,16 +3038,18 @@ namespace Microsoft.CodeAnalysis.CSharp
 
         public BoundExpression Value { get; }
 
+        public LabelSymbol Label { get; }
+
         public override BoundNode Accept(BoundTreeVisitor visitor)
         {
             return visitor.VisitSwitchExpressionArm(this);
         }
 
-        public BoundSwitchExpressionArm Update(ImmutableArray<LocalSymbol> locals, BoundPattern pattern, BoundExpression guard, BoundExpression value)
+        public BoundSwitchExpressionArm Update(ImmutableArray<LocalSymbol> locals, BoundPattern pattern, BoundExpression guard, BoundExpression value, LabelSymbol label)
         {
-            if (locals != this.Locals || pattern != this.Pattern || guard != this.Guard || value != this.Value)
+            if (locals != this.Locals || pattern != this.Pattern || guard != this.Guard || value != this.Value || label != this.Label)
             {
-                var result = new BoundSwitchExpressionArm(this.Syntax, locals, pattern, guard, value, this.HasErrors);
+                var result = new BoundSwitchExpressionArm(this.Syntax, locals, pattern, guard, value, label, this.HasErrors);
                 result.WasCompilerGenerated = this.WasCompilerGenerated;
                 return result;
             }
@@ -3230,34 +3278,6 @@ namespace Microsoft.CodeAnalysis.CSharp
         }
     }
 
-    internal sealed partial class BoundNonNullDecision : BoundDagDecision
-    {
-        public BoundNonNullDecision(SyntaxNode syntax, BoundDagTemp input, bool hasErrors = false)
-            : base(BoundKind.NonNullDecision, syntax, input, hasErrors || input.HasErrors())
-        {
-
-            Debug.Assert(input != null, "Field 'input' cannot be null (use Null=\"allow\" in BoundNodes.xml to remove this check)");
-
-        }
-
-
-        public override BoundNode Accept(BoundTreeVisitor visitor)
-        {
-            return visitor.VisitNonNullDecision(this);
-        }
-
-        public BoundNonNullDecision Update(BoundDagTemp input)
-        {
-            if (input != this.Input)
-            {
-                var result = new BoundNonNullDecision(this.Syntax, input, this.HasErrors);
-                result.WasCompilerGenerated = this.WasCompilerGenerated;
-                return result;
-            }
-            return this;
-        }
-    }
-
     internal sealed partial class BoundTypeDecision : BoundDagDecision
     {
         public BoundTypeDecision(SyntaxNode syntax, TypeSymbol type, BoundDagTemp input, bool hasErrors = false)
@@ -3290,10 +3310,66 @@ namespace Microsoft.CodeAnalysis.CSharp
         }
     }
 
-    internal sealed partial class BoundValueDecision : BoundDagDecision
+    internal sealed partial class BoundNonNullDecision : BoundDagDecision
     {
-        public BoundValueDecision(SyntaxNode syntax, ConstantValue value, BoundDagTemp input, bool hasErrors = false)
-            : base(BoundKind.ValueDecision, syntax, input, hasErrors || input.HasErrors())
+        public BoundNonNullDecision(SyntaxNode syntax, BoundDagTemp input, bool hasErrors = false)
+            : base(BoundKind.NonNullDecision, syntax, input, hasErrors || input.HasErrors())
+        {
+
+            Debug.Assert(input != null, "Field 'input' cannot be null (use Null=\"allow\" in BoundNodes.xml to remove this check)");
+
+        }
+
+
+        public override BoundNode Accept(BoundTreeVisitor visitor)
+        {
+            return visitor.VisitNonNullDecision(this);
+        }
+
+        public BoundNonNullDecision Update(BoundDagTemp input)
+        {
+            if (input != this.Input)
+            {
+                var result = new BoundNonNullDecision(this.Syntax, input, this.HasErrors);
+                result.WasCompilerGenerated = this.WasCompilerGenerated;
+                return result;
+            }
+            return this;
+        }
+    }
+
+    internal sealed partial class BoundNullValueDecision : BoundDagDecision
+    {
+        public BoundNullValueDecision(SyntaxNode syntax, BoundDagTemp input, bool hasErrors = false)
+            : base(BoundKind.NullValueDecision, syntax, input, hasErrors || input.HasErrors())
+        {
+
+            Debug.Assert(input != null, "Field 'input' cannot be null (use Null=\"allow\" in BoundNodes.xml to remove this check)");
+
+        }
+
+
+        public override BoundNode Accept(BoundTreeVisitor visitor)
+        {
+            return visitor.VisitNullValueDecision(this);
+        }
+
+        public BoundNullValueDecision Update(BoundDagTemp input)
+        {
+            if (input != this.Input)
+            {
+                var result = new BoundNullValueDecision(this.Syntax, input, this.HasErrors);
+                result.WasCompilerGenerated = this.WasCompilerGenerated;
+                return result;
+            }
+            return this;
+        }
+    }
+
+    internal sealed partial class BoundNonNullValueDecision : BoundDagDecision
+    {
+        public BoundNonNullValueDecision(SyntaxNode syntax, ConstantValue value, BoundDagTemp input, bool hasErrors = false)
+            : base(BoundKind.NonNullValueDecision, syntax, input, hasErrors || input.HasErrors())
         {
 
             Debug.Assert(value != null, "Field 'value' cannot be null (use Null=\"allow\" in BoundNodes.xml to remove this check)");
@@ -3307,14 +3383,14 @@ namespace Microsoft.CodeAnalysis.CSharp
 
         public override BoundNode Accept(BoundTreeVisitor visitor)
         {
-            return visitor.VisitValueDecision(this);
+            return visitor.VisitNonNullValueDecision(this);
         }
 
-        public BoundValueDecision Update(ConstantValue value, BoundDagTemp input)
+        public BoundNonNullValueDecision Update(ConstantValue value, BoundDagTemp input)
         {
             if (value != this.Value || input != this.Input)
             {
-                var result = new BoundValueDecision(this.Syntax, value, input, this.HasErrors);
+                var result = new BoundNonNullValueDecision(this.Syntax, value, input, this.HasErrors);
                 result.WasCompilerGenerated = this.WasCompilerGenerated;
                 return result;
             }
@@ -6925,6 +7001,8 @@ namespace Microsoft.CodeAnalysis.CSharp
                     return VisitExpressionStatement(node as BoundExpressionStatement, arg);
                 case BoundKind.SwitchStatement: 
                     return VisitSwitchStatement(node as BoundSwitchStatement, arg);
+                case BoundKind.ForwardLabels: 
+                    return VisitForwardLabels(node as BoundForwardLabels, arg);
                 case BoundKind.SwitchSection: 
                     return VisitSwitchSection(node as BoundSwitchSection, arg);
                 case BoundKind.SwitchLabel: 
@@ -6951,12 +7029,14 @@ namespace Microsoft.CodeAnalysis.CSharp
                     return VisitDecision(node as BoundDecision, arg);
                 case BoundKind.DagTemp: 
                     return VisitDagTemp(node as BoundDagTemp, arg);
-                case BoundKind.NonNullDecision: 
-                    return VisitNonNullDecision(node as BoundNonNullDecision, arg);
                 case BoundKind.TypeDecision: 
                     return VisitTypeDecision(node as BoundTypeDecision, arg);
-                case BoundKind.ValueDecision: 
-                    return VisitValueDecision(node as BoundValueDecision, arg);
+                case BoundKind.NonNullDecision: 
+                    return VisitNonNullDecision(node as BoundNonNullDecision, arg);
+                case BoundKind.NullValueDecision: 
+                    return VisitNullValueDecision(node as BoundNullValueDecision, arg);
+                case BoundKind.NonNullValueDecision: 
+                    return VisitNonNullValueDecision(node as BoundNonNullValueDecision, arg);
                 case BoundKind.DagDeconstructEvaluation: 
                     return VisitDagDeconstructEvaluation(node as BoundDagDeconstructEvaluation, arg);
                 case BoundKind.DagTypeEvaluation: 
@@ -7393,6 +7473,10 @@ namespace Microsoft.CodeAnalysis.CSharp
         {
             return this.DefaultVisit(node, arg);
         }
+        public virtual R VisitForwardLabels(BoundForwardLabels node, A arg)
+        {
+            return this.DefaultVisit(node, arg);
+        }
         public virtual R VisitSwitchSection(BoundSwitchSection node, A arg)
         {
             return this.DefaultVisit(node, arg);
@@ -7445,15 +7529,19 @@ namespace Microsoft.CodeAnalysis.CSharp
         {
             return this.DefaultVisit(node, arg);
         }
-        public virtual R VisitNonNullDecision(BoundNonNullDecision node, A arg)
-        {
-            return this.DefaultVisit(node, arg);
-        }
         public virtual R VisitTypeDecision(BoundTypeDecision node, A arg)
         {
             return this.DefaultVisit(node, arg);
         }
-        public virtual R VisitValueDecision(BoundValueDecision node, A arg)
+        public virtual R VisitNonNullDecision(BoundNonNullDecision node, A arg)
+        {
+            return this.DefaultVisit(node, arg);
+        }
+        public virtual R VisitNullValueDecision(BoundNullValueDecision node, A arg)
+        {
+            return this.DefaultVisit(node, arg);
+        }
+        public virtual R VisitNonNullValueDecision(BoundNonNullValueDecision node, A arg)
         {
             return this.DefaultVisit(node, arg);
         }
@@ -8061,6 +8149,10 @@ namespace Microsoft.CodeAnalysis.CSharp
         {
             return this.DefaultVisit(node);
         }
+        public virtual BoundNode VisitForwardLabels(BoundForwardLabels node)
+        {
+            return this.DefaultVisit(node);
+        }
         public virtual BoundNode VisitSwitchSection(BoundSwitchSection node)
         {
             return this.DefaultVisit(node);
@@ -8113,15 +8205,19 @@ namespace Microsoft.CodeAnalysis.CSharp
         {
             return this.DefaultVisit(node);
         }
-        public virtual BoundNode VisitNonNullDecision(BoundNonNullDecision node)
-        {
-            return this.DefaultVisit(node);
-        }
         public virtual BoundNode VisitTypeDecision(BoundTypeDecision node)
         {
             return this.DefaultVisit(node);
         }
-        public virtual BoundNode VisitValueDecision(BoundValueDecision node)
+        public virtual BoundNode VisitNonNullDecision(BoundNonNullDecision node)
+        {
+            return this.DefaultVisit(node);
+        }
+        public virtual BoundNode VisitNullValueDecision(BoundNullValueDecision node)
+        {
+            return this.DefaultVisit(node);
+        }
+        public virtual BoundNode VisitNonNullValueDecision(BoundNonNullValueDecision node)
         {
             return this.DefaultVisit(node);
         }
@@ -8755,7 +8851,6 @@ namespace Microsoft.CodeAnalysis.CSharp
         }
         public override BoundNode VisitSequence(BoundSequence node)
         {
-            this.VisitList(node.SideEffects);
             this.Visit(node.Value);
             return null;
         }
@@ -8794,6 +8889,10 @@ namespace Microsoft.CodeAnalysis.CSharp
             this.VisitList(node.SwitchSections);
             return null;
         }
+        public override BoundNode VisitForwardLabels(BoundForwardLabels node)
+        {
+            return null;
+        }
         public override BoundNode VisitSwitchSection(BoundSwitchSection node)
         {
             this.VisitList(node.SwitchLabels);
@@ -8830,8 +8929,9 @@ namespace Microsoft.CodeAnalysis.CSharp
         }
         public override BoundNode VisitSwitchExpression(BoundSwitchExpression node)
         {
-            this.Visit(node.GoverningExpression);
-            this.VisitList(node.SwitchSections);
+            this.Visit(node.Expression);
+            this.VisitList(node.SwitchArms);
+            this.Visit(node.DecisionDag);
             return null;
         }
         public override BoundNode VisitSwitchExpressionArm(BoundSwitchExpressionArm node)
@@ -8870,17 +8970,22 @@ namespace Microsoft.CodeAnalysis.CSharp
             this.Visit(node.Source);
             return null;
         }
-        public override BoundNode VisitNonNullDecision(BoundNonNullDecision node)
-        {
-            this.Visit(node.Input);
-            return null;
-        }
         public override BoundNode VisitTypeDecision(BoundTypeDecision node)
         {
             this.Visit(node.Input);
             return null;
         }
-        public override BoundNode VisitValueDecision(BoundValueDecision node)
+        public override BoundNode VisitNonNullDecision(BoundNonNullDecision node)
+        {
+            this.Visit(node.Input);
+            return null;
+        }
+        public override BoundNode VisitNullValueDecision(BoundNullValueDecision node)
+        {
+            this.Visit(node.Input);
+            return null;
+        }
+        public override BoundNode VisitNonNullValueDecision(BoundNonNullValueDecision node)
         {
             this.Visit(node.Input);
             return null;
@@ -9667,10 +9772,9 @@ namespace Microsoft.CodeAnalysis.CSharp
         }
         public override BoundNode VisitSequence(BoundSequence node)
         {
-            ImmutableArray<BoundExpression> sideEffects = (ImmutableArray<BoundExpression>)this.VisitList(node.SideEffects);
             BoundExpression value = (BoundExpression)this.Visit(node.Value);
             TypeSymbol type = this.VisitType(node.Type);
-            return node.Update(node.Locals, sideEffects, value, type);
+            return node.Update(node.Locals, value, type);
         }
         public override BoundNode VisitNoOpStatement(BoundNoOpStatement node)
         {
@@ -9706,6 +9810,10 @@ namespace Microsoft.CodeAnalysis.CSharp
             BoundExpression expression = (BoundExpression)this.Visit(node.Expression);
             ImmutableArray<BoundSwitchSection> switchSections = (ImmutableArray<BoundSwitchSection>)this.VisitList(node.SwitchSections);
             return node.Update(loweredPreambleOpt, expression, node.ConstantTargetOpt, node.InnerLocals, node.InnerLocalFunctions, switchSections, node.BreakLabel, node.StringEquality);
+        }
+        public override BoundNode VisitForwardLabels(BoundForwardLabels node)
+        {
+            return node;
         }
         public override BoundNode VisitSwitchSection(BoundSwitchSection node)
         {
@@ -9743,17 +9851,18 @@ namespace Microsoft.CodeAnalysis.CSharp
         }
         public override BoundNode VisitSwitchExpression(BoundSwitchExpression node)
         {
-            BoundExpression governingExpression = (BoundExpression)this.Visit(node.GoverningExpression);
-            ImmutableArray<BoundSwitchExpressionArm> switchSections = (ImmutableArray<BoundSwitchExpressionArm>)this.VisitList(node.SwitchSections);
+            BoundExpression expression = (BoundExpression)this.Visit(node.Expression);
+            ImmutableArray<BoundSwitchExpressionArm> switchArms = (ImmutableArray<BoundSwitchExpressionArm>)this.VisitList(node.SwitchArms);
+            BoundDecisionDag decisionDag = (BoundDecisionDag)this.Visit(node.DecisionDag);
             TypeSymbol type = this.VisitType(node.Type);
-            return node.Update(governingExpression, switchSections, type);
+            return node.Update(expression, switchArms, decisionDag, node.DefaultLabel, type);
         }
         public override BoundNode VisitSwitchExpressionArm(BoundSwitchExpressionArm node)
         {
             BoundPattern pattern = (BoundPattern)this.Visit(node.Pattern);
             BoundExpression guard = (BoundExpression)this.Visit(node.Guard);
             BoundExpression value = (BoundExpression)this.Visit(node.Value);
-            return node.Update(node.Locals, pattern, guard, value);
+            return node.Update(node.Locals, pattern, guard, value, node.Label);
         }
         public override BoundNode VisitEvaluationPoint(BoundEvaluationPoint node)
         {
@@ -9785,18 +9894,23 @@ namespace Microsoft.CodeAnalysis.CSharp
             TypeSymbol type = this.VisitType(node.Type);
             return node.Update(type, source, node.Index);
         }
-        public override BoundNode VisitNonNullDecision(BoundNonNullDecision node)
-        {
-            BoundDagTemp input = (BoundDagTemp)this.Visit(node.Input);
-            return node.Update(input);
-        }
         public override BoundNode VisitTypeDecision(BoundTypeDecision node)
         {
             BoundDagTemp input = (BoundDagTemp)this.Visit(node.Input);
             TypeSymbol type = this.VisitType(node.Type);
             return node.Update(type, input);
         }
-        public override BoundNode VisitValueDecision(BoundValueDecision node)
+        public override BoundNode VisitNonNullDecision(BoundNonNullDecision node)
+        {
+            BoundDagTemp input = (BoundDagTemp)this.Visit(node.Input);
+            return node.Update(input);
+        }
+        public override BoundNode VisitNullValueDecision(BoundNullValueDecision node)
+        {
+            BoundDagTemp input = (BoundDagTemp)this.Visit(node.Input);
+            return node.Update(input);
+        }
+        public override BoundNode VisitNonNullValueDecision(BoundNonNullValueDecision node)
         {
             BoundDagTemp input = (BoundDagTemp)this.Visit(node.Input);
             return node.Update(node.Value, input);
@@ -10898,7 +11012,6 @@ namespace Microsoft.CodeAnalysis.CSharp
             return new TreeDumperNode("sequence", null, new TreeDumperNode[]
             {
                 new TreeDumperNode("locals", node.Locals, null),
-                new TreeDumperNode("sideEffects", null, from x in node.SideEffects select Visit(x, null)),
                 new TreeDumperNode("value", null, new TreeDumperNode[] { Visit(node.Value, null) }),
                 new TreeDumperNode("type", node.Type, null)
             }
@@ -10962,6 +11075,14 @@ namespace Microsoft.CodeAnalysis.CSharp
                 new TreeDumperNode("switchSections", null, from x in node.SwitchSections select Visit(x, null)),
                 new TreeDumperNode("breakLabel", node.BreakLabel, null),
                 new TreeDumperNode("stringEquality", node.StringEquality, null)
+            }
+            );
+        }
+        public override TreeDumperNode VisitForwardLabels(BoundForwardLabels node, object arg)
+        {
+            return new TreeDumperNode("forwardLabels", null, new TreeDumperNode[]
+            {
+                new TreeDumperNode("labels", node.Labels, null)
             }
             );
         }
@@ -11033,8 +11154,10 @@ namespace Microsoft.CodeAnalysis.CSharp
         {
             return new TreeDumperNode("switchExpression", null, new TreeDumperNode[]
             {
-                new TreeDumperNode("governingExpression", null, new TreeDumperNode[] { Visit(node.GoverningExpression, null) }),
-                new TreeDumperNode("switchSections", null, from x in node.SwitchSections select Visit(x, null)),
+                new TreeDumperNode("expression", null, new TreeDumperNode[] { Visit(node.Expression, null) }),
+                new TreeDumperNode("switchArms", null, from x in node.SwitchArms select Visit(x, null)),
+                new TreeDumperNode("decisionDag", null, new TreeDumperNode[] { Visit(node.DecisionDag, null) }),
+                new TreeDumperNode("defaultLabel", node.DefaultLabel, null),
                 new TreeDumperNode("type", node.Type, null)
             }
             );
@@ -11046,7 +11169,8 @@ namespace Microsoft.CodeAnalysis.CSharp
                 new TreeDumperNode("locals", node.Locals, null),
                 new TreeDumperNode("pattern", null, new TreeDumperNode[] { Visit(node.Pattern, null) }),
                 new TreeDumperNode("guard", null, new TreeDumperNode[] { Visit(node.Guard, null) }),
-                new TreeDumperNode("value", null, new TreeDumperNode[] { Visit(node.Value, null) })
+                new TreeDumperNode("value", null, new TreeDumperNode[] { Visit(node.Value, null) }),
+                new TreeDumperNode("label", node.Label, null)
             }
             );
         }
@@ -11098,14 +11222,6 @@ namespace Microsoft.CodeAnalysis.CSharp
             }
             );
         }
-        public override TreeDumperNode VisitNonNullDecision(BoundNonNullDecision node, object arg)
-        {
-            return new TreeDumperNode("nonNullDecision", null, new TreeDumperNode[]
-            {
-                new TreeDumperNode("input", null, new TreeDumperNode[] { Visit(node.Input, null) })
-            }
-            );
-        }
         public override TreeDumperNode VisitTypeDecision(BoundTypeDecision node, object arg)
         {
             return new TreeDumperNode("typeDecision", null, new TreeDumperNode[]
@@ -11115,9 +11231,25 @@ namespace Microsoft.CodeAnalysis.CSharp
             }
             );
         }
-        public override TreeDumperNode VisitValueDecision(BoundValueDecision node, object arg)
+        public override TreeDumperNode VisitNonNullDecision(BoundNonNullDecision node, object arg)
         {
-            return new TreeDumperNode("valueDecision", null, new TreeDumperNode[]
+            return new TreeDumperNode("nonNullDecision", null, new TreeDumperNode[]
+            {
+                new TreeDumperNode("input", null, new TreeDumperNode[] { Visit(node.Input, null) })
+            }
+            );
+        }
+        public override TreeDumperNode VisitNullValueDecision(BoundNullValueDecision node, object arg)
+        {
+            return new TreeDumperNode("nullValueDecision", null, new TreeDumperNode[]
+            {
+                new TreeDumperNode("input", null, new TreeDumperNode[] { Visit(node.Input, null) })
+            }
+            );
+        }
+        public override TreeDumperNode VisitNonNullValueDecision(BoundNonNullValueDecision node, object arg)
+        {
+            return new TreeDumperNode("nonNullValueDecision", null, new TreeDumperNode[]
             {
                 new TreeDumperNode("value", node.Value, null),
                 new TreeDumperNode("input", null, new TreeDumperNode[] { Visit(node.Input, null) })

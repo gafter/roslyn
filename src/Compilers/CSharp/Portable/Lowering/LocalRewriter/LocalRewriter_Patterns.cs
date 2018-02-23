@@ -105,19 +105,40 @@ namespace Microsoft.CodeAnalysis.CSharp
                             test = _factory.Is(input, d.Type);
                         }
                         return;
-                    case BoundValueDecision d:
+                    case BoundNullValueDecision d:
+                        if (d.Input == _inputTemp && _loweredInput.ConstantValue != null)
+                        {
+                            bool decisionResult = _loweredInput.ConstantValue == ConstantValue.Null;
+                            if (!decisionResult)
+                            {
+                                // A constant input that is not null is never null. The test is trivially false.
+                                test = _factory.Literal(decisionResult);
+                            }
+                            else
+                            {
+                                // The test is trivially true; no need to generate code to test it.
+                            }
+                        }
+                        else
+                        {
+                            test = _localRewriter.MakeNullCheck(d.Syntax, input, input.Type.IsNullableType() ? BinaryOperatorKind.NullableNullEqual : BinaryOperatorKind.Equal);
+                        }
+                        return;
+                    case BoundNonNullValueDecision d:
                         // If the actual input is a constant, short-circuit this test
                         if (d.Input == _inputTemp && _loweredInput.ConstantValue != null)
                         {
+                            // PROTOTYPE(patterns2): Check that ConstantValue.operator== behaves as required
                             bool decisionResult = _loweredInput.ConstantValue == d.Value;
                             if (!decisionResult)
                             {
+                                // A constant input that is other than the value desired is trivially false.
                                 test = _factory.Literal(decisionResult);
                             }
-                        }
-                        else if (d.Value == ConstantValue.Null)
-                        {
-                            test = _localRewriter.MakeNullCheck(d.Syntax, input, input.Type.IsNullableType() ? BinaryOperatorKind.NullableNullEqual : BinaryOperatorKind.Equal);
+                            else
+                            {
+                                // The test is trivially true; no need to generate code to test it.
+                            }
                         }
                         else
                         {
