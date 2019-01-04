@@ -6313,27 +6313,36 @@ tryAgain:
         {
             Debug.Assert(this.CurrentToken.Kind == SyntaxKind.QuestionToken);
 
-            // we do not permit nullable types in a declaration pattern
-            if (mode != ParseTypeMode.AfterIs && mode != ParseTypeMode.DefinitePattern || !IsTrueIdentifier(this.PeekToken(1)))
+            // We permit nullable annotations among the dimensions of an array type
+            if (this.PeekToken(1).Kind == SyntaxKind.OpenBracketToken)
             {
-                var resetPoint = this.GetResetPoint();
-                try
-                {
-                    var question = this.EatToken();
+                return CheckFeatureAvailability(this.EatToken(), MessageID.IDS_FeatureNullable);
+            }
 
-                    var isOrAs = mode == ParseTypeMode.AsExpression || mode == ParseTypeMode.AfterIs;
-                    if (isOrAs && (IsTerm() || IsPredefinedType(this.CurrentToken.Kind) || SyntaxFacts.IsAnyUnaryExpression(this.CurrentToken.Kind)))
-                    {
-                        this.Reset(ref resetPoint);
-                        return null;
-                    }
+            // We do not permit nullable types in a declaration pattern, but we parse it that way
+            // and leave it to semantic error recovery to sort out.
+            if ((mode == ParseTypeMode.AfterIs || mode == ParseTypeMode.DefinitePattern) && IsTrueIdentifier(this.PeekToken(1)) && this.PeekToken(2).Kind != SyntaxKind.ColonToken)
+            {
+                return CheckFeatureAvailability(this.EatToken(), MessageID.IDS_FeatureNullable);
+            }
 
-                    return CheckFeatureAvailability(question, MessageID.IDS_FeatureNullable);
-                }
-                finally
+            var resetPoint = this.GetResetPoint();
+            try
+            {
+                var question = this.EatToken();
+
+                var isOrAs = mode == ParseTypeMode.AsExpression || mode == ParseTypeMode.AfterIs;
+                if (isOrAs && (IsTerm() || IsPredefinedType(this.CurrentToken.Kind) || SyntaxFacts.IsAnyUnaryExpression(this.CurrentToken.Kind)))
                 {
-                    this.Release(ref resetPoint);
+                    this.Reset(ref resetPoint);
+                    return null;
                 }
+
+                return CheckFeatureAvailability(question, MessageID.IDS_FeatureNullable);
+            }
+            finally
+            {
+                this.Release(ref resetPoint);
             }
 
             return null;

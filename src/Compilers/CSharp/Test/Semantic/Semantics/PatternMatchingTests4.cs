@@ -3030,5 +3030,63 @@ A(5, 6).Y
 A(2, 3).Y
 8");
         }
+
+        [Fact]
+        public void NullableArrayDeclarationPattern()
+        {
+            var source =
+@"#nullable enable
+public class A
+{
+    static void M(object o, bool c)
+    {
+        if (o is A?) { }              // ok (for compat)
+        if (o is A? && c) { }         // ok (for compat)
+        if (o is A? b1) { }           // error 1
+        if (o is A? b2 && c) { }      // error 2
+        if (o is A[]?[] b3) { }       // error 3
+        if (o is A[]?[] b4 && c) { }  // error 4
+        if (o is A[]? b5) { }         // error 5
+        if (o is A[]? b6 && c) { }    // error 6
+        if (o is A[][]? b7) { }       // ok (ambiguous parse; see xxx)
+        if (o is A[][]? b8 && c) { }  // ok (ambiguous parse; see xxx)
+        if (o is A[]? c && c : c) { } // ok (for compat)
+    }
+}
+";
+            var compilation = CreatePatternCompilation(source, options: TestOptions.DebugDll);
+            compilation.VerifyDiagnostics(
+                // (8,21): error CS0103: The name 'b1' does not exist in the current context
+                //         if (o is A? b1) { }          // error 1
+                Diagnostic(ErrorCode.ERR_NameNotInContext, "b1").WithArguments("b1").WithLocation(8, 21),
+                // (8,23): error CS1003: Syntax error, ':' expected
+                //         if (o is A? b1) { }          // error 1
+                Diagnostic(ErrorCode.ERR_SyntaxError, ")").WithArguments(":", ")").WithLocation(8, 23),
+                // (8,23): error CS1525: Invalid expression term ')'
+                //         if (o is A? b1) { }          // error 1
+                Diagnostic(ErrorCode.ERR_InvalidExprTerm, ")").WithArguments(")").WithLocation(8, 23),
+                // (9,21): error CS0103: The name 'b2' does not exist in the current context
+                //         if (o is A? b2 && c) { }     // error 2
+                Diagnostic(ErrorCode.ERR_NameNotInContext, "b2").WithArguments("b2").WithLocation(9, 21),
+                // (9,28): error CS1003: Syntax error, ':' expected
+                //         if (o is A? b2 && c) { }     // error 2
+                Diagnostic(ErrorCode.ERR_SyntaxError, ")").WithArguments(":", ")").WithLocation(9, 28),
+                // (9,28): error CS1525: Invalid expression term ')'
+                //         if (o is A? b2 && c) { }     // error 2
+                Diagnostic(ErrorCode.ERR_InvalidExprTerm, ")").WithArguments(")").WithLocation(9, 28),
+                // (10,18): error CS8116: It is not legal to use nullable type 'A[][]?' in a pattern; use the underlying type 'A[][]' instead.
+                //         if (o is A[]?[] b3) { }      // error 3
+                Diagnostic(ErrorCode.ERR_PatternNullableType, "A[]?[]").WithArguments("A[][]?", "A[][]").WithLocation(10, 18),
+                // (11,18): error CS8116: It is not legal to use nullable type 'A[][]?' in a pattern; use the underlying type 'A[][]' instead.
+                //         if (o is A[]?[] b4 && c) { } // error 4
+                Diagnostic(ErrorCode.ERR_PatternNullableType, "A[]?[]").WithArguments("A[][]?", "A[][]").WithLocation(11, 18),
+                // (12,18): error CS8116: It is not legal to use nullable type 'A[]?' in a pattern; use the underlying type 'A[]' instead.
+                //         if (o is A[]? b5) { }        // error 5
+                Diagnostic(ErrorCode.ERR_PatternNullableType, "A[]?").WithArguments("A[]?", "A[]").WithLocation(12, 18),
+                // (13,18): error CS8116: It is not legal to use nullable type 'A[]?' in a pattern; use the underlying type 'A[]' instead.
+                //         if (o is A[]? b6 && c) { }   // error 6
+                Diagnostic(ErrorCode.ERR_PatternNullableType, "A[]?").WithArguments("A[]?", "A[]").WithLocation(13, 18)
+                );
+        }
     }
 }

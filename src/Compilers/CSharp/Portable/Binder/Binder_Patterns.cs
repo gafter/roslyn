@@ -254,7 +254,7 @@ namespace Microsoft.CodeAnalysis.CSharp
         private bool CheckValidPatternType(
             SyntaxNode typeSyntax,
             TypeSymbol inputType,
-            TypeSymbol patternType,
+            TypeSymbolWithAnnotations patternType,
             bool patternTypeWasInSource,
             DiagnosticBag diagnostics)
         {
@@ -271,10 +271,10 @@ namespace Microsoft.CodeAnalysis.CSharp
                 diagnostics.Add(ErrorCode.ERR_PointerTypeInPatternMatching, typeSyntax.Location);
                 return true;
             }
-            else if (patternType.IsNullableType() && patternTypeWasInSource)
+            else if ((patternType.NullableAnnotation == NullableAnnotation.Annotated || patternType.IsNullableType()) && patternTypeWasInSource)
             {
                 // It is an error to use pattern-matching with a nullable type, because you'll never get null. Use the underlying type.
-                Error(diagnostics, ErrorCode.ERR_PatternNullableType, typeSyntax, patternType, patternType.GetNullableUnderlyingType());
+                Error(diagnostics, ErrorCode.ERR_PatternNullableType, typeSyntax, patternType, patternType.TypeSymbol.StrippedType());
                 return true;
             }
             else if (patternType.IsStatic)
@@ -292,11 +292,11 @@ namespace Microsoft.CodeAnalysis.CSharp
 
                 HashSet<DiagnosticInfo> useSiteDiagnostics = null;
                 bool? matchPossible = ExpressionOfTypeMatchesPatternType(
-                    Conversions, inputType, patternType, ref useSiteDiagnostics, out Conversion conversion, operandConstantValue: null, operandCouldBeNull: true);
+                    Conversions, inputType, patternType.TypeSymbol, ref useSiteDiagnostics, out Conversion conversion, operandConstantValue: null, operandCouldBeNull: true);
                 diagnostics.Add(typeSyntax, useSiteDiagnostics);
                 if (matchPossible != false)
                 {
-                    if (!conversion.Exists && (inputType.ContainsTypeParameter() || patternType.ContainsTypeParameter()))
+                    if (!conversion.Exists && (inputType.ContainsTypeParameter() || patternType.TypeSymbol.ContainsTypeParameter()))
                     {
                         // permit pattern-matching when one of the types is an open type in C# 7.1.
                         LanguageVersion requiredVersion = MessageID.IDS_FeatureGenericPatternMatching.RequiredVersion();
@@ -379,7 +379,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             TypeSymbolWithAnnotations declType = BindType(typeSyntax, diagnostics, out AliasSymbol aliasOpt);
             Debug.Assert(!declType.IsNull);
             BoundTypeExpression boundDeclType = new BoundTypeExpression(typeSyntax, aliasOpt, inferredType: false, type: declType.TypeSymbol);
-            hasErrors |= CheckValidPatternType(typeSyntax, inputType, declType.TypeSymbol, patternTypeWasInSource: true, diagnostics: diagnostics);
+            hasErrors |= CheckValidPatternType(typeSyntax, inputType, declType, patternTypeWasInSource: true, diagnostics: diagnostics);
             return boundDeclType;
         }
 
