@@ -68056,5 +68056,27 @@ class Program
                 Diagnostic(ErrorCode.WRN_NullabilityMismatchInAssignment, "(default, x)").WithArguments("(T?, object? x)", "(T? x, object y)").WithLocation(12, 32));
             comp.VerifyTypes();
         }
+
+        [Fact]
+        public void DisplayMultidimensionalArray()
+        {
+            var source = @"
+class C
+{
+    void M(A<object> o, A<string[]?[][,]> s)
+    {
+        o = s;
+    }
+}
+interface A<out T> {}
+";
+            var comp = CreateCompilation(source, options: WithNonNullTypesTrue());
+            comp.VerifyDiagnostics(
+                // (6,13): warning CS8619: Nullability of reference types in value of type 'A<string[]?[][*,*]>' doesn't match target type 'A<object>'.
+                //         o = s;
+                Diagnostic(ErrorCode.WRN_NullabilityMismatchInAssignment, "s").WithArguments("A<string[]?[][*,*]>", "A<object>").WithLocation(6, 13)
+                );
+            comp.VerifyTypes();
+        }
     }
 }

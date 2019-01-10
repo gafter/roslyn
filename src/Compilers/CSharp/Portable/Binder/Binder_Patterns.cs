@@ -378,6 +378,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             Debug.Assert(!typeSyntax.IsVar); // if the syntax had `var`, it would have been parsed as a var pattern.
             TypeSymbolWithAnnotations declType = BindType(typeSyntax, diagnostics, out AliasSymbol aliasOpt);
             Debug.Assert(!declType.IsNull);
+            Debug.Assert(!declType.NullableAnnotation.IsAnyNullable()); // the syntax does not permit nullable annotations
             BoundTypeExpression boundDeclType = new BoundTypeExpression(typeSyntax, aliasOpt, inferredType: false, type: declType.TypeSymbol);
             hasErrors |= CheckValidPatternType(typeSyntax, inputType, declType.TypeSymbol, patternTypeWasInSource: true, diagnostics: diagnostics);
             return boundDeclType;

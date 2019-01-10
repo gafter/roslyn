@@ -5923,6 +5923,7 @@ tryAgain:
                 lastTokenOfType = this.EatToken();
                 result = ScanTypeFlags.MustBeType;
 
+                // PROTOTYPE(nullable): This does not properly take the mode into account, as ParseType does.
                 if (this.CurrentToken.Kind == SyntaxKind.QuestionToken)
                 {
                     lastTokenOfType = this.EatToken();
@@ -6312,31 +6313,37 @@ tryAgain:
         private SyntaxToken EatNullableQualifierIfApplicable(ParseTypeMode mode)
         {
             Debug.Assert(this.CurrentToken.Kind == SyntaxKind.QuestionToken);
-
-            // we do not permit nullable types in a declaration pattern
-            if (mode != ParseTypeMode.AfterIs && mode != ParseTypeMode.DefinitePattern || !IsTrueIdentifier(this.PeekToken(1)))
+            var resetPoint = this.GetResetPoint();
+            try
             {
-                var resetPoint = this.GetResetPoint();
-                try
+                var questionToken = this.EatToken();
+                switch (mode)
                 {
-                    var question = this.EatToken();
+                    case ParseTypeMode.AfterIs:
+                    case ParseTypeMode.DefinitePattern:
+                    case ParseTypeMode.AsExpression:
+                    case ParseTypeMode.ArrayCreation:
+                        // These contexts might be a type that is at the end of an expression.
+                        // In these contexts we only permit the nullable qualifier if it is followed
+                        // by a token that could not start an expression, because for backward
+                        // compatibility we want to consider a `?` token as part of the `?:`
+                        // operator if possible.
+                        if (CanStartExpression())
+                        {
+                            // Restore current token index
+                            this.Reset(ref resetPoint);
+                            return null;
+                        }
 
-                    var isOrAs = mode == ParseTypeMode.AsExpression || mode == ParseTypeMode.AfterIs;
-                    if (isOrAs && (IsTerm() || IsPredefinedType(this.CurrentToken.Kind) || SyntaxFacts.IsAnyUnaryExpression(this.CurrentToken.Kind)))
-                    {
-                        this.Reset(ref resetPoint);
-                        return null;
-                    }
+                        break;
+                }
 
-                    return CheckFeatureAvailability(question, MessageID.IDS_FeatureNullable);
-                }
-                finally
-                {
-                    this.Release(ref resetPoint);
-                }
+                return CheckFeatureAvailability(questionToken, MessageID.IDS_FeatureNullable);
             }
-
-            return null;
+            finally
+            {
+                this.Release(ref resetPoint);
+            }
         }
 
         private bool PointerTypeModsFollowedByRankAndDimensionSpecifier()
@@ -8777,9 +8784,25 @@ tryAgain:
             return this.ParseSubExpression(Precedence.Expression);
         }
 
-        private bool IsPossibleExpression(bool allowBinaryExpressions = true, bool allowAssignmentExpressions = true)
+        /// <summary>
+        /// Is the current token one that could start an expression?
+        /// </summary>
+        private bool CanStartExpression()
         {
-            var tk = this.CurrentToken.Kind;
+            return IsPossibleExpression(allowBinaryExpressions: false, allowAssignmentExpressions: false);
+        }
+
+        /// <summary>
+        /// Is the current token one that could be in an expression?
+        /// </summary>
+        private bool IsPossibleExpression()
+        {
+            return IsPossibleExpression(allowBinaryExpressions: true, allowAssignmentExpressions: true);
+        }
+
+        private bool IsPossibleExpression(bool allowBinaryExpressions, bool allowAssignmentExpressions)
+        {
+            SyntaxKind tk = this.CurrentToken.Kind;
             switch (tk)
             {
                 case SyntaxKind.TypeOfKeyword:
@@ -9094,7 +9117,7 @@ tryAgain:
                 newPrecedence = GetPrecedence(opKind);
 
                 ExpressionSyntax rightOperand;
-                if (IsPossibleExpression(allowBinaryExpressions: false, allowAssignmentExpressions: false))
+                if (CanStartExpression())
                 {
                     rightOperand = this.ParseSubExpression(newPrecedence);
                 }
@@ -9248,7 +9271,7 @@ tryAgain:
                             Debug.Assert(opKind == SyntaxKind.RangeExpression);
 
                             ExpressionSyntax rightOperand;
-                            if (IsPossibleExpression(allowBinaryExpressions: false, allowAssignmentExpressions: false))
+                            if (CanStartExpression())
                             {
                                 newPrecedence = GetPrecedence(opKind);
                                 rightOperand = this.ParseSubExpression(newPrecedence);
