@@ -2335,8 +2335,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             HashSet<TypeSymbolWithAnnotations> lower,
             HashSet<TypeSymbolWithAnnotations> upper,
             ref HashSet<DiagnosticInfo> useSiteDiagnostics,
-            ConversionsBase conversions,
-            ref bool hadNullabilityMismatch)
+            ConversionsBase conversions)
         {
             // UNDONE: This method makes a lot of garbage.
 
@@ -2360,18 +2359,18 @@ namespace Microsoft.CodeAnalysis.CSharp
                 if (lower != null)
                 {
                     // Lower bounds represent co-variance.
-                    AddAllCandidates(candidates, lower, VarianceKind.Out, conversions, ref hadNullabilityMismatch);
+                    AddAllCandidates(candidates, lower, VarianceKind.Out, conversions);
                 }
                 if (upper != null)
                 {
                     // Lower bounds represent contra-variance.
-                    AddAllCandidates(candidates, upper, VarianceKind.In, conversions, ref hadNullabilityMismatch);
+                    AddAllCandidates(candidates, upper, VarianceKind.In, conversions);
                 }
             }
             else
             {
                 // Exact bounds represent invariance.
-                AddAllCandidates(candidates, exact, VarianceKind.None, conversions, ref hadNullabilityMismatch);
+                AddAllCandidates(candidates, exact, VarianceKind.None, conversions);
                 if (candidates.Count >= 2)
                 {
                     return default;
@@ -2392,7 +2391,7 @@ namespace Microsoft.CodeAnalysis.CSharp
 
             if (lower != null)
             {
-                MergeOrRemoveCandidates(candidates, lower, initialCandidates, conversions, VarianceKind.Out, ref hadNullabilityMismatch, ref useSiteDiagnostics);
+                MergeOrRemoveCandidates(candidates, lower, initialCandidates, conversions, VarianceKind.Out, ref useSiteDiagnostics);
             }
 
             // SPEC:   For each upper bound U of Xi all types from which there is not an
@@ -2400,7 +2399,7 @@ namespace Microsoft.CodeAnalysis.CSharp
 
             if (upper != null)
             {
-                MergeOrRemoveCandidates(candidates, upper, initialCandidates, conversions, VarianceKind.In, ref hadNullabilityMismatch, ref useSiteDiagnostics);
+                MergeOrRemoveCandidates(candidates, upper, initialCandidates, conversions, VarianceKind.In, ref useSiteDiagnostics);
             }
 
             initialCandidates.Clear();
@@ -2451,17 +2450,17 @@ OuterBreak:
             return TypeSymbolWithAnnotations.Create(expr.Type);
         }
 
-        internal static TypeSymbolWithAnnotations Merge(TypeSymbolWithAnnotations first, TypeSymbolWithAnnotations second, VarianceKind variance, ConversionsBase conversions, out bool hadNullabilityMismatch)
+        internal static TypeSymbolWithAnnotations Merge(TypeSymbolWithAnnotations first, TypeSymbolWithAnnotations second, VarianceKind variance, ConversionsBase conversions)
         {
             var merged = MergeTupleNames(MergeDynamic(first, second, conversions.CorLibrary), second);
             if (!conversions.IncludeNullability)
             {
-                hadNullabilityMismatch = false;
                 // https://github.com/dotnet/roslyn/issues/30534: Should preserve
                 // distinct "not computed" state from initial binding.
                 return merged.SetUnknownNullabilityForReferenceTypes();
             }
-            return merged.MergeNullability(second, variance, out hadNullabilityMismatch);
+
+            return merged.MergeNullability(second, variance);
         }
 
         /// <summary>
@@ -2782,8 +2781,7 @@ OuterBreak:
             Dictionary<TypeSymbolWithAnnotations, TypeSymbolWithAnnotations> candidates,
             HashSet<TypeSymbolWithAnnotations> bounds,
             VarianceKind variance,
-            ConversionsBase conversions,
-            ref bool hadNullabilityMismatch)
+            ConversionsBase conversions)
         {
             foreach (var candidate in bounds)
             {
@@ -2794,7 +2792,8 @@ OuterBreak:
                     // distinct "not computed" state from initial binding.
                     type = type.SetUnknownNullabilityForReferenceTypes();
                 }
-                AddOrMergeCandidate(candidates, type, variance, conversions, ref hadNullabilityMismatch);
+
+                AddOrMergeCandidate(candidates, type, variance, conversions);
             }
         }
 
@@ -2802,16 +2801,14 @@ OuterBreak:
             Dictionary<TypeSymbolWithAnnotations, TypeSymbolWithAnnotations> candidates,
             TypeSymbolWithAnnotations newCandidate,
             VarianceKind variance,
-            ConversionsBase conversions,
-            ref bool hadNullabilityMismatch)
+            ConversionsBase conversions)
         {
             Debug.Assert(conversions.IncludeNullability ||
                 newCandidate.SetUnknownNullabilityForReferenceTypes().Equals(newCandidate, TypeCompareKind.ConsiderEverything));
 
             if (candidates.TryGetValue(newCandidate, out TypeSymbolWithAnnotations oldCandidate))
             {
-                MergeAndReplaceIfStillCandidate(candidates, oldCandidate, newCandidate, variance, conversions, out bool hadMismatch);
-                hadNullabilityMismatch |= hadMismatch;
+                MergeAndReplaceIfStillCandidate(candidates, oldCandidate, newCandidate, variance, conversions);
             }
             else
             {
@@ -2829,7 +2826,6 @@ OuterBreak:
             ArrayBuilder<TypeSymbolWithAnnotations> initialCandidates,
             ConversionsBase conversions,
             VarianceKind variance,
-            ref bool hadNullabilityMismatch,
             ref HashSet<DiagnosticInfo> useSiteDiagnostics)
         {
             Debug.Assert(variance == VarianceKind.In || variance == VarianceKind.Out);
@@ -2868,8 +2864,7 @@ OuterBreak:
                         // This rule doesn't have to be implemented explicitly due to special handling of 
                         // conversions from dynamic in ImplicitConversionExists helper.
                         // 
-                        MergeAndReplaceIfStillCandidate(candidates, candidate, bound, variance, conversions, out bool hadMismatch);
-                        hadNullabilityMismatch |= hadMismatch;
+                        MergeAndReplaceIfStillCandidate(candidates, candidate, bound, variance, conversions);
                     }
                 }
             }
@@ -2880,11 +2875,8 @@ OuterBreak:
             TypeSymbolWithAnnotations oldCandidate,
             TypeSymbolWithAnnotations newCandidate,
             VarianceKind variance,
-            ConversionsBase conversions,
-            out bool hadNullabilityMismatch)
+            ConversionsBase conversions)
         {
-            hadNullabilityMismatch = false;
-
             // We make an exception when new candidate is dynamic, for backwards compatibility 
             if (newCandidate.IsDynamic())
             {
@@ -2902,7 +2894,7 @@ OuterBreak:
                 // IOut<object?>, then merge that result with upper bound IOut<object!> (using VarianceKind.In)
                 // to produce IOut<object?>. But then conversion of argument IIn<IOut<object!>> to parameter
                 // IIn<IOut<object?>> will generate a warning at that point.)
-                TypeSymbolWithAnnotations merged = Merge(latest, newCandidate, variance, conversions, out hadNullabilityMismatch);
+                TypeSymbolWithAnnotations merged = Merge(latest, newCandidate, variance, conversions);
                 candidates[oldCandidate] = merged;
             }
         }

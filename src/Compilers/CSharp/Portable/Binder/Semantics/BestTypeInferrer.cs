@@ -24,6 +24,18 @@ namespace Microsoft.CodeAnalysis.CSharp
             return result;
         }
 
+        public static NullableAnnotation GetNullableAnnotation(ArrayBuilder<TypeWithState> types)
+        {
+            ArrayBuilder<TypeSymbolWithAnnotations> builder = ArrayBuilder<TypeSymbolWithAnnotations>.GetInstance();
+            foreach (var type in types)
+            {
+                builder.Add(type.ToTypeSymbolWithAnnotations());
+            }
+            var result = GetNullableAnnotation(builder);
+            builder.Free();
+            return result;
+        }
+
         /// <remarks>
         /// This method finds the best common type of a set of expressions as per section 7.5.2.14 of the specification.
         /// NOTE: If some or all of the expressions have error types, we return error type as the inference result.
