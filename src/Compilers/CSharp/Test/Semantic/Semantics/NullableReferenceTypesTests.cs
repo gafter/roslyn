@@ -3962,7 +3962,7 @@ class E
 {
     public void M()
     {
-        Oblivious.Method(null) /*T:string*/;
+        Oblivious.Method(null) /*T:string!*/;
 
         External.Method(null) /*T:string!*/; // warn 1
         External.NMethod(null) /*T:string?*/;
@@ -3976,7 +3976,7 @@ class E
         OuterD.D.Method(null) /*T:string!*/; // warn 4
         OuterD.D.NMethod(null) /*T:string?*/;
 
-        Oblivious2.Method(null) /*T:string*/;
+        Oblivious2.Method(null) /*T:string!*/;
         Oblivious2.NMethod(null) /*T:string?*/;
     }
 }
@@ -12589,15 +12589,13 @@ public class C
 {
     public void Main(string s)
     {
-        s = default!; // default! returns an oblivious result
+        s = default!; // default! returns a non-null result
         var s2 = s;
-        s2/*T:string*/.ToString(); // ok
+        s2/*T:string!*/.ToString(); // ok
     }
 }
 " }, options: WithNonNullTypesTrue());
 
-            // https://github.com/dotnet/roslyn/issues/29862: The suppression operator isn't producing a non-null result
-            //                                                I'd expect default! to return a non-null result
             VerifyVarLocal(c, "string!");
             c.VerifyTypes();
             c.VerifyDiagnostics();
@@ -17725,9 +17723,6 @@ class C
                 // (5,10): error CS0019: Operator '??' cannot be applied to operands of type '<null>' and '<null>'
                 //         (null ?? null).ToString();
                 Diagnostic(ErrorCode.ERR_BadBinaryOps, "null ?? null").WithArguments("??", "<null>", "<null>").WithLocation(5, 10),
-                // (5,10): warning CS8602: Possible dereference of a null reference.
-                //         (null ?? null).ToString();
-                Diagnostic(ErrorCode.WRN_NullReferenceReceiver, "null ?? null").WithLocation(5, 10),
                 // (7,10): warning CS8602: Possible dereference of a null reference.
                 //         (null ?? y).ToString();
                 Diagnostic(ErrorCode.WRN_NullReferenceReceiver, "null ?? y").WithLocation(7, 10));
@@ -17785,7 +17780,7 @@ public class NotNull
 {
     static void F1(UnknownNull x1, UnknownNull y1)
     {
-        (x1.A ?? y1.B)/*T:*/.ToString();
+        (x1.A ?? y1.B)/*T:!*/.ToString();
     }
     static void F2(UnknownNull x2, MaybeNull y2)
     {
@@ -17793,7 +17788,7 @@ public class NotNull
     }
     static void F3(MaybeNull x3, UnknownNull y3)
     {
-        (x3.A ?? y3.B)/*T:*/.ToString();
+        (x3.A ?? y3.B)/*T:!*/.ToString();
     }
     static void F4(MaybeNull x4, MaybeNull y4)
     {
@@ -40448,7 +40443,7 @@ class Program
     {
         if (x == null) return;
         var y = x.Value;
-        y.F/*T:T*/.ToString();
+        y.F/*T:T!*/.ToString();
     }
 }";
             var comp = CreateCompilation(source, options: WithNonNullTypesTrue());
@@ -73645,8 +73640,8 @@ class C
         C c3
 #nullable enable
                   = (c1 ??= GetC());
-        _ = c1/*T:C*/;
-        _ = c3/*T:C*/;
+        _ = c1/*T:C!*/;
+        _ = c3/*T:C!*/;
 
         // oblivious + nullable = nullable
         // This one is a little weirder. The ??= on c3 forces it into either nullable or not nullable, so we must
