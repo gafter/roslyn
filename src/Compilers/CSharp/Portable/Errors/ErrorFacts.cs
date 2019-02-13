@@ -31,20 +31,15 @@ namespace Microsoft.CodeAnalysis.CSharp
             builder.Add(getId(ErrorCode.WRN_NullabilityMismatchInReturnTypeOfTargetDelegate));
             builder.Add(getId(ErrorCode.WRN_NullabilityMismatchInParameterTypeOfTargetDelegate));
             builder.Add(getId(ErrorCode.WRN_NullAsNonNullable));
-            builder.Add(getId(ErrorCode.WRN_NoBestNullabilityConditionalExpression));
             builder.Add(getId(ErrorCode.WRN_NullableValueTypeMayBeNull));
             builder.Add(getId(ErrorCode.WRN_NullabilityMismatchInTypeParameterConstraint));
             builder.Add(getId(ErrorCode.WRN_NullabilityMismatchInTypeParameterReferenceTypeConstraint));
             builder.Add(getId(ErrorCode.WRN_CantInferNullabilityOfMethodTypeArgs));
-            builder.Add(getId(ErrorCode.WRN_NoBestNullabilityArrayElements));
 
             NullableFlowAnalysisSafetyWarnings = builder.ToImmutable();
 
             builder.Clear();
             builder.Add(getId(ErrorCode.WRN_ConvertingNullableToNonNullable));
-            builder.Add(getId(ErrorCode.HDN_NullCheckIsProbablyAlwaysFalse));
-            builder.Add(getId(ErrorCode.HDN_NullCheckIsProbablyAlwaysTrue));
-            builder.Add(getId(ErrorCode.HDN_ExpressionIsProbablyNeverNull));
 
             NullableFlowAnalysisNonSafetyWarnings = builder.ToImmutable();
 
@@ -387,7 +382,6 @@ namespace Microsoft.CodeAnalysis.CSharp
                 case ErrorCode.WRN_NullabilityMismatchInReturnTypeOfTargetDelegate:
                 case ErrorCode.WRN_NullabilityMismatchInParameterTypeOfTargetDelegate:
                 case ErrorCode.WRN_NullAsNonNullable:
-                case ErrorCode.WRN_NoBestNullabilityConditionalExpression:
                 case ErrorCode.WRN_NullableValueTypeMayBeNull:
                 case ErrorCode.WRN_NullabilityMismatchInTypeParameterConstraint:
                 case ErrorCode.WRN_DefaultLiteralConvertedToNullIsNotIntended:
@@ -395,7 +389,6 @@ namespace Microsoft.CodeAnalysis.CSharp
                 case ErrorCode.WRN_NullabilityMismatchInConstraintsOnImplicitImplementation:
                 case ErrorCode.WRN_NullabilityMismatchInTypeParameterReferenceTypeConstraint:
                 case ErrorCode.WRN_CantInferNullabilityOfMethodTypeArgs:
-                case ErrorCode.WRN_NoBestNullabilityArrayElements:
                 case ErrorCode.WRN_SwitchExpressionNotExhaustive:
                 case ErrorCode.WRN_IsTypeNamedUnderscore:
                 case ErrorCode.WRN_GivenExpressionNeverMatchesPattern:

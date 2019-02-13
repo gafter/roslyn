@@ -347,36 +347,6 @@
         <target state="new">File name '{0}' is empty, contains invalid characters, has a drive specification without an absolute path, or is too long</target>
         <note />
       </trans-unit>
-      <trans-unit id="HDN_ExpressionIsProbablyNeverNull">
-        <source>Expression is probably never null.</source>
-        <target state="new">Expression is probably never null.</target>
-        <note />
-      </trans-unit>
-      <trans-unit id="HDN_ExpressionIsProbablyNeverNull_Title">
-        <source>Expression is probably never null.</source>
-        <target state="new">Expression is probably never null.</target>
-        <note />
-      </trans-unit>
-      <trans-unit id="HDN_NullCheckIsProbablyAlwaysFalse">
-        <source>Result of the comparison is possibly always false.</source>
-        <target state="new">Result of the comparison is possibly always false.</target>
-        <note />
-      </trans-unit>
-      <trans-unit id="HDN_NullCheckIsProbablyAlwaysFalse_Title">
-        <source>Result of the comparison is possibly always false.</source>
-        <target state="new">Result of the comparison is possibly always false.</target>
-        <note />
-      </trans-unit>
-      <trans-unit id="HDN_NullCheckIsProbablyAlwaysTrue">
-        <source>Result of the comparison is possibly always true.</source>
-        <target state="new">Result of the comparison is possibly always true.</target>
-        <note />
-      </trans-unit>
-      <trans-unit id="HDN_NullCheckIsProbablyAlwaysTrue_Title">
-        <source>Result of the comparison is possibly always true.</source>
-        <target state="new">Result of the comparison is possibly always true.</target>
-        <note />
-      </trans-unit>
       <trans-unit id="IDS_Disposable">
         <source>disposable</source>
         <target state="new">disposable</target>
@@ -980,26 +950,6 @@
       <trans-unit id="WRN_MissingNonNullTypesContextForAnnotation_Title">
         <source>The annotation for nullable reference types should only be used in code within a '#nullable' context.</source>
         <target state="new">The annotation for nullable reference types should only be used in code within a '#nullable' context.</target>
-        <note />
-      </trans-unit>
-      <trans-unit id="WRN_NoBestNullabilityArrayElements">
-        <source>No best nullability found for implicitly-typed array.</source>
-        <target state="new">No best nullability found for implicitly-typed array.</target>
-        <note />
-      </trans-unit>
-      <trans-unit id="WRN_NoBestNullabilityArrayElements_Title">
-        <source>No best nullability found for implicitly-typed array.</source>
-        <target state="new">No best nullability found for implicitly-typed array.</target>
-        <note />
-      </trans-unit>
-      <trans-unit id="WRN_NoBestNullabilityConditionalExpression">
-        <source>No best nullability for operands of conditional expression '{0}' and '{1}'.</source>
-        <target state="new">No best nullability for operands of conditional expression '{0}' and '{1}'.</target>
-        <note />
-      </trans-unit>
-      <trans-unit id="WRN_NoBestNullabilityConditionalExpression_Title">
-        <source>No best nullability for operands of conditional expression.</source>
-        <target state="new">No best nullability for operands of conditional expression.</target>
         <note />
       </trans-unit>
       <trans-unit id="WRN_NullAsNonNullable">

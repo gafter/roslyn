@@ -470,7 +470,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                 bool isNullableEnabled = IsNullableEnabled(questionToken);
 
                 // Inside a method body or other executable code, we can question IsValueType without causing cycles.
-                if (!typeArgument.IsNull && !ShouldCheckConstraints)
+                if (!typeArgument.IsDefault && !ShouldCheckConstraints)
                 {
                     diagnostics.Add(new LazyMissingNonNullTypesContextDiagnosticInfo(Compilation, isNullableEnabled, typeArgument), questionToken.GetLocation());
                 }

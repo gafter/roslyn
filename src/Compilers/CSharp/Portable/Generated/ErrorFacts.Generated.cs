@@ -208,14 +208,12 @@
                 case ErrorCode.WRN_NullabilityMismatchInReturnTypeOfTargetDelegate:
                 case ErrorCode.WRN_NullabilityMismatchInParameterTypeOfTargetDelegate:
                 case ErrorCode.WRN_NullAsNonNullable:
-                case ErrorCode.WRN_NoBestNullabilityConditionalExpression:
                 case ErrorCode.WRN_NullableValueTypeMayBeNull:
                 case ErrorCode.WRN_NullabilityMismatchInTypeParameterConstraint:
                 case ErrorCode.WRN_MissingNonNullTypesContextForAnnotation:
                 case ErrorCode.WRN_NullabilityMismatchInConstraintsOnImplicitImplementation:
                 case ErrorCode.WRN_NullabilityMismatchInTypeParameterReferenceTypeConstraint:
                 case ErrorCode.WRN_CantInferNullabilityOfMethodTypeArgs:
-                case ErrorCode.WRN_NoBestNullabilityArrayElements:
                 case ErrorCode.WRN_NullabilityMismatchInExplicitlyImplementedInterface:
                 case ErrorCode.WRN_NullabilityMismatchInInterfaceImplementedByBase:
                 case ErrorCode.WRN_DuplicateInterfaceWithNullabilityMismatchInBaseList:
@@ -259,9 +257,6 @@
             {
                 case ErrorCode.HDN_UnusedUsingDirective:
                 case ErrorCode.HDN_UnusedExternAlias:
-                case ErrorCode.HDN_NullCheckIsProbablyAlwaysTrue:
-                case ErrorCode.HDN_NullCheckIsProbablyAlwaysFalse:
-                case ErrorCode.HDN_ExpressionIsProbablyNeverNull:
                     return true;
                 default:
                     return false;

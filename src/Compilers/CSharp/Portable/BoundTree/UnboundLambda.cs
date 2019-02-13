@@ -190,7 +190,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                         {
                             typesOnly.Add(resultType.TypeSymbol);
                         }
-                        var bestType = BestTypeInferrer.GetBestType(typesOnly, conversions, hadNullabilityMismatch: out _, ref useSiteDiagnostics);
+                        var bestType = BestTypeInferrer.GetBestType(typesOnly, conversions, ref useSiteDiagnostics);
                         bestResultType = bestType is null ? default : TypeSymbolWithAnnotations.Create(bestType);
                         typesOnly.Free();
                     }
@@ -226,7 +226,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                 return TypeSymbolWithAnnotations.Create(resultType);
             }
 
-            if (bestResultType.IsNull || bestResultType.SpecialType == SpecialType.System_Void)
+            if (bestResultType.IsDefault || bestResultType.SpecialType == SpecialType.System_Void)
             {
                 // If the best type was 'void', ERR_CantReturnVoid is reported while binding the "return void"
                 // statement(s).
@@ -410,7 +410,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             foreach (var lambda in _returnInferenceCache.Values)
             {
                 var type = lambda.InferredReturnType.Type;
-                if (!type.IsNull)
+                if (!type.IsDefault)
                 {
                     any = true;
                     yield return type.TypeSymbol;
@@ -420,7 +420,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             if (!any)
             {
                 var type = BindForErrorRecovery().InferredReturnType.Type;
-                if (!type.IsNull)
+                if (!type.IsDefault)
                 {
                     yield return type.TypeSymbol;
                 }
@@ -510,7 +510,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             var lambdaParameters = lambdaSymbol.Parameters;
             ParameterHelpers.EnsureIsReadOnlyAttributeExists(lambdaParameters, diagnostics, modifyCompilation: false);
 
-            if (!returnType.IsNull)
+            if (!returnType.IsDefault)
             {
                 if (returnType.NeedsNullableAttribute())
                 {
@@ -545,7 +545,7 @@ haveLambdaBodyAndBinders:
 
             if (IsAsync && !ErrorFacts.PreventsSuccessfulDelegateConversion(diagnostics))
             {
-                if (!returnType.IsNull && // Can be null if "delegateType" is not actually a delegate type.
+                if (!returnType.IsDefault && // Can be null if "delegateType" is not actually a delegate type.
                     returnType.SpecialType != SpecialType.System_Void &&
                     !returnType.TypeSymbol.IsNonGenericTaskType(binder.Compilation) &&
                     !returnType.TypeSymbol.IsGenericTaskType(binder.Compilation))
@@ -615,7 +615,7 @@ haveLambdaBodyAndBinders:
 
             // TODO: Should InferredReturnType.UseSiteDiagnostics be merged into BoundLambda.Diagnostics?
             var returnType = inferredReturnType.Type;
-            if (returnType.IsNull)
+            if (returnType.IsDefault)
             {
                 returnType = TypeSymbolWithAnnotations.Create(LambdaSymbol.InferenceFailureReturnType);
             }
@@ -824,7 +824,7 @@ haveLambdaBodyAndBinders:
                 builder.Builder.Append(parameter.ToDisplayString(SymbolDisplayFormat.CSharpErrorMessageFormat));
             }
 
-            if (!lambda.ReturnType.IsNull)
+            if (!lambda.ReturnType.IsDefault)
             {
                 builder.Builder.Append(lambda.ReturnType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat));
             }

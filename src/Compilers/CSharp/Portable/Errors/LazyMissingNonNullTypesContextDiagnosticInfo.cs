@@ -16,7 +16,7 @@ namespace Microsoft.CodeAnalysis.CSharp
 
         internal LazyMissingNonNullTypesContextDiagnosticInfo(CSharpCompilation compilation, bool isNullableEnabled, TypeSymbolWithAnnotations type)
         {
-            Debug.Assert(!type.IsNull);
+            Debug.Assert(!type.IsDefault);
             _compilation = compilation;
             _isNullableEnabled = isNullableEnabled;
             _type = type;
@@ -34,7 +34,7 @@ namespace Microsoft.CodeAnalysis.CSharp
         /// </summary>
         public static DiagnosticInfo ReportNullableReferenceTypesIfNeeded(CSharpCompilation compilation, bool isNullableEnabled, TypeSymbolWithAnnotations type)
         {
-            return !type.IsNull && (type.IsValueType || type.IsErrorType()) ? null : ReportNullableReferenceTypesIfNeeded(compilation, isNullableEnabled);
+            return !type.IsDefault && (type.IsValueType || type.IsErrorType()) ? null : ReportNullableReferenceTypesIfNeeded(compilation, isNullableEnabled);
         }
 
         public static DiagnosticInfo ReportNullableReferenceTypesIfNeeded(CSharpCompilation compilation, bool isNullableEnabled)

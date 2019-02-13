@@ -334,7 +334,6 @@ class C<T>
         b[0].ToString();
     }
 }";
-            // https://github.com/dotnet/roslyn/issues/30480: Should report WRN_NoBestNullabilityArrayElements. Problem in BestTypeInferrer.Better
             var comp = CreateCompilation(new[] { source }, options: WithNonNullTypesTrue());
             comp.VerifyDiagnostics(
                 // (12,25): warning CS8619: Nullability of reference types in value of type 'C<string>' doesn't match target type 'C<string?>'.
@@ -4093,7 +4092,11 @@ class C<T>
             comp.VerifyDiagnostics(
                 // (3,7): warning CS8618: Non-nullable field '_f' is uninitialized.
                 // class C<T>
-                Diagnostic(ErrorCode.WRN_UninitializedNonNullableField, "C").WithArguments("field", "_f").WithLocation(3, 7));
+                Diagnostic(ErrorCode.WRN_UninitializedNonNullableField, "C").WithArguments("field", "_f").WithLocation(3, 7),
+                // (6,36): warning CS8604: Possible null reference argument for parameter 'result' in 'Task<T> Task.FromResult<T>(T result)'.
+                //     Task<T> F() => Task.FromResult(_f[0]);
+                Diagnostic(ErrorCode.WRN_NullReferenceArgument, "_f[0]").WithArguments("result", "Task<T> Task.FromResult<T>(T result)").WithLocation(6, 36)
+                );
         }
 
         [Fact]
@@ -4138,9 +4141,9 @@ class C
     void M()
     {
         string s = Oblivious.f;
-        s /*T:string*/ .ToString();
+        s /*T:string!*/ .ToString();
         string ns = Oblivious.f;
-        ns /*T:string*/ .ToString();
+        ns /*T:string!*/ .ToString();
     }
 }
 ";
@@ -4185,7 +4188,7 @@ class C
 
         foreach (string s in FalseCollection())
         {
-            s /*T:string*/ .ToString();
+            s /*T:string!*/ .ToString();
         }
 
         foreach (string? ns in FalseNCollection())
@@ -4195,7 +4198,7 @@ class C
 
         foreach (var s1 in FalseCollection())
         {
-            s1 /*T:string*/ .ToString();
+            s1 /*T:string!*/ .ToString();
         }
 
         foreach (var ns1 in FalseNCollection())
@@ -4273,7 +4276,7 @@ class C
 
         foreach (string s in FalseCollection())
         {
-            s /*T:string*/ .ToString();
+            s /*T:string!*/ .ToString();
         }
 
         foreach (string? ns in FalseNCollection()) // 2
@@ -4283,7 +4286,7 @@ class C
 
         foreach (var s1 in FalseCollection())
         {
-            s1 /*T:string*/ .ToString();
+            s1 /*T:string!*/ .ToString();
         }
 
         foreach (var ns1 in FalseNCollection())
@@ -4341,7 +4344,7 @@ class C
         ns2 = null;
 
         FalseOut(out string s3);
-        s3 /*T:string*/ .ToString();
+        s3 /*T:string!*/ .ToString();
         s3 = null; // warn 3
 
         FalseNOut(out string? ns3);
@@ -4357,7 +4360,7 @@ class C
         ns4 = null;
 
         FalseOut(out var s5);
-        s5 /*T:string*/ .ToString();
+        s5 /*T:string!*/ .ToString();
         s5 = null;
 
         FalseNOut(out var ns5);
@@ -4503,7 +4506,7 @@ public class C : Base
         ns2 = null;
 
         string s3 = FalseMethod();
-        s3 /*T:string*/ .ToString();
+        s3 /*T:string!*/ .ToString();
         s3 = null; // warn 3
 
         string? ns3 = FalseNMethod();
@@ -4519,7 +4522,7 @@ public class C : Base
         ns4 = null;
 
         var s5 = FalseMethod();
-        s5 /*T:string*/ .ToString();
+        s5 /*T:string!*/ .ToString();
         s5 = null;
 
         var ns5 = FalseNMethod();
@@ -4594,7 +4597,7 @@ public class C : Base
         ns2 = null;
 
         string s3 = FalseMethod();
-        s3 /*T:string*/ .ToString();
+        s3 /*T:string!*/ .ToString();
         s3 = null;
 
         string? ns3 = FalseNMethod(); // 2
@@ -4610,7 +4613,7 @@ public class C : Base
         ns4 = null;
 
         var s5 = FalseMethod();
-        s5 /*T:string*/ .ToString();
+        s5 /*T:string!*/ .ToString();
         s5 = null;
 
         var ns5 = FalseNMethod();
@@ -4821,7 +4824,7 @@ public struct D<T, NT>
 {
     public void M(T t, NT nt)
     {
-        t.Item /*T:S*/ .ToString();
+        t.Item /*T:S!*/ .ToString();
         t.Item = null;
         nt.Item /*T:S?*/ .ToString();
         nt.Item = null;
@@ -9411,15 +9414,9 @@ struct S2
                 // (53,18): warning CS8602: Possible dereference of a null reference.
                 //         CL1 y7 = x7.P1;
                 Diagnostic(ErrorCode.WRN_NullReferenceReceiver, "x7").WithLocation(53, 18),
-                // (54,18): hidden CS8607: Expression is probably never null.
-                //         CL1 z7 = x7?.P1;
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "x7").WithLocation(54, 18),
                 // (64,18): warning CS8602: Possible dereference of a null reference.
                 //         CL1 u8 = x8.M1();
                 Diagnostic(ErrorCode.WRN_NullReferenceReceiver, "x8").WithLocation(64, 18),
-                // (65,18): hidden CS8607: Expression is probably never null.
-                //         CL1 z8 = x8?.M1();
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "x8").WithLocation(65, 18),
                 // (71,14): warning CS8600: Converting null literal or possible null value to non-nullable type.
                 //         u9 = x9;
                 Diagnostic(ErrorCode.WRN_ConvertingNullableToNonNullable, "x9").WithLocation(71, 14),
@@ -9519,15 +9516,9 @@ struct S2
                 // (296,15): warning CS8600: Converting null literal or possible null value to non-nullable type.
                 //         x31 = default(CL1);
                 Diagnostic(ErrorCode.WRN_ConvertingNullableToNonNullable, "default(CL1)").WithLocation(296, 15),
-                // (301,19): hidden CS8607: Expression is probably never null.
-                //         var y32 = new CL1() ?? x32;
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "new CL1()").WithLocation(301, 19),
                 // (306,29): warning CS8600: Converting null literal or possible null value to non-nullable type.
                 //         var y33 = new { p = (object)null } ?? x33;
-                Diagnostic(ErrorCode.WRN_ConvertingNullableToNonNullable, "(object)null").WithLocation(306, 29),
-                // (306,19): hidden CS8607: Expression is probably never null.
-                //         var y33 = new { p = (object)null } ?? x33;
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "new { p = (object)null }").WithLocation(306, 19));
+                Diagnostic(ErrorCode.WRN_ConvertingNullableToNonNullable, "(object)null").WithLocation(306, 29));
         }
 
         [Fact]
@@ -9801,9 +9792,6 @@ class C
                 // (15,14): warning CS8620: Nullability of reference types in argument of type 'I<object>[]' doesn't match target type 'I<object?>[]' for parameter 'y' in 'void C.G(I<object> x, params I<object?>[] y)'.
                 //         G(x, new[] { x, x });
                 Diagnostic(ErrorCode.WRN_NullabilityMismatchInArgument, "new[] { x, x }").WithArguments("I<object>[]", "I<object?>[]", "y", "void C.G(I<object> x, params I<object?>[] y)").WithLocation(15, 14),
-                // (17,14): warning CS8639: No best nullability found for implicitly-typed array.
-                //         G(x, new[] { x, y, z });
-                Diagnostic(ErrorCode.WRN_NoBestNullabilityArrayElements, "new[] { x, y, z }").WithLocation(17, 14),
                 // (17,14): warning CS8620: Nullability of reference types in argument of type 'I<object>?[]' doesn't match target type 'I<object?>[]' for parameter 'y' in 'void C.G(I<object> x, params I<object?>[] y)'.
                 //         G(x, new[] { x, y, z });
                 Diagnostic(ErrorCode.WRN_NullabilityMismatchInArgument, "new[] { x, y, z }").WithArguments("I<object>?[]", "I<object?>[]", "y", "void C.G(I<object> x, params I<object?>[] y)").WithLocation(17, 14),
@@ -10716,10 +10704,7 @@ public struct S2
             c.VerifyDiagnostics(
                 // (63,16): warning CS8603: Possible null reference return.
                 //         return y11.F1;
-                Diagnostic(ErrorCode.WRN_NullReferenceReturn, "y11.F1").WithLocation(63, 16),
-                // (70,16): hidden CS8607: Expression is probably never null.
-                //         return y12.F1 ?? new object();
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "y12.F1").WithLocation(70, 16));
+                Diagnostic(ErrorCode.WRN_NullReferenceReturn, "y11.F1").WithLocation(63, 16));
         }
 
         [Fact]
@@ -10785,24 +10770,9 @@ class C
                 // (14,21): warning CS8600: Converting null literal or possible null value to non-nullable type.
                 //         object y1 = x1;
                 Diagnostic(ErrorCode.WRN_ConvertingNullableToNonNullable, "x1").WithLocation(14, 21),
-                // (21,21): hidden CS8607: Expression is probably never null.
-                //         object z2 = x2 ?? new object();
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "x2").WithLocation(21, 21),
-                // (26,22): hidden CS8607: Expression is probably never null.
-                //         object? x3 = M3() ?? M2();
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "M3()").WithLocation(26, 22),
-                // (27,21): hidden CS8607: Expression is probably never null.
-                //         object z3 = x3 ?? new object();
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "x3").WithLocation(27, 21),
                 // (39,21): warning CS8601: Possible null reference assignment.
                 //         object x5 = M2() ?? M2();
-                Diagnostic(ErrorCode.WRN_ConvertingNullableToNonNullable, "M2() ?? M2()").WithLocation(39, 21),
-                // (44,22): hidden CS8607: Expression is probably never null.
-                //         object? x6 = M3() ?? M3();
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "M3()").WithLocation(44, 22),
-                // (45,21): hidden CS8607: Expression is probably never null.
-                //         object z6 = x6 ?? new object();
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "x6").WithLocation(45, 21)
+                Diagnostic(ErrorCode.WRN_ConvertingNullableToNonNullable, "M2() ?? M2()").WithLocation(39, 21)
                 );
         }
 
@@ -10848,15 +10818,6 @@ class C
 " }, options: WithNonNullTypesTrue(), references: new[] { c0.EmitToImageReference() });
 
             c.VerifyDiagnostics(
-                 // (20,22): hidden CS8607: Expression is probably never null.
-                 //         object? x2 = M3() ?? CL0.M1();
-                 Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "M3()").WithLocation(20, 22),
-                 // (21,21): hidden CS8607: Expression is probably never null.
-                 //         object z2 = x2 ?? new object();
-                 Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "x2").WithLocation(21, 21),
-                 // (27,21): hidden CS8607: Expression is probably never null.
-                 //         object z3 = x3 ?? new object();
-                 Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "x3").WithLocation(27, 21)
                 );
         }
 
@@ -10927,10 +10888,7 @@ class C
                 Diagnostic(ErrorCode.WRN_ConvertingNullableToNonNullable, "M4() ? M3() : M2()").WithLocation(26, 22),
                 // (38,22): warning CS8600: Converting null literal or possible null value to non-nullable type.
                 //         object x5 =  M4() ? M2() : M2();
-                Diagnostic(ErrorCode.WRN_ConvertingNullableToNonNullable, "M4() ? M2() : M2()").WithLocation(38, 22),
-                // (44,21): hidden CS8607: Expression is probably never null.
-                //         object z6 = x6 ?? new object();
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "x6").WithLocation(44, 21)
+                Diagnostic(ErrorCode.WRN_ConvertingNullableToNonNullable, "M4() ? M2() : M2()").WithLocation(38, 22)
                 );
         }
 
@@ -11060,10 +11018,7 @@ class C
                 Diagnostic(ErrorCode.WRN_ConvertingNullableToNonNullable, "x3").WithLocation(31, 21),
                 // (46,21): warning CS8600: Converting null literal or possible null value to non-nullable type.
                 //         object y5 = x5;
-                Diagnostic(ErrorCode.WRN_ConvertingNullableToNonNullable, "x5").WithLocation(46, 21),
-                // (53,21): hidden CS8607: Expression is probably never null.
-                //         object z6 = x6 ?? new object();
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "x6").WithLocation(53, 21)
+                Diagnostic(ErrorCode.WRN_ConvertingNullableToNonNullable, "x5").WithLocation(46, 21)
                 );
         }
 
@@ -12732,7 +12687,7 @@ public class C
         {
             var listS = List.Create(s);
             var listO = List.Create(o);
-            listO /*T:List<string>!*/ .ToString();
+            listO /*T:List<string!>!*/ .ToString();
             listS = listO; // ok
         }
 
@@ -12745,13 +12700,13 @@ public class C
         {
             var listNS = List.Create(ns);
             var listO = List.Create(o);
-            listNS = listO; // ok
+            listNS = listO!; // 3
         }
 
         {
             var listO = List.Create(o);
             var listNS = List.Create(ns);
-            listO = listNS; // ok
+            listO = listNS!; // 4
         }
 
         {
@@ -13231,9 +13186,6 @@ class C
 ", AssertsTrueAttributeDefinition }, options: WithNonNullTypesTrue());
 
             c.VerifyDiagnostics(
-                // (7,16): hidden CS8606: Result of the comparison is possibly always false.
-                //         Assert(c == null, "hello");
-                Diagnostic(ErrorCode.HDN_NullCheckIsProbablyAlwaysFalse, "c == null").WithLocation(7, 16)
                 );
         }
 
@@ -15248,10 +15200,7 @@ class CL2
                  Diagnostic(ErrorCode.WRN_ConvertingNullableToNonNullable, "y3").WithLocation(40, 18),
                  // (48,18): warning CS8600: Converting null literal or possible null value to non-nullable type.
                  //             x4 = y4;
-                 Diagnostic(ErrorCode.WRN_ConvertingNullableToNonNullable, "y4").WithLocation(48, 18),
-                 // (58,13): hidden CS8605: Result of the comparison is possibly always true.
-                 //         if (y5 != null)
-                 Diagnostic(ErrorCode.HDN_NullCheckIsProbablyAlwaysTrue, "y5 != null").WithLocation(58, 13)
+                 Diagnostic(ErrorCode.WRN_ConvertingNullableToNonNullable, "y4").WithLocation(48, 18)
                 );
         }
 
@@ -15351,10 +15300,7 @@ class CL2
                  Diagnostic(ErrorCode.WRN_ConvertingNullableToNonNullable, "y3").WithLocation(40, 18),
                  // (48,18): warning CS8600: Converting null literal or possible null value to non-nullable type.
                  //             x4 = y4;
-                 Diagnostic(ErrorCode.WRN_ConvertingNullableToNonNullable, "y4").WithLocation(48, 18),
-                 // (58,13): hidden CS8606: Result of the comparison is possibly always false.
-                 //         if (null == y5)
-                 Diagnostic(ErrorCode.HDN_NullCheckIsProbablyAlwaysFalse, "null == y5").WithLocation(58, 13)
+                 Diagnostic(ErrorCode.WRN_ConvertingNullableToNonNullable, "y4").WithLocation(48, 18)
                 );
         }
 
@@ -15487,16 +15433,7 @@ class CL1
             c.VerifyDiagnostics(
                 // (15,18): warning CS8600: Converting null literal or possible null value to non-nullable type.
                 //         CL1 z2 = y2 ?? x2;
-                Diagnostic(ErrorCode.WRN_ConvertingNullableToNonNullable, "y2 ?? x2").WithLocation(15, 18),
-                // (20,18): hidden CS8607: Expression is probably never null.
-                //         CL1 z3 = x3 ?? y3;
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "x3").WithLocation(20, 18),
-                // (26,18): hidden CS8607: Expression is probably never null.
-                //         CL1 z4 = x4 ?? x4.M1();
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "x4").WithLocation(26, 18),
-                // (38,21): hidden CS8607: Expression is probably never null.
-                //         string z6 = y6 ?? x6.M2();
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "y6").WithLocation(38, 21)
+                Diagnostic(ErrorCode.WRN_ConvertingNullableToNonNullable, "y2 ?? x2").WithLocation(15, 18)
                 );
         }
 
@@ -15542,18 +15479,15 @@ class CL1
 " }, options: WithNonNullTypesTrue());
 
             c.VerifyDiagnostics(
-                 // (10,18): warning CS8600: Converting null literal or possible null value to non-nullable type.
-                 //         CL1 z1 = x1?.M1();
-                 Diagnostic(ErrorCode.WRN_ConvertingNullableToNonNullable, "x1?.M1()").WithLocation(10, 18),
-                 // (16,18): hidden CS8607: Expression is probably never null.
-                 //         CL1 z2 = x2?.M1();
-                 Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "x2").WithLocation(16, 18),
-                 // (22,18): hidden CS8607: Expression is probably never null.
-                 //         CL1 z3 = x3?.M2();
-                 Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "x3").WithLocation(22, 18),
-                 // (22,18): warning CS8600: Converting null literal or possible null value to non-nullable type.
-                 //         CL1 z3 = x3?.M2();
-                 Diagnostic(ErrorCode.WRN_ConvertingNullableToNonNullable, "x3?.M2()").WithLocation(22, 18)
+                // (10,18): warning CS8600: Converting null literal or possible null value to non-nullable type.
+                //         CL1 z1 = x1?.M1();
+                Diagnostic(ErrorCode.WRN_ConvertingNullableToNonNullable, "x1?.M1()").WithLocation(10, 18),
+                // (22,18): warning CS8600: Converting null literal or possible null value to non-nullable type.
+                //         CL1 z3 = x3?.M2();
+                Diagnostic(ErrorCode.WRN_ConvertingNullableToNonNullable, "x3?.M2()").WithLocation(22, 18),
+                // (27,16): warning CS8604: Possible null reference argument for parameter 'x' in 'void CL1.M3(CL1 x)'.
+                //         x4?.M3(x4);
+                Diagnostic(ErrorCode.WRN_NullReferenceArgument, "x4").WithArguments("x", "void CL1.M3(CL1 x)").WithLocation(27, 16)
                 );
         }
 
@@ -15618,18 +15552,9 @@ class CL1
                 // (15,18): warning CS8600: Converting null literal or possible null value to non-nullable type.
                 //         CL1 z2 = y2 != null ? y2 : x2;
                 Diagnostic(ErrorCode.WRN_ConvertingNullableToNonNullable, "y2 != null ? y2 : x2").WithLocation(15, 18),
-                // (20,18): hidden CS8605: Result of the comparison is possibly always true.
-                //         CL1 z3 = x3 != null ? x3 : y3;
-                Diagnostic(ErrorCode.HDN_NullCheckIsProbablyAlwaysTrue, "x3 != null").WithLocation(20, 18),
                 // (20,18): warning CS8600: Converting null literal or possible null value to non-nullable type.
                 //         CL1 z3 = x3 != null ? x3 : y3;
                 Diagnostic(ErrorCode.WRN_ConvertingNullableToNonNullable, "x3 != null ? x3 : y3").WithLocation(20, 18),
-                // (26,18): hidden CS8605: Result of the comparison is possibly always true.
-                //         CL1 z4 = x4 != null ? x4 : x4.M1();
-                Diagnostic(ErrorCode.HDN_NullCheckIsProbablyAlwaysTrue, "x4 != null").WithLocation(26, 18),
-                // (38,21): hidden CS8605: Result of the comparison is possibly always true.
-                //         string z6 = y6 != null ? y6 : x6.M2();
-                Diagnostic(ErrorCode.HDN_NullCheckIsProbablyAlwaysTrue, "y6 != null").WithLocation(38, 21),
                 // (44,21): warning CS8600: Converting null literal or possible null value to non-nullable type.
                 //         string z7 = y7 != null ? y7 : x7.M2();
                 Diagnostic(ErrorCode.WRN_ConvertingNullableToNonNullable, "y7 != null ? y7 : x7.M2()").WithLocation(44, 21)
@@ -15697,18 +15622,9 @@ class CL1
                 // (15,18): warning CS8600: Converting null literal or possible null value to non-nullable type.
                 //         CL1 z2 = y2 == null ? x2 : y2;
                 Diagnostic(ErrorCode.WRN_ConvertingNullableToNonNullable, "y2 == null ? x2 : y2").WithLocation(15, 18),
-                // (20,18): hidden CS8606: Result of the comparison is possibly always false.
-                //         CL1 z3 = x3 == null ? y3 : x3;
-                Diagnostic(ErrorCode.HDN_NullCheckIsProbablyAlwaysFalse, "x3 == null").WithLocation(20, 18),
                 // (20,18): warning CS8600: Converting null literal or possible null value to non-nullable type.
                 //         CL1 z3 = x3 == null ? y3 : x3;
                 Diagnostic(ErrorCode.WRN_ConvertingNullableToNonNullable, "x3 == null ? y3 : x3").WithLocation(20, 18),
-                // (26,18): hidden CS8606: Result of the comparison is possibly always false.
-                //         CL1 z4 = x4 == null ? x4.M1() : x4;
-                Diagnostic(ErrorCode.HDN_NullCheckIsProbablyAlwaysFalse, "x4 == null").WithLocation(26, 18),
-                // (38,21): hidden CS8606: Result of the comparison is possibly always false.
-                //         string z6 = y6 == null ? x6.M2() : y6;
-                Diagnostic(ErrorCode.HDN_NullCheckIsProbablyAlwaysFalse, "y6 == null").WithLocation(38, 21),
                 // (44,21): warning CS8600: Converting null literal or possible null value to non-nullable type.
                 //         string z7 = y7 == null ? x7.M2() : y7;
                 Diagnostic(ErrorCode.WRN_ConvertingNullableToNonNullable, "y7 == null ? x7.M2() : y7").WithLocation(44, 21)
@@ -15773,9 +15689,6 @@ class C
 " }, options: WithNonNullTypesTrue());
 
             c.VerifyDiagnostics(
-                 // (12,21): hidden CS8607: Expression is probably never null.
-                 //         object z1 = y1 ?? x1;
-                 Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "y1").WithLocation(12, 21)
                 );
         }
 
@@ -15800,9 +15713,6 @@ class C
 " }, options: WithNonNullTypesTrue());
 
             c.VerifyDiagnostics(
-                 // (12,21): hidden CS8605: Result of the comparison is possibly always true.
-                 //         object z1 = y1 != null ? y1 : x1;
-                 Diagnostic(ErrorCode.HDN_NullCheckIsProbablyAlwaysTrue, "y1 != null").WithLocation(12, 21)
                 );
         }
 
@@ -15827,9 +15737,6 @@ class C
 " }, options: WithNonNullTypesTrue());
 
             c.VerifyDiagnostics(
-                 // (12,9): hidden CS8607: Expression is probably never null.
-                 //         y1?.GetHashCode();
-                 Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "y1").WithLocation(12, 9)
                 );
         }
 
@@ -15863,9 +15770,6 @@ class C
 " }, options: WithNonNullTypesTrue());
 
             c.VerifyDiagnostics(
-                 // (13,13): hidden CS8606: Result of the comparison is possibly always false.
-                 //         if (y1 == null)
-                 Diagnostic(ErrorCode.HDN_NullCheckIsProbablyAlwaysFalse, "y1 == null").WithLocation(13, 13)
                 );
         }
 
@@ -15899,9 +15803,6 @@ class C
 " }, options: WithNonNullTypesTrue());
 
             c.VerifyDiagnostics(
-                 // (13,13): hidden CS8605: Result of the comparison is possibly always true.
-                 //         if (y1 != null)
-                 Diagnostic(ErrorCode.HDN_NullCheckIsProbablyAlwaysTrue, "y1 != null").WithLocation(13, 13)
                 );
         }
 
@@ -16492,9 +16393,6 @@ class C
 " }, options: WithNonNullTypesTrue());
 
             c.VerifyDiagnostics(
-                // (8,22): hidden CS8606: Result of the comparison is possibly always false.
-                //             if (x is null) // hidden
-                Diagnostic(ErrorCode.HDN_NullCheckIsProbablyAlwaysFalse, "null").WithLocation(8, 22),
                 // (10,17): warning CS8602: Possible dereference of a null reference.
                 //                 x.ToString(); // warn
                 Diagnostic(ErrorCode.WRN_NullReferenceReceiver, "x").WithLocation(10, 17)
@@ -17244,15 +17142,9 @@ class C
                 // (15,9): warning CS8602: Possible dereference of a null reference.
                 //         (b ? ref x2 : ref x2)/*T:I<string?>!*/.P.ToString();
                 Diagnostic(ErrorCode.WRN_NullReferenceReceiver, "(b ? ref x2 : ref x2)/*T:I<string?>!*/.P").WithLocation(15, 9),
-                // (16,10): warning CS8626: No best nullability for operands of conditional expression 'I<string>' and 'I<string?>'.
-                //         (b ? ref y2 : ref x2)/*T:I<string!>!*/.P.ToString();
-                Diagnostic(ErrorCode.WRN_NoBestNullabilityConditionalExpression, "b ? ref y2 : ref x2").WithArguments("I<string>", "I<string?>").WithLocation(16, 10),
                 // (16,27): warning CS8619: Nullability of reference types in value of type 'I<string?>' doesn't match target type 'I<string>'.
                 //         (b ? ref y2 : ref x2)/*T:I<string!>!*/.P.ToString();
                 Diagnostic(ErrorCode.WRN_NullabilityMismatchInAssignment, "x2").WithArguments("I<string?>", "I<string>").WithLocation(16, 27),
-                // (17,10): warning CS8626: No best nullability for operands of conditional expression 'I<string?>' and 'I<string>'.
-                //         (b ? ref x2 : ref y2)/*T:I<string!>!*/.P.ToString();
-                Diagnostic(ErrorCode.WRN_NoBestNullabilityConditionalExpression, "b ? ref x2 : ref y2").WithArguments("I<string?>", "I<string>").WithLocation(17, 10),
                 // (17,18): warning CS8619: Nullability of reference types in value of type 'I<string?>' doesn't match target type 'I<string>'.
                 //         (b ? ref x2 : ref y2)/*T:I<string!>!*/.P.ToString();
                 Diagnostic(ErrorCode.WRN_NullabilityMismatchInAssignment, "x2").WithArguments("I<string?>", "I<string>").WithLocation(17, 18),
@@ -17366,15 +17258,9 @@ class C
 }";
             var comp = CreateCompilation(new[] { source }, options: WithNonNullTypesTrue(), references: new[] { ref0 });
             comp.VerifyDiagnostics(
-                // (13,14): warning CS8626: No best nullability for operands of conditional expression 'B<object?>' and 'B<object>'.
-                //         o = (b ? x : y)/*T:B<object>!*/;
-                Diagnostic(ErrorCode.WRN_NoBestNullabilityConditionalExpression, "b ? x : y").WithArguments("B<object?>", "B<object>").WithLocation(13, 14),
                 // (13,18): warning CS8619: Nullability of reference types in value of type 'B<object?>' doesn't match target type 'B<object>'.
                 //         o = (b ? x : y)/*T:B<object>!*/;
                 Diagnostic(ErrorCode.WRN_NullabilityMismatchInAssignment, "x").WithArguments("B<object?>", "B<object>").WithLocation(13, 18),
-                // (15,14): warning CS8626: No best nullability for operands of conditional expression 'B<object>' and 'B<object?>'.
-                //         o = (b ? y : x)/*T:B<object>!*/;
-                Diagnostic(ErrorCode.WRN_NoBestNullabilityConditionalExpression, "b ? y : x").WithArguments("B<object>", "B<object?>").WithLocation(15, 14),
                 // (15,22): warning CS8619: Nullability of reference types in value of type 'B<object?>' doesn't match target type 'B<object>'.
                 //         o = (b ? y : x)/*T:B<object>!*/;
                 Diagnostic(ErrorCode.WRN_NullabilityMismatchInAssignment, "x").WithArguments("B<object?>", "B<object>").WithLocation(15, 22));
@@ -17448,15 +17334,9 @@ class C
 }";
             var comp = CreateCompilation(new[] { source }, options: WithNonNullTypesTrue(), references: new[] { ref0 });
             comp.VerifyDiagnostics(
-                // (12,14): warning CS8626: No best nullability for operands of conditional expression 'I<object>' and 'I<object?>'.
-                //         o = (b ? x : y)/*T:I<object>!*/;
-                Diagnostic(ErrorCode.WRN_NoBestNullabilityConditionalExpression, "b ? x : y").WithArguments("I<object>", "I<object?>").WithLocation(12, 14),
                 // (12,22): warning CS8619: Nullability of reference types in value of type 'I<object?>' doesn't match target type 'I<object>'.
                 //         o = (b ? x : y)/*T:I<object>!*/;
                 Diagnostic(ErrorCode.WRN_NullabilityMismatchInAssignment, "y").WithArguments("I<object?>", "I<object>").WithLocation(12, 22),
-                // (14,14): warning CS8626: No best nullability for operands of conditional expression 'I<object?>' and 'I<object>'.
-                //         o = (b ? y : x)/*T:I<object>!*/;
-                Diagnostic(ErrorCode.WRN_NoBestNullabilityConditionalExpression, "b ? y : x").WithArguments("I<object?>", "I<object>").WithLocation(14, 14),
                 // (14,18): warning CS8619: Nullability of reference types in value of type 'I<object?>' doesn't match target type 'I<object>'.
                 //         o = (b ? y : x)/*T:I<object>!*/;
                 Diagnostic(ErrorCode.WRN_NullabilityMismatchInAssignment, "y").WithArguments("I<object?>", "I<object>").WithLocation(14, 18)
@@ -17516,27 +17396,15 @@ class C
 }";
             var comp = CreateCompilation(new[] { source }, options: WithNonNullTypesTrue(), references: new[] { ref0 });
             comp.VerifyDiagnostics(
-                // (11,14): warning CS8626: No best nullability for operands of conditional expression 'IIn<object, string>' and 'IIn<object?, string?>'.
-                //         o = (b ? x1 : y1)/*T:IIn<object!, string>!*/;
-                Diagnostic(ErrorCode.WRN_NoBestNullabilityConditionalExpression, "b ? x1 : y1").WithArguments("IIn<object, string>", "IIn<object?, string?>").WithLocation(11, 14),
                 // (11,23): warning CS8619: Nullability of reference types in value of type 'IIn<object?, string?>' doesn't match target type 'IIn<object, string>'.
                 //         o = (b ? x1 : y1)/*T:IIn<object!, string!>!*/;
                 Diagnostic(ErrorCode.WRN_NullabilityMismatchInAssignment, "y1").WithArguments("IIn<object?, string?>", "IIn<object, string>").WithLocation(11, 23),
-                // (13,14): warning CS8626: No best nullability for operands of conditional expression 'IIn<object?, string?>' and 'IIn<object, string>'.
-                //         o = (b ? y1 : x1)/*T:IIn<object!, string>!*/;
-                Diagnostic(ErrorCode.WRN_NoBestNullabilityConditionalExpression, "b ? y1 : x1").WithArguments("IIn<object?, string?>", "IIn<object, string>").WithLocation(13, 14),
                 // (13,18): warning CS8619: Nullability of reference types in value of type 'IIn<object?, string?>' doesn't match target type 'IIn<object, string>'.
                 //         o = (b ? y1 : x1)/*T:IIn<object!, string!>!*/;
                 Diagnostic(ErrorCode.WRN_NullabilityMismatchInAssignment, "y1").WithArguments("IIn<object?, string?>", "IIn<object, string>").WithLocation(13, 18),
-                // (26,14): warning CS8626: No best nullability for operands of conditional expression 'IOut<object, string>' and 'IOut<object?, string?>'.
-                //         o = (b ? x2 : y2)/*T:IOut<object, string?>!*/;
-                Diagnostic(ErrorCode.WRN_NoBestNullabilityConditionalExpression, "b ? x2 : y2").WithArguments("IOut<object, string>", "IOut<object?, string?>").WithLocation(26, 14),
                 // (26,23): warning CS8619: Nullability of reference types in value of type 'IOut<object?, string?>' doesn't match target type 'IOut<object, string?>'.
                 //         o = (b ? x2 : y2)/*T:IOut<object!, string?>!*/;
                 Diagnostic(ErrorCode.WRN_NullabilityMismatchInAssignment, "y2").WithArguments("IOut<object?, string?>", "IOut<object, string?>").WithLocation(26, 23),
-                // (28,14): warning CS8626: No best nullability for operands of conditional expression 'IOut<object?, string?>' and 'IOut<object, string>'.
-                //         o = (b ? y2 : x2)/*T:IOut<object, string?>!*/;
-                Diagnostic(ErrorCode.WRN_NoBestNullabilityConditionalExpression, "b ? y2 : x2").WithArguments("IOut<object?, string?>", "IOut<object, string>").WithLocation(28, 14),
                 // (28,18): warning CS8619: Nullability of reference types in value of type 'IOut<object?, string?>' doesn't match target type 'IOut<object, string?>'.
                 //         o = (b ? y2 : x2)/*T:IOut<object!, string?>!*/;
                 Diagnostic(ErrorCode.WRN_NullabilityMismatchInAssignment, "y2").WithArguments("IOut<object?, string?>", "IOut<object, string?>").WithLocation(28, 18)
@@ -17586,15 +17454,9 @@ class C
 }";
             var comp = CreateCompilation(new[] { source }, options: WithNonNullTypesTrue(), references: new[] { ref0 });
             comp.VerifyDiagnostics(
-                // (20,14): warning CS8626: No best nullability for operands of conditional expression '(I<object>, I<object>)' and '(I<object> x2, I<object?> y2)'.
-                //         o = (b ? (x2, x2) : (x2, y2))/*T:(I<object!>!, I<object!>!)*/;
-                Diagnostic(ErrorCode.WRN_NoBestNullabilityConditionalExpression, "b ? (x2, x2) : (x2, y2)").WithArguments("(I<object>, I<object>)", "(I<object> x2, I<object?> y2)").WithLocation(20, 14),
                 // (20,29): warning CS8619: Nullability of reference types in value of type '(I<object> x2, I<object?> y2)' doesn't match target type '(I<object>, I<object>)'.
                 //         o = (b ? (x2, x2) : (x2, y2))/*T:(I<object!>!, I<object!>!)*/;
                 Diagnostic(ErrorCode.WRN_NullabilityMismatchInAssignment, "(x2, y2)").WithArguments("(I<object> x2, I<object?> y2)", "(I<object>, I<object>)").WithLocation(20, 29),
-                // (23,14): warning CS8626: No best nullability for operands of conditional expression '(I<object> x2, I<object?> y2)' and '(I<object?>, I<object?>)'.
-                //         o = (b ? (x2, y2) : (y2, y2))/*T:(I<object!>!, I<object?>!)*/;
-                Diagnostic(ErrorCode.WRN_NoBestNullabilityConditionalExpression, "b ? (x2, y2) : (y2, y2)").WithArguments("(I<object> x2, I<object?> y2)", "(I<object?>, I<object?>)").WithLocation(23, 14),
                 // (23,29): warning CS8619: Nullability of reference types in value of type '(I<object?>, I<object?>)' doesn't match target type '(I<object>, I<object?>)'.
                 //         o = (b ? (x2, y2) : (y2, y2))/*T:(I<object!>!, I<object?>!)*/;
                 Diagnostic(ErrorCode.WRN_NullabilityMismatchInAssignment, "(y2, y2)").WithArguments("(I<object?>, I<object?>)", "(I<object>, I<object?>)").WithLocation(23, 29));
@@ -17703,15 +17565,9 @@ class C
             // https://github.com/dotnet/roslyn/issues/30432: Report warnings for combinations of `IIn<object?>` and `IIn<object!>`
             // and combinations of  `IOut<object?>` and `IOut<object!>`.
             comp.VerifyDiagnostics(
-                // (11,26): warning CS8626: No best nullability for operands of conditional expression 'I<object>' and 'I<object?>'.
-                //         ref var xy = ref b ? ref x1 : ref y1;
-                Diagnostic(ErrorCode.WRN_NoBestNullabilityConditionalExpression, "b ? ref x1 : ref y1").WithArguments("I<object>", "I<object?>").WithLocation(11, 26),
                 // (11,43): warning CS8619: Nullability of reference types in value of type 'I<object?>' doesn't match target type 'I<object>'.
                 //         ref var xy = ref b ? ref x1 : ref y1;
                 Diagnostic(ErrorCode.WRN_NullabilityMismatchInAssignment, "y1").WithArguments("I<object?>", "I<object>").WithLocation(11, 43),
-                // (13,26): warning CS8626: No best nullability for operands of conditional expression 'I<object?>' and 'I<object>'.
-                //         ref var yx = ref b ? ref y1 : ref x1;
-                Diagnostic(ErrorCode.WRN_NoBestNullabilityConditionalExpression, "b ? ref y1 : ref x1").WithArguments("I<object?>", "I<object>").WithLocation(13, 26),
                 // (13,34): warning CS8619: Nullability of reference types in value of type 'I<object?>' doesn't match target type 'I<object>'.
                 //         ref var yx = ref b ? ref y1 : ref x1;
                 Diagnostic(ErrorCode.WRN_NullabilityMismatchInAssignment, "y1").WithArguments("I<object?>", "I<object>").WithLocation(13, 34));
@@ -17763,42 +17619,24 @@ class C
 }";
             var comp = CreateCompilation(new[] { source }, options: WithNonNullTypesTrue());
             comp.VerifyDiagnostics(
-                // (9,13): warning CS8626: No best nullability for operands of conditional expression 'I<object>' and 'I<object?>'.
-                //         a = c ? x : y;
-                Diagnostic(ErrorCode.WRN_NoBestNullabilityConditionalExpression, "c ? x : y").WithArguments("I<object>", "I<object?>").WithLocation(9, 13),
                 // (9,21): warning CS8619: Nullability of reference types in value of type 'I<object?>' doesn't match target type 'I<object>'.
                 //         a = c ? x : y;
                 Diagnostic(ErrorCode.WRN_NullabilityMismatchInAssignment, "y").WithArguments("I<object?>", "I<object>").WithLocation(9, 21),
-                // (10,13): warning CS8626: No best nullability for operands of conditional expression 'I<object>' and 'I<object?>'.
-                //         a = false ? x : y;
-                Diagnostic(ErrorCode.WRN_NoBestNullabilityConditionalExpression, "false ? x : y").WithArguments("I<object>", "I<object?>").WithLocation(10, 13),
                 // (10,25): warning CS8619: Nullability of reference types in value of type 'I<object?>' doesn't match target type 'I<object>'.
                 //         a = false ? x : y;
                 Diagnostic(ErrorCode.WRN_NullabilityMismatchInAssignment, "y").WithArguments("I<object?>", "I<object>").WithLocation(10, 25),
-                // (11,13): warning CS8626: No best nullability for operands of conditional expression 'I<object>' and 'I<object?>'.
-                //         a = true ? x : y;
-                Diagnostic(ErrorCode.WRN_NoBestNullabilityConditionalExpression, "true ? x : y").WithArguments("I<object>", "I<object?>").WithLocation(11, 13),
-                // (13,13): warning CS8626: No best nullability for operands of conditional expression 'I<object>' and 'I<object?>'.
-                //         b = c ? x : y;
-                Diagnostic(ErrorCode.WRN_NoBestNullabilityConditionalExpression, "c ? x : y").WithArguments("I<object>", "I<object?>").WithLocation(13, 13),
                 // (13,13): warning CS8619: Nullability of reference types in value of type 'I<object>' doesn't match target type 'I<object?>'.
                 //         b = c ? x : y;
                 Diagnostic(ErrorCode.WRN_NullabilityMismatchInAssignment, "c ? x : y").WithArguments("I<object>", "I<object?>").WithLocation(13, 13),
                 // (13,21): warning CS8619: Nullability of reference types in value of type 'I<object?>' doesn't match target type 'I<object>'.
                 //         b = c ? x : y;
                 Diagnostic(ErrorCode.WRN_NullabilityMismatchInAssignment, "y").WithArguments("I<object?>", "I<object>").WithLocation(13, 21),
-                // (14,13): warning CS8626: No best nullability for operands of conditional expression 'I<object>' and 'I<object?>'.
-                //         b = false ? x : y;
-                Diagnostic(ErrorCode.WRN_NoBestNullabilityConditionalExpression, "false ? x : y").WithArguments("I<object>", "I<object?>").WithLocation(14, 13),
                 // (14,13): warning CS8619: Nullability of reference types in value of type 'I<object>' doesn't match target type 'I<object?>'.
                 //         b = false ? x : y;
                 Diagnostic(ErrorCode.WRN_NullabilityMismatchInAssignment, "false ? x : y").WithArguments("I<object>", "I<object?>").WithLocation(14, 13),
                 // (14,25): warning CS8619: Nullability of reference types in value of type 'I<object?>' doesn't match target type 'I<object>'.
                 //         b = false ? x : y;
                 Diagnostic(ErrorCode.WRN_NullabilityMismatchInAssignment, "y").WithArguments("I<object?>", "I<object>").WithLocation(14, 25),
-                // (15,13): warning CS8626: No best nullability for operands of conditional expression 'I<object>' and 'I<object?>'.
-                //         b = true ? x : y;
-                Diagnostic(ErrorCode.WRN_NoBestNullabilityConditionalExpression, "true ? x : y").WithArguments("I<object>", "I<object?>").WithLocation(15, 13),
                 // (15,13): warning CS8619: Nullability of reference types in value of type 'I<object>' doesn't match target type 'I<object?>'.
                 //         b = true ? x : y;
                 Diagnostic(ErrorCode.WRN_NullabilityMismatchInAssignment, "true ? x : y").WithArguments("I<object>", "I<object?>").WithLocation(15, 13),
@@ -17866,10 +17704,7 @@ class C
             comp.VerifyDiagnostics(
                 // (5,10): warning CS8602: Possible dereference of a null reference.
                 //         (x ?? y).ToString();
-                Diagnostic(ErrorCode.WRN_NullReferenceReceiver, "x ?? y").WithLocation(5, 10),
-                // (7,25): hidden CS8607: Expression is probably never null.
-                //         if (y != null) (y ?? x).ToString();
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "y").WithLocation(7, 25));
+                Diagnostic(ErrorCode.WRN_NullReferenceReceiver, "x ?? y").WithLocation(5, 10));
         }
 
         [Fact]
@@ -17912,12 +17747,7 @@ class C
 }";
             var comp = CreateCompilation(new[] { source }, options: WithNonNullTypesTrue());
             comp.VerifyDiagnostics(
-                // (5,10): hidden CS8607: Expression is probably never null.
-                //         ("" ?? x).ToString();
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, @"""""").WithLocation(5, 10),
-                // (6,10): hidden CS8607: Expression is probably never null.
-                //         ("" ?? y).ToString();
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, @"""""").WithLocation(6, 10));
+                );
         }
 
         [Fact]
@@ -18017,24 +17847,16 @@ public class NotNull
                 // (25,10): error CS0019: Operator '??' cannot be applied to operands of type 'A' and 'B'
                 //         (x6.A ?? y6.B)/*T:!*/.ToString();
                 Diagnostic(ErrorCode.ERR_BadBinaryOps, "x6.A ?? y6.B").WithArguments("??", "A", "B").WithLocation(25, 10),
-                // (25,10): hidden CS8607: Expression is probably never null.
-                //         (x6.A ?? y6.B)/*T:!*/.ToString();
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "x6.A").WithLocation(25, 10),
                 // (29,10): error CS0019: Operator '??' cannot be applied to operands of type 'A' and 'B'
                 //         (x7.A ?? y7.B)/*T:!*/.ToString();
                 Diagnostic(ErrorCode.ERR_BadBinaryOps, "x7.A ?? y7.B").WithArguments("??", "A", "B").WithLocation(29, 10),
                 // (33,10): error CS0019: Operator '??' cannot be applied to operands of type 'A' and 'B'
                 //         (x8.A ?? y8.B)/*T:!*/.ToString();
                 Diagnostic(ErrorCode.ERR_BadBinaryOps, "x8.A ?? y8.B").WithArguments("??", "A", "B").WithLocation(33, 10),
-                // (33,10): hidden CS8607: Expression is probably never null.
-                //         (x8.A ?? y8.B)/*T:!*/.ToString();
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "x8.A").WithLocation(33, 10),
                 // (37,10): error CS0019: Operator '??' cannot be applied to operands of type 'A' and 'B'
                 //         (x9.A ?? y9.B)/*T:!*/.ToString();
-                Diagnostic(ErrorCode.ERR_BadBinaryOps, "x9.A ?? y9.B").WithArguments("??", "A", "B").WithLocation(37, 10),
-                // (37,10): hidden CS8607: Expression is probably never null.
-                //         (x9.A ?? y9.B)/*T:!*/.ToString();
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "x9.A").WithLocation(37, 10));
+                Diagnostic(ErrorCode.ERR_BadBinaryOps, "x9.A ?? y9.B").WithArguments("??", "A", "B").WithLocation(37, 10)
+                );
         }
 
         [Fact]
@@ -18074,18 +17896,10 @@ public class NotNull
                 // (6,10): error CS0019: Operator '??' cannot be applied to operands of type 'Unknown?' and 'C'
                 //         (y1 ?? x1)/*T:!*/.ToString();
                 Diagnostic(ErrorCode.ERR_BadBinaryOps, "y1 ?? x1").WithArguments("??", "Unknown?", "C").WithLocation(6, 10),
-                // (5,10): hidden CS8607: Expression is probably never null.
-                //         (x1 ?? y1)/*T:!*/.ToString();
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "x1").WithLocation(5, 10),
                 // (8,10): warning CS8602: Possible dereference of a null reference.
                 //         (y1 ?? null)/*T:Unknown?*/.ToString();
-                Diagnostic(ErrorCode.WRN_NullReferenceReceiver, "y1 ?? null").WithLocation(8, 10),
-                // (13,10): hidden CS8607: Expression is probably never null.
-                //         (y2 ?? x2)/*T:!*/.ToString();
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "y2").WithLocation(13, 10),
-                // (15,10): hidden CS8607: Expression is probably never null.
-                //         (y2 ?? null)/*T:!*/.ToString();
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "y2").WithLocation(15, 10));
+                Diagnostic(ErrorCode.WRN_NullReferenceReceiver, "y1 ?? null").WithLocation(8, 10)
+                );
         }
 
         [Fact]
@@ -18203,24 +18017,15 @@ class C
                 // (8,30): warning CS8619: Nullability of reference types in value of type 'I<object?>' doesn't match target type 'I<object>'.
                 //         I<object> z1 = x1 ?? y1;
                 Diagnostic(ErrorCode.WRN_NullabilityMismatchInAssignment, "y1").WithArguments("I<object?>", "I<object>").WithLocation(8, 30),
-                // (9,25): hidden CS8607: Expression is probably never null.
-                //         I<object?> w1 = y1 ?? x1;
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "y1").WithLocation(9, 25),
                 // (9,31): warning CS8619: Nullability of reference types in value of type 'I<object>' doesn't match target type 'I<object?>'.
                 //         I<object?> w1 = y1 ?? x1;
                 Diagnostic(ErrorCode.WRN_NullabilityMismatchInAssignment, "x1").WithArguments("I<object>", "I<object?>").WithLocation(9, 31),
-                // (14,27): hidden CS8607: Expression is probably never null.
-                //         IIn<object?> w2 = y2 ?? x2;
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "y2").WithLocation(14, 27),
                 // (14,27): warning CS8619: Nullability of reference types in value of type 'IIn<object>' doesn't match target type 'IIn<object?>'.
                 //         IIn<object?> w2 = y2 ?? x2;
                 Diagnostic(ErrorCode.WRN_NullabilityMismatchInAssignment, "y2 ?? x2").WithArguments("IIn<object>", "IIn<object?>").WithLocation(14, 27),
                 // (18,27): warning CS8619: Nullability of reference types in value of type 'IOut<object?>' doesn't match target type 'IOut<object>'.
                 //         IOut<object> z3 = x3 ?? y3;
                 Diagnostic(ErrorCode.WRN_NullabilityMismatchInAssignment, "x3 ?? y3").WithArguments("IOut<object?>", "IOut<object>").WithLocation(18, 27),
-                // (19,28): hidden CS8607: Expression is probably never null.
-                //         IOut<object?> w3 = y3 ?? x3;
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "y3").WithLocation(19, 28),
                 // (24,15): warning CS8600: Converting null literal or possible null value to non-nullable type.
                 //         z4 = ((IIn<object?>)x4) ?? y4;
                 Diagnostic(ErrorCode.WRN_ConvertingNullableToNonNullable, "(IIn<object?>)x4").WithLocation(24, 15),
@@ -18564,13 +18369,8 @@ class C
                 Diagnostic(ErrorCode.WRN_NullReferenceReceiver, "x ?? y").WithLocation(5, 10),
                 // (7,10): warning CS8602: Possible dereference of a null reference.
                 //         (y ?? x).ToString();
-                Diagnostic(ErrorCode.WRN_NullReferenceReceiver, "y ?? x").WithLocation(7, 10),
-                // (9,10): hidden CS8607: Expression is probably never null.
-                //         (z ?? x).ToString();
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "z").WithLocation(9, 10),
-                // (10,10): hidden CS8607: Expression is probably never null.
-                //         (z ?? y).ToString();
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "z").WithLocation(10, 10));
+                Diagnostic(ErrorCode.WRN_NullReferenceReceiver, "y ?? x").WithLocation(7, 10)
+                );
         }
 
         [Fact]
@@ -18664,25 +18464,7 @@ public class NotNull
                 Diagnostic(ErrorCode.WRN_NullReferenceReceiver, "x4.Object ?? y4.String").WithLocation(20, 10),
                 // (21,10): warning CS8602: Possible dereference of a null reference.
                 //         (y4.String ?? x4.Object)/*T:object?*/.ToString();
-                Diagnostic(ErrorCode.WRN_NullReferenceReceiver, "y4.String ?? x4.Object").WithLocation(21, 10),
-                // (26,10): hidden CS8607: Expression is probably never null.
-                //         (y5.String ?? x5.Object)/*T:object*/.ToString();
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "y5.String").WithLocation(26, 10),
-                // (30,10): hidden CS8607: Expression is probably never null.
-                //         (x6.Object ?? y6.String)/*T:object*/.ToString();
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "x6.Object").WithLocation(30, 10),
-                // (36,10): hidden CS8607: Expression is probably never null.
-                //         (y7.String ?? x7.Object)/*T:object!*/.ToString();
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "y7.String").WithLocation(36, 10),
-                // (40,10): hidden CS8607: Expression is probably never null.
-                //         (x8.Object ?? y8.String)/*T:object*/.ToString();
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "x8.Object").WithLocation(40, 10),
-                // (45,10): hidden CS8607: Expression is probably never null.
-                //         (x9.Object ?? y9.String)/*T:object!*/.ToString();
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "x9.Object").WithLocation(45, 10),
-                // (46,10): hidden CS8607: Expression is probably never null.
-                //         (y9.String ?? x9.Object)/*T:object!*/.ToString();
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "y9.String").WithLocation(46, 10));
+                Diagnostic(ErrorCode.WRN_NullReferenceReceiver, "y4.String ?? x4.Object").WithLocation(21, 10));
         }
 
         [Fact]
@@ -18716,15 +18498,9 @@ class C
                 // (11,15): warning CS8619: Nullability of reference types in value of type 'B<object?>' doesn't match target type 'A<object>'.
                 //         (x ?? y).F.ToString(); // 1
                 Diagnostic(ErrorCode.WRN_NullabilityMismatchInAssignment, "y").WithArguments("B<object?>", "A<object>").WithLocation(11, 15),
-                // (12,10): hidden CS8607: Expression is probably never null.
-                //         (y ?? x).F.ToString(); // 2
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "y").WithLocation(12, 10),
                 // (12,10): warning CS8619: Nullability of reference types in value of type 'B<object?>' doesn't match target type 'A<object>'.
                 //         (y ?? x).F.ToString(); // 2
                 Diagnostic(ErrorCode.WRN_NullabilityMismatchInAssignment, "y").WithArguments("B<object?>", "A<object>").WithLocation(12, 10),
-                // (16,10): hidden CS8607: Expression is probably never null.
-                //         (z ?? w).F.ToString(); // 3
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "z").WithLocation(16, 10),
                 // (16,15): warning CS8619: Nullability of reference types in value of type 'B<object>' doesn't match target type 'A<object?>'.
                 //         (z ?? w).F.ToString(); // 3
                 Diagnostic(ErrorCode.WRN_NullabilityMismatchInAssignment, "w").WithArguments("B<object>", "A<object?>").WithLocation(16, 15),
@@ -18766,15 +18542,9 @@ class C
                 // (9,10): warning CS8619: Nullability of reference types in value of type 'IIn<object>' doesn't match target type 'IIn<string?>'.
                 //         (x ?? y)/*T:IIn<string?>!*/.F(string.Empty, null);
                 Diagnostic(ErrorCode.WRN_NullabilityMismatchInAssignment, "x").WithArguments("IIn<object>", "IIn<string?>").WithLocation(9, 10),
-                // (10,10): hidden CS8607: Expression is probably never null.
-                //         (y ?? x)/*T:IIn<string?>!*/.F(string.Empty, null);
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "y").WithLocation(10, 10),
                 // (10,15): warning CS8619: Nullability of reference types in value of type 'IIn<object>' doesn't match target type 'IIn<string?>'.
                 //         (y ?? x)/*T:IIn<string?>!*/.F(string.Empty, null);
                 Diagnostic(ErrorCode.WRN_NullabilityMismatchInAssignment, "x").WithArguments("IIn<object>", "IIn<string?>").WithLocation(10, 15),
-                // (14,10): hidden CS8607: Expression is probably never null.
-                //         (z ?? w)/*T:IIn<string!>!*/.F(string.Empty, null);
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "z").WithLocation(14, 10),
                 // (14,53): warning CS8625: Cannot convert null literal to non-nullable reference or unconstrained type parameter.
                 //         (z ?? w)/*T:IIn<string!>!*/.F(string.Empty, null);
                 Diagnostic(ErrorCode.WRN_NullAsNonNullable, "null").WithLocation(14, 53),
@@ -18810,15 +18580,9 @@ class C
                 // (9,15): warning CS8619: Nullability of reference types in value of type 'IOut<string?>' doesn't match target type 'IOut<object>'.
                 //         (x ?? y)/*T:IOut<object!>!*/.P.ToString();
                 Diagnostic(ErrorCode.WRN_NullabilityMismatchInAssignment, "y").WithArguments("IOut<string?>", "IOut<object>").WithLocation(9, 15),
-                // (10,10): hidden CS8607: Expression is probably never null.
-                //         (y ?? x)/*T:IOut<object!>!*/.P.ToString();
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "y").WithLocation(10, 10),
                 // (10,10): warning CS8619: Nullability of reference types in value of type 'IOut<string?>' doesn't match target type 'IOut<object>'.
                 //         (y ?? x)/*T:IOut<object!>!*/.P.ToString();
                 Diagnostic(ErrorCode.WRN_NullabilityMismatchInAssignment, "y").WithArguments("IOut<string?>", "IOut<object>").WithLocation(10, 10),
-                // (14,10): hidden CS8607: Expression is probably never null.
-                //         (z ?? w)/*T:IOut<object?>!*/.P.ToString();
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "z").WithLocation(14, 10),
                 // (14,9): warning CS8602: Possible dereference of a null reference.
                 //         (z ?? w)/*T:IOut<object?>!*/.P.ToString();
                 Diagnostic(ErrorCode.WRN_NullReferenceReceiver, "(z ?? w)/*T:IOut<object?>!*/.P").WithLocation(14, 9),
@@ -18934,12 +18698,6 @@ class CL1
 " }, options: WithNonNullTypesTrue());
 
             c.VerifyDiagnostics(
-                 // (11,13): hidden CS8606: Result of the comparison is possibly always false.
-                 //         if (x1 == null) {} // 1
-                 Diagnostic(ErrorCode.HDN_NullCheckIsProbablyAlwaysFalse, "x1 == null").WithLocation(11, 13),
-                 // (23,13): hidden CS8606: Result of the comparison is possibly always false.
-                 //         if (x2 == null) {} // 1
-                 Diagnostic(ErrorCode.HDN_NullCheckIsProbablyAlwaysFalse, "x2 == null").WithLocation(23, 13)
                 );
         }
 
@@ -20140,12 +19898,12 @@ class CL0<T>
 " }, options: WithNonNullTypesTrue());
 
             c.VerifyDiagnostics(
-                // (10,18): warning CS8639: No best nullability found for implicitly-typed array.
+                // (10,27): warning CS8619: Nullability of reference types in value of type 'CL0<string?>' doesn't match target type 'CL0<string>'.
                 //         var u1 = new [] { x1, y1 };
-                Diagnostic(ErrorCode.WRN_NoBestNullabilityArrayElements, "new [] { x1, y1 }").WithLocation(10, 18),
-                // (11,18): warning CS8639: No best nullability found for implicitly-typed array.
+                Diagnostic(ErrorCode.WRN_NullabilityMismatchInAssignment, "x1").WithArguments("CL0<string?>", "CL0<string>").WithLocation(10, 27),
+                // (11,31): warning CS8619: Nullability of reference types in value of type 'CL0<string?>' doesn't match target type 'CL0<string>'.
                 //         var a1 = new [] { y1, x1 };
-                Diagnostic(ErrorCode.WRN_NoBestNullabilityArrayElements, "new [] { y1, x1 }").WithLocation(11, 18),
+                Diagnostic(ErrorCode.WRN_NullabilityMismatchInAssignment, "x1").WithArguments("CL0<string?>", "CL0<string>").WithLocation(11, 31),
                 // (12,43): warning CS8619: Nullability of reference types in value of type 'CL0<string>' doesn't match target type 'CL0<string?>'.
                 //         var v1 = new CL0<string?>[] { x1, y1 };
                 Diagnostic(ErrorCode.WRN_NullabilityMismatchInAssignment, "y1").WithArguments("CL0<string>", "CL0<string?>").WithLocation(12, 43),
@@ -20229,7 +19987,7 @@ class CL0<T>
                 Diagnostic(ErrorCode.WRN_NullReferenceReceiver, "c[0][0]").WithLocation(13, 9));
         }
 
-        [Fact]
+        [Fact, WorkItem(33346, "https://github.com/dotnet/roslyn/issues/33346")]
         public void ImplicitlyTypedArrayCreation_02()
         {
             var source =
@@ -20240,16 +19998,16 @@ class CL0<T>
         var a = new[] { x };
         a[0].ToString();
         var b = new[] { y };
-        b[0].ToString();
+        b[0].ToString(); // error 1
     }
     static void F(object[] a, object?[] b)
     {
         var c = new[] { a, b };
-        c[0][0].ToString();
+        c[0][0].ToString(); // missing error 2
         var d = new[] { a, b! };
-        d[0][0].ToString();
+        d[0][0].ToString(); // missing error 3
         var e = new[] { b!, a };
-        e[0][0].ToString();
+        e[0][0].ToString(); // missing error 4
     }
 }";
             var comp = CreateCompilation(new[] { source }, options: WithNonNullTypesTrue());
@@ -20257,16 +20015,8 @@ class CL0<T>
             comp.VerifyDiagnostics(
                 // (8,9): warning CS8602: Possible dereference of a null reference.
                 //         b[0].ToString();
-                Diagnostic(ErrorCode.WRN_NullReferenceReceiver, "b[0]").WithLocation(8, 9),
-                // (12,17): warning CS8639: No best nullability found for implicitly-typed array.
-                //         var c = new[] { a, b };
-                Diagnostic(ErrorCode.WRN_NoBestNullabilityArrayElements, "new[] { a, b }").WithLocation(12, 17),
-                // (14,17): warning CS8639: No best nullability found for implicitly-typed array.
-                //         var d = new[] { a, b! };
-                Diagnostic(ErrorCode.WRN_NoBestNullabilityArrayElements, "new[] { a, b! }").WithLocation(14, 17),
-                // (16,17): warning CS8639: No best nullability found for implicitly-typed array.
-                //         var e = new[] { b!, a };
-                Diagnostic(ErrorCode.WRN_NoBestNullabilityArrayElements, "new[] { b!, a }").WithLocation(16, 17));
+                Diagnostic(ErrorCode.WRN_NullReferenceReceiver, "b[0]").WithLocation(8, 9)
+                );
         }
 
         [Fact]
@@ -20464,24 +20214,13 @@ class C
 }";
             var comp = CreateCompilation(new[] { source }, options: WithNonNullTypesTrue());
             comp.VerifyDiagnostics(
-                // (8,21): warning CS8639: No best nullability found for implicitly-typed array.
-                //             var c = new[] { a, b };
-                Diagnostic(ErrorCode.WRN_NoBestNullabilityArrayElements, "new[] { a, b }").WithLocation(8, 21),
                 // (9,13): warning CS8602: Possible dereference of a null reference.
                 //             c[0].ToString();
                 Diagnostic(ErrorCode.WRN_NullReferenceReceiver, "c[0]").WithLocation(9, 13),
-                // (10,21): warning CS8639: No best nullability found for implicitly-typed array.
-                //             var d = new[] { b, a };
-                Diagnostic(ErrorCode.WRN_NoBestNullabilityArrayElements, "new[] { b, a }").WithLocation(10, 21),
                 // (11,13): warning CS8602: Possible dereference of a null reference.
                 //             d[0].ToString();
-                Diagnostic(ErrorCode.WRN_NullReferenceReceiver, "d[0]").WithLocation(11, 13),
-                // (15,21): warning CS8639: No best nullability found for implicitly-typed array.
-                //             var c = new[] { a, b };
-                Diagnostic(ErrorCode.WRN_NoBestNullabilityArrayElements, "new[] { a, b }").WithLocation(15, 21),
-                // (17,21): warning CS8639: No best nullability found for implicitly-typed array.
-                //             var d = new[] { b, a };
-                Diagnostic(ErrorCode.WRN_NoBestNullabilityArrayElements, "new[] { b, a }").WithLocation(17, 21));
+                Diagnostic(ErrorCode.WRN_NullReferenceReceiver, "d[0]").WithLocation(11, 13)
+                );
         }
 
         [Fact]
@@ -20605,35 +20344,25 @@ class Program
     {
         var z = Create(A.F); // B<object~>
         object o;
-        o = (new[] { x, y })[0]/*T:B<object!>!*/;
+        o = (new[] { x, y })[0]/*T:B<object!>!*/;    // missing error converting x to B<object>
         o = (new[] { x, z })[0]/*T:B<object?>!*/;
-        o = (new[] { y, x })[0]/*T:B<object!>!*/;
+        o = (new[] { y, x })[0]/*T:B<object!>!*/;    // missing error converting x to B<object>
         o = (new[] { y, z })[0]/*T:B<object!>!*/;
         o = (new[] { z, x })[0]/*T:B<object?>!*/;
         o = (new[] { z, y })[0]/*T:B<object!>!*/;
-        o = (new[] { x, y, z })[0]/*T:B<object!>!*/;
-        o = (new[] { z, y, x })[0]/*T:B<object!>!*/;
+        o = (new[] { x, y, z })[0]/*T:B<object!>!*/;    // missing error converting x to B<object>
+        o = (new[] { z, y, x })[0]/*T:B<object!>!*/;    // missing error converting x to B<object>
     }
 }";
             var comp = CreateCompilation(new[] { source }, options: WithNonNullTypesTrue(), references: new[] { ref0 });
             comp.VerifyDiagnostics(
-                // (12,14): warning CS8639: No best nullability found for implicitly-typed array.
-                //         o = (new[] { x, y })[0]/*T:B<object>!*/;
-                Diagnostic(ErrorCode.WRN_NoBestNullabilityArrayElements, "new[] { x, y }").WithLocation(12, 14),
-                // (14,14): warning CS8639: No best nullability found for implicitly-typed array.
-                //         o = (new[] { y, x })[0]/*T:B<object>!*/;
-                Diagnostic(ErrorCode.WRN_NoBestNullabilityArrayElements, "new[] { y, x }").WithLocation(14, 14),
-                // (18,14): warning CS8639: No best nullability found for implicitly-typed array.
-                //         o = (new[] { x, y, z })[0]/*T:B<object>*/;
-                Diagnostic(ErrorCode.WRN_NoBestNullabilityArrayElements, "new[] { x, y, z }").WithLocation(18, 14),
-                // (19,14): warning CS8639: No best nullability found for implicitly-typed array.
-                //         o = (new[] { z, y, x })[0]/*T:B<object>*/;
-                Diagnostic(ErrorCode.WRN_NoBestNullabilityArrayElements, "new[] { z, y, x }").WithLocation(19, 14));
+                );
             comp.VerifyTypes();
         }
 
         [Fact]
         [WorkItem(29837, "https://github.com/dotnet/roslyn/issues/29837")]
+        [WorkItem(27961, "https://github.com/dotnet/roslyn/issues/27961")]
         public void ImplicitlyTypedArrayCreation_NestedNullability_Variant_01()
         {
             var source0 =
@@ -20698,18 +20427,13 @@ class C
     }
 }";
             var comp = CreateCompilation(new[] { source }, options: WithNonNullTypesTrue(), references: new[] { ref0 });
-            comp.VerifyDiagnostics(
-                // (12,14): warning CS8639: No best nullability found for implicitly-typed array.
-                //         o = (new[] { x, y })[0]/*T:I<object!>*/; // 1
-                Diagnostic(ErrorCode.WRN_NoBestNullabilityArrayElements, "new[] { x, y }").WithLocation(12, 14),
-                // (14,14): warning CS8639: No best nullability found for implicitly-typed array.
-                //         o = (new[] { y, x })[0]/*T:I<object!>*/; // 2
-                Diagnostic(ErrorCode.WRN_NoBestNullabilityArrayElements, "new[] { y, x }").WithLocation(14, 14));
+            comp.VerifyDiagnostics();
             comp.VerifyTypes();
         }
 
         [Fact]
         [WorkItem(29837, "https://github.com/dotnet/roslyn/issues/29837")]
+        [WorkItem(27961, "https://github.com/dotnet/roslyn/issues/27961")]
         public void ImplicitlyTypedArrayCreation_NestedNullability_Variant_02()
         {
             var source0 =
@@ -20775,18 +20499,13 @@ class C
     }
 }";
             var comp = CreateCompilation(new[] { source }, options: WithNonNullTypesTrue(), references: new[] { ref0 });
-            comp.VerifyDiagnostics(
-                // (13,14): warning CS8639: No best nullability found for implicitly-typed array.
-                //         o = (new [] { x1, y1 })[0]/*T:I<IOut<string>>*/; // 1
-                Diagnostic(ErrorCode.WRN_NoBestNullabilityArrayElements, "new [] { x1, y1 }").WithLocation(13, 14),
-                // (15,14): warning CS8639: No best nullability found for implicitly-typed array.
-                //         o = (new [] { y1, x1 })[0]/*T:I<IOut<string>>*/; // 2
-                Diagnostic(ErrorCode.WRN_NoBestNullabilityArrayElements, "new [] { y1, x1 }").WithLocation(15, 14));
+            comp.VerifyDiagnostics();
             comp.VerifyTypes();
         }
 
         [Fact]
         [WorkItem(29837, "https://github.com/dotnet/roslyn/issues/29837")]
+        [WorkItem(27961, "https://github.com/dotnet/roslyn/issues/27961")]
         public void ImplicitlyTypedArrayCreation_NestedNullability_Variant_03()
         {
             var source0 =
@@ -20816,7 +20535,7 @@ class C
         var z0 = CreateINone(A.F1)/*T:B<object>.INone!*/;
         object o;
         o = (new[] { x0, x0 })[0]/*T:B<object!>.INone!*/;
-        o = (new[] { x0, y0 })[0]/*T:B<object!>.INone!*/; // 1
+        o = (new[] { x0, y0 })[0]/*T:B<object!>.INone!*/; // 1 (missing error converting one of these operands to the array element type)
         o = (new[] { x0, z0 })[0]/*T:B<object!>.INone!*/;
         o = (new[] { y0, x0 })[0]/*T:B<object!>.INone!*/; // 2
         o = (new[] { y0, y0 })[0]/*T:B<object?>.INone!*/;
@@ -20872,31 +20591,7 @@ class C
     }
 }";
             var comp = CreateCompilation(new[] { source }, options: WithNonNullTypesTrue(), references: new[] { ref0 });
-            comp.VerifyDiagnostics(
-                // (17,14): warning CS8639: No best nullability found for implicitly-typed array.
-                //         o = (new[] { x0, y0 })[0]/*T:B<object!>.INone*/; // 1
-                Diagnostic(ErrorCode.WRN_NoBestNullabilityArrayElements, "new[] { x0, y0 }").WithLocation(17, 14),
-                // (19,14): warning CS8639: No best nullability found for implicitly-typed array.
-                //         o = (new[] { y0, x0 })[0]/*T:B<object!>.INone*/; // 2
-                Diagnostic(ErrorCode.WRN_NoBestNullabilityArrayElements, "new[] { y0, x0 }").WithLocation(19, 14),
-                // (32,14): warning CS8639: No best nullability found for implicitly-typed array.
-                //         o = (new[] { x1, y1 })[0]/*T:B<object!>.I<string!>*/; // 3
-                Diagnostic(ErrorCode.WRN_NoBestNullabilityArrayElements, "new[] { x1, y1 }").WithLocation(32, 14),
-                // (34,14): warning CS8639: No best nullability found for implicitly-typed array.
-                //         o = (new[] { y1, x1 })[0]/*T:B<object!>.I<string!>*/; // 4
-                Diagnostic(ErrorCode.WRN_NoBestNullabilityArrayElements, "new[] { y1, x1 }").WithLocation(34, 14),
-                // (47,14): warning CS8639: No best nullability found for implicitly-typed array.
-                //         o = (new[] { x2, y2 })[0]/*T:B<object!>.IIn<string!>*/; // 5
-                Diagnostic(ErrorCode.WRN_NoBestNullabilityArrayElements, "new[] { x2, y2 }").WithLocation(47, 14),
-                // (49,14): warning CS8639: No best nullability found for implicitly-typed array.
-                //         o = (new[] { y2, x2 })[0]/*T:B<object!>.IIn<string!>*/; // 6
-                Diagnostic(ErrorCode.WRN_NoBestNullabilityArrayElements, "new[] { y2, x2 }").WithLocation(49, 14),
-                // (62,14): warning CS8639: No best nullability found for implicitly-typed array.
-                //         o = (new[] { x3, y3 })[0]/*T:B<object!>.IOut<string?>*/; // 7
-                Diagnostic(ErrorCode.WRN_NoBestNullabilityArrayElements, "new[] { x3, y3 }").WithLocation(62, 14),
-                // (64,14): warning CS8639: No best nullability found for implicitly-typed array.
-                //         o = (new[] { y3, x3 })[0]/*T:B<object!>.IOut<string?>*/; // 8
-                Diagnostic(ErrorCode.WRN_NoBestNullabilityArrayElements, "new[] { y3, x3 }").WithLocation(64, 14));
+            comp.VerifyDiagnostics();
             comp.VerifyTypes();
         }
 
@@ -20941,13 +20636,7 @@ class C
     }
 }";
             var comp = CreateCompilation(new[] { source }, options: WithNonNullTypesTrue(), references: new[] { ref0 });
-            comp.VerifyDiagnostics(
-                // (20,14): warning CS8639: No best nullability found for implicitly-typed array.
-                //         o = (new[] { (x2, x2), (x2, y2) })[0]/*T:(I<object!>!, I<object>!)*/;
-                Diagnostic(ErrorCode.WRN_NoBestNullabilityArrayElements, "new[] { (x2, x2), (x2, y2) }").WithLocation(20, 14),
-                // (23,14): warning CS8639: No best nullability found for implicitly-typed array.
-                //         o = (new[] { (x2, y2), (y2, y2) })[0]/*T:(I<object>!, I<object?>!)*/;
-                Diagnostic(ErrorCode.WRN_NoBestNullabilityArrayElements, "new[] { (x2, y2), (y2, y2) }").WithLocation(23, 14));
+            comp.VerifyDiagnostics();
             comp.VerifyTypes();
         }
 
@@ -21038,30 +20727,18 @@ class C
 }";
             var comp = CreateCompilation(new[] { source }, options: WithNonNullTypesTrue());
             comp.VerifyDiagnostics(
-                // (8,10): warning CS8639: No best nullability found for implicitly-typed array.
-                //         (new[] { x, y })[0].ToString(); // A1
-                Diagnostic(ErrorCode.WRN_NoBestNullabilityArrayElements, "new[] { x, y }").WithLocation(8, 10),
                 // (9,9): warning CS8602: Possible dereference of a null reference.
                 //         (new[] { x, z })[0].ToString(); // A2
                 Diagnostic(ErrorCode.WRN_NullReferenceReceiver, "(new[] { x, z })[0]").WithLocation(9, 9),
-                // (10,10): warning CS8639: No best nullability found for implicitly-typed array.
-                //         (new[] { x, w })[0].ToString(); // A3
-                Diagnostic(ErrorCode.WRN_NoBestNullabilityArrayElements, "new[] { x, w }").WithLocation(10, 10),
                 // (10,9): warning CS8602: Possible dereference of a null reference.
                 //         (new[] { x, w })[0].ToString(); // A3
                 Diagnostic(ErrorCode.WRN_NullReferenceReceiver, "(new[] { x, w })[0]").WithLocation(10, 9),
-                // (11,10): warning CS8639: No best nullability found for implicitly-typed array.
-                //         (new[] { y, z })[0].ToString(); // A4
-                Diagnostic(ErrorCode.WRN_NoBestNullabilityArrayElements, "new[] { y, z }").WithLocation(11, 10),
                 // (11,9): warning CS8602: Possible dereference of a null reference.
                 //         (new[] { y, z })[0].ToString(); // A4
                 Diagnostic(ErrorCode.WRN_NullReferenceReceiver, "(new[] { y, z })[0]").WithLocation(11, 9),
                 // (12,9): warning CS8602: Possible dereference of a null reference.
                 //         (new[] { y, w })[0].ToString(); // A5
                 Diagnostic(ErrorCode.WRN_NullReferenceReceiver, "(new[] { y, w })[0]").WithLocation(12, 9),
-                // (13,10): warning CS8639: No best nullability found for implicitly-typed array.
-                //         (new[] { w, z })[0].ToString(); // A6
-                Diagnostic(ErrorCode.WRN_NoBestNullabilityArrayElements, "new[] { w, z }").WithLocation(13, 10),
                 // (13,9): warning CS8602: Possible dereference of a null reference.
                 //         (new[] { w, z })[0].ToString(); // A6
                 Diagnostic(ErrorCode.WRN_NullReferenceReceiver, "(new[] { w, z })[0]").WithLocation(13, 9),
@@ -21608,15 +21285,9 @@ struct S2
                  // (22,14): warning CS8600: Converting null literal or possible null value to non-nullable type.
                  //         x2 = y2.F1;
                  Diagnostic(ErrorCode.WRN_ConvertingNullableToNonNullable, "y2.F1").WithLocation(22, 14),
-                 // (34,14): hidden CS8607: Expression is probably never null.
-                 //         x4 = y4.F2.F1 ?? x4;
-                 Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "y4.F2.F1").WithLocation(34, 14),
                  // (35,14): warning CS8600: Converting null literal or possible null value to non-nullable type.
                  //         x4 = y4.F2.F3;
                  Diagnostic(ErrorCode.WRN_ConvertingNullableToNonNullable, "y4.F2.F3").WithLocation(35, 14),
-                 // (42,14): hidden CS8607: Expression is probably never null.
-                 //         x5 = u5.F1 ?? x5;
-                 Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "u5.F1").WithLocation(42, 14),
                  // (43,14): warning CS8600: Converting null literal or possible null value to non-nullable type.
                  //         x5 = u5.F3;
                  Diagnostic(ErrorCode.WRN_ConvertingNullableToNonNullable, "u5.F3").WithLocation(43, 14)
@@ -21808,9 +21479,6 @@ struct S2
                 // (9,14): warning CS8600: Converting null literal or possible null value to non-nullable type.
                 //         x1 = new S1().F1;
                 Diagnostic(ErrorCode.WRN_ConvertingNullableToNonNullable, "new S1().F1").WithLocation(9, 14),
-                // (19,14): hidden CS8607: Expression is probably never null.
-                //         x3 = new S1() {F1 = x3}.F1 ?? x3;
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "new S1() {F1 = x3}.F1").WithLocation(19, 14),
                 // (24,14): warning CS8600: Converting null literal or possible null value to non-nullable type.
                 //         x4 = new S2().F2;
                 Diagnostic(ErrorCode.WRN_ConvertingNullableToNonNullable, "new S2().F2").WithLocation(24, 14)
@@ -21971,75 +21639,39 @@ struct S1
 
             // https://github.com/dotnet/roslyn/issues/29889: Why isn't u2 = v2 causing a warning?
             c.VerifyDiagnostics(
-                // (10,14): hidden CS8607: Expression is probably never null.
-                //         x1 = y1.p1 ?? x1;
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "y1.p1").WithLocation(10, 14),
                 // (11,14): warning CS8600: Converting null literal or possible null value to non-nullable type.
                 //         x1 = y1.p2;
                 Diagnostic(ErrorCode.WRN_ConvertingNullableToNonNullable, "y1.p2").WithLocation(11, 14),
-                // (19,14): hidden CS8607: Expression is probably never null.
-                //         x2 = u2.p2 ?? x2;
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "u2.p2").WithLocation(19, 14),
                 // (20,14): warning CS8600: Converting null literal or possible null value to non-nullable type.
                 //         x2 = u2.p1;
                 Diagnostic(ErrorCode.WRN_ConvertingNullableToNonNullable, "u2.p1").WithLocation(20, 14),
-                // (21,14): hidden CS8607: Expression is probably never null.
-                //         x2 = v2.p2 ?? x2;
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "v2.p2").WithLocation(21, 14),
                 // (22,14): warning CS8600: Converting null literal or possible null value to non-nullable type.
                 //         x2 = v2.p1;
                 Diagnostic(ErrorCode.WRN_ConvertingNullableToNonNullable, "v2.p1").WithLocation(22, 14),
-                // (29,14): hidden CS8607: Expression is probably never null.
-                //         x3 = v3.p1 ?? x3;
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "v3.p1").WithLocation(29, 14),
                 // (30,14): warning CS8600: Converting null literal or possible null value to non-nullable type.
                 //         x3 = v3.p2;
                 Diagnostic(ErrorCode.WRN_ConvertingNullableToNonNullable, "v3.p2").WithLocation(30, 14),
-                // (38,14): hidden CS8607: Expression is probably never null.
-                //         x4 = u4.p0.p2 ?? x4;
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "u4.p0.p2").WithLocation(38, 14),
                 // (39,14): warning CS8600: Converting null literal or possible null value to non-nullable type.
                 //         x4 = u4.p0.p1;
                 Diagnostic(ErrorCode.WRN_ConvertingNullableToNonNullable, "u4.p0.p1").WithLocation(39, 14),
-                // (40,14): hidden CS8607: Expression is probably never null.
-                //         x4 = v4.p0.p2 ?? x4;
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "v4.p0.p2").WithLocation(40, 14),
                 // (41,14): warning CS8600: Converting null literal or possible null value to non-nullable type.
                 //         x4 = v4.p0.p1;
                 Diagnostic(ErrorCode.WRN_ConvertingNullableToNonNullable, "v4.p0.p1").WithLocation(41, 14),
-                // (48,14): hidden CS8607: Expression is probably never null.
-                //         x5 = v5.p0.p1 ?? x5;
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "v5.p0.p1").WithLocation(48, 14),
                 // (49,14): warning CS8600: Converting null literal or possible null value to non-nullable type.
                 //         x5 = v5.p0.p2;
                 Diagnostic(ErrorCode.WRN_ConvertingNullableToNonNullable, "v5.p0.p2").WithLocation(49, 14),
-                // (56,14): hidden CS8607: Expression is probably never null.
-                //         x6 = v6.p1 ?? x6;
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "v6.p1").WithLocation(56, 14),
                 // (57,14): warning CS8600: Converting null literal or possible null value to non-nullable type.
                 //         x6 = v6.p2;
                 Diagnostic(ErrorCode.WRN_ConvertingNullableToNonNullable, "v6.p2").WithLocation(57, 14),
-                // (65,14): hidden CS8607: Expression is probably never null.
-                //         x7 = u7.p0.p2 ?? x7;
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "u7.p0.p2").WithLocation(65, 14),
                 // (66,14): warning CS8600: Converting null literal or possible null value to non-nullable type.
                 //         x7 = u7.p0.p1;
                 Diagnostic(ErrorCode.WRN_ConvertingNullableToNonNullable, "u7.p0.p1").WithLocation(66, 14),
-                // (67,14): hidden CS8607: Expression is probably never null.
-                //         x7 = v7.p0.p2 ?? x7;
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "v7.p0.p2").WithLocation(67, 14),
                 // (68,14): warning CS8600: Converting null literal or possible null value to non-nullable type.
                 //         x7 = v7.p0.p1;
                 Diagnostic(ErrorCode.WRN_ConvertingNullableToNonNullable, "v7.p0.p1").WithLocation(68, 14),
-                // (75,14): hidden CS8607: Expression is probably never null.
-                //         x8 = v8.p0.p1 ?? x8;
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "v8.p0.p1").WithLocation(75, 14),
                 // (76,14): warning CS8600: Converting null literal or possible null value to non-nullable type.
                 //         x8 = v8.p0.p2;
                 Diagnostic(ErrorCode.WRN_ConvertingNullableToNonNullable, "v8.p0.p2").WithLocation(76, 14),
-                // (83,14): hidden CS8607: Expression is probably never null.
-                //         x9 = v9.p1 ?? x9;
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "v9.p1").WithLocation(83, 14),
                 // (84,14): warning CS8600: Converting null literal or possible null value to non-nullable type.
                 //         x9 = v9.p2;
                 Diagnostic(ErrorCode.WRN_ConvertingNullableToNonNullable, "v9.p2").WithLocation(84, 14),
@@ -22053,7 +21685,7 @@ struct S1
                 //         x10 = u10.a1.p1; // 5
                 Diagnostic(ErrorCode.WRN_ConvertingNullableToNonNullable, "u10.a1.p1").WithLocation(99, 15),
                 // (100,15): warning CS8600: Converting null literal or possible null value to non-nullable type.
-                //         x10 = u10.a2.p2; // 6
+                //         x10 = u10.a2.p2; // 6 
                 Diagnostic(ErrorCode.WRN_ConvertingNullableToNonNullable, "u10.a2.p2").WithLocation(100, 15)
                 );
         }
@@ -22131,9 +21763,6 @@ class CL1
 " }, options: WithNonNullTypesTrue());
 
             c.VerifyDiagnostics(
-                 // (14,14): hidden CS8607: Expression is probably never null.
-                 //         x3 = new {F1 = x3}.F1 ?? x3;
-                 Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "new {F1 = x3}.F1").WithLocation(14, 14)
                 );
         }
 
@@ -22248,8 +21877,6 @@ class C
     }
 }";
             var comp = CreateCompilation(new[] { source }, options: WithNonNullTypesTrue());
-            // https://github.com/dotnet/roslyn/issues/29890: Should report ErrorCode.HDN_ExpressionIsProbablyNeverNull.
-            // See comment in DefiniteAssignment.VisitAnonymousObjectCreationExpression.
             comp.VerifyDiagnostics();
         }
 
@@ -22318,9 +21945,6 @@ class C
 " }, options: WithNonNullTypesTrue());
 
             c.VerifyDiagnostics(
-                 // (14,9): hidden CS8607: Expression is probably never null.
-                 //         this?.Test1();
-                 Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "this").WithLocation(14, 9)
                 );
         }
 
@@ -22487,10 +22111,7 @@ struct S1
                 Diagnostic(ErrorCode.WRN_ConvertingNullableToNonNullable, "P3").WithLocation(34, 14),
                 // (22,14): error CS8079: Use of possibly unassigned auto-implemented property 'P2'
                 //         x2 = P2;
-                Diagnostic(ErrorCode.ERR_UseDefViolationProperty, "P2").WithArguments("P2").WithLocation(22, 14),
-                // (56,14): hidden CS8607: Expression is probably never null.
-                //         x5 = P5.F1 ?? x5;
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "P5.F1").WithLocation(56, 14)
+                Diagnostic(ErrorCode.ERR_UseDefViolationProperty, "P2").WithArguments("P2").WithLocation(22, 14)
                 );
         }
 
@@ -24449,9 +24070,6 @@ class C
 " }, options: WithNonNullTypesTrue());
 
             c.VerifyDiagnostics(
-                 // (14,14): hidden CS8607: Expression is probably never null.
-                 //         x2 = new T2() ?? x2;
-                 Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "new T2()").WithLocation(14, 14)
                 );
         }
 
@@ -24506,9 +24124,6 @@ class CL0
 " }, options: WithNonNullTypesTrue());
 
             c.VerifyDiagnostics(
-                 // (14,14): hidden CS8607: Expression is probably never null.
-                 //         x2 = new CL0((dynamic)0) ?? x2;
-                 Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "new CL0((dynamic)0)").WithLocation(14, 14)
                 );
         }
 
@@ -24593,9 +24208,6 @@ class CL0
 " }, options: WithNonNullTypesTrue());
 
             c.VerifyDiagnostics(
-                 // (14,14): hidden CS8607: Expression is probably never null.
-                 //         x2 = x2[(dynamic)0] ?? x2;
-                 Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "x2[(dynamic)0]").WithLocation(14, 14)
                 );
         }
 
@@ -24765,9 +24377,6 @@ class CL0
 " }, options: WithNonNullTypesTrue());
 
             c.VerifyDiagnostics(
-                 // (14,14): hidden CS8607: Expression is probably never null.
-                 //         x2 = x2[(dynamic)0] ?? x2;
-                 Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "x2[(dynamic)0]").WithLocation(14, 14)
                 );
         }
 
@@ -24808,9 +24417,6 @@ class CL0
 " }, options: WithNonNullTypesTrue());
 
             c.VerifyDiagnostics(
-                 // (14,14): hidden CS8607: Expression is probably never null.
-                 //         x2 = x2[(dynamic)0] ?? x2;
-                 Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "x2[(dynamic)0]").WithLocation(14, 14)
                 );
         }
 
@@ -25019,9 +24625,6 @@ class CL0
 " }, options: WithNonNullTypesTrue());
 
             c.VerifyDiagnostics(
-                 // (14,14): hidden CS8607: Expression is probably never null.
-                 //         x2 = x2.M1((dynamic)0) ?? x2;
-                 Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "x2.M1((dynamic)0)").WithLocation(14, 14)
                 );
         }
 
@@ -25183,9 +24786,6 @@ class CL0
 " }, options: WithNonNullTypesTrue());
 
             c.VerifyDiagnostics(
-                 // (14,14): hidden CS8607: Expression is probably never null.
-                 //         x2 = x2.M1((dynamic)0) ?? x2;
-                 Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "x2.M1((dynamic)0)").WithLocation(14, 14)
                 );
         }
 
@@ -25224,9 +24824,6 @@ class CL0
 " }, options: WithNonNullTypesTrue());
 
             c.VerifyDiagnostics(
-                 // (14,14): hidden CS8607: Expression is probably never null.
-                 //         x2 = x2.M1((dynamic)0) ?? x2;
-                 Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "x2.M1((dynamic)0)").WithLocation(14, 14)
                 );
         }
 
@@ -25426,9 +25023,6 @@ class CL0
 " }, options: WithNonNullTypesTrue());
 
             c.VerifyDiagnostics(
-                 // (16,18): hidden CS8607: Expression is probably never null.
-                 //         CL0 z2 = new CL0(x2) ?? y2;
-                 Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "new CL0(x2)").WithLocation(16, 18)
                 );
         }
 
@@ -25478,9 +25072,6 @@ class C
 " }, options: WithNonNullTypesTrue());
 
             c.VerifyDiagnostics(
-                 // (16,14): hidden CS8607: Expression is probably never null.
-                 //         x2 = z2 ?? x2;
-                 Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "z2").WithLocation(16, 14)
                 );
         }
 
@@ -25507,9 +25098,6 @@ class C
 " }, options: WithNonNullTypesTrue());
 
             c.VerifyDiagnostics(
-                 // (15,14): hidden CS8607: Expression is probably never null.
-                 //         x2 = $"{y2}" ?? x2;
-                 Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, @"$""{y2}""").WithLocation(15, 14)
                 );
         }
 
@@ -25536,9 +25124,6 @@ class C
 " }, options: WithNonNullTypesTrue());
 
             c.VerifyDiagnostics(
-                 // (15,14): hidden CS8607: Expression is probably never null.
-                 //         x2 = new System.Action(Main) ?? x2;
-                 Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "new System.Action(Main)").WithLocation(15, 14)
                 );
         }
 
@@ -25849,9 +25434,6 @@ class C
 " }, options: WithNonNullTypesTrue());
 
             c.VerifyDiagnostics(
-                 // (15,14): hidden CS8607: Expression is probably never null.
-                 //         x2 = typeof(C) ?? x2;
-                 Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "typeof(C)").WithLocation(15, 14)
                 );
         }
 
@@ -26496,9 +26078,6 @@ class C
 " }, options: WithNonNullTypesTrue());
 
             c.VerifyDiagnostics(
-                 // (15,21): hidden CS8607: Expression is probably never null.
-                 //         string z2 = x2 + y2 ?? "";
-                 Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "x2 + y2").WithLocation(15, 21)
                 );
         }
 
@@ -26594,24 +26173,21 @@ class CL2
 " }, options: WithNonNullTypesTrue());
 
             c.VerifyDiagnostics(
-                 // (10,24): warning CS8604: Possible null reference argument for parameter 'y' in 'CL0 CL0.operator +(string? x, CL0 y)'.
-                 //         CL0? z1 = x1 + y1;
-                 Diagnostic(ErrorCode.WRN_NullReferenceArgument, "y1").WithArguments("y", "CL0 CL0.operator +(string? x, CL0 y)").WithLocation(10, 24),
-                 // (11,18): hidden CS8607: Expression is probably never null.
-                 //         CL0 u1 = z1 ?? new CL0();
-                 Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "z1").WithLocation(11, 18),
-                 // (16,18): warning CS8604: Possible null reference argument for parameter 'x' in 'CL1? CL1.operator +(string x, CL1? y)'.
-                 //         CL1 z2 = x2 + y2;
-                 Diagnostic(ErrorCode.WRN_NullReferenceArgument, "x2").WithArguments("x", "CL1? CL1.operator +(string x, CL1? y)").WithLocation(16, 18),
-                 // (16,18): warning CS8600: Converting null literal or possible null value to non-nullable type.
-                 //         CL1 z2 = x2 + y2;
-                 Diagnostic(ErrorCode.WRN_ConvertingNullableToNonNullable, "x2 + y2").WithLocation(16, 18),
-                 // (21,23): warning CS8604: Possible null reference argument for parameter 'y' in 'CL0 CL0.operator +(string? x, CL0 y)'.
-                 //         CL2 u3 = x3 + y3 + z3;
-                 Diagnostic(ErrorCode.WRN_NullReferenceArgument, "y3").WithArguments("y", "CL0 CL0.operator +(string? x, CL0 y)").WithLocation(21, 23),
-                 // (26,18): warning CS8604: Possible null reference argument for parameter 'x' in 'CL2 CL2.operator +(CL1 x, CL2 y)'.
-                 //         CL2 u4 = x4 + y4 + z4;
-                 Diagnostic(ErrorCode.WRN_NullReferenceArgument, "x4 + y4").WithArguments("x", "CL2 CL2.operator +(CL1 x, CL2 y)").WithLocation(26, 18)
+                // (10,24): warning CS8604: Possible null reference argument for parameter 'y' in 'CL0 CL0.operator +(string? x, CL0 y)'.
+                //         CL0? z1 = x1 + y1;
+                Diagnostic(ErrorCode.WRN_NullReferenceArgument, "y1").WithArguments("y", "CL0 CL0.operator +(string? x, CL0 y)").WithLocation(10, 24),
+                // (16,18): warning CS8604: Possible null reference argument for parameter 'x' in 'CL1? CL1.operator +(string x, CL1? y)'.
+                //         CL1 z2 = x2 + y2;
+                Diagnostic(ErrorCode.WRN_NullReferenceArgument, "x2").WithArguments("x", "CL1? CL1.operator +(string x, CL1? y)").WithLocation(16, 18),
+                // (16,18): warning CS8600: Converting null literal or possible null value to non-nullable type.
+                //         CL1 z2 = x2 + y2;
+                Diagnostic(ErrorCode.WRN_ConvertingNullableToNonNullable, "x2 + y2").WithLocation(16, 18),
+                // (21,23): warning CS8604: Possible null reference argument for parameter 'y' in 'CL0 CL0.operator +(string? x, CL0 y)'.
+                //         CL2 u3 = x3 + y3 + z3;
+                Diagnostic(ErrorCode.WRN_NullReferenceArgument, "y3").WithArguments("y", "CL0 CL0.operator +(string? x, CL0 y)").WithLocation(21, 23),
+                // (26,18): warning CS8604: Possible null reference argument for parameter 'x' in 'CL2 CL2.operator +(CL1 x, CL2 y)'.
+                //         CL2 u4 = x4 + y4 + z4;
+                Diagnostic(ErrorCode.WRN_NullReferenceArgument, "x4 + y4").WithArguments("x", "CL2 CL2.operator +(CL1 x, CL2 y)").WithLocation(26, 18)
                 );
         }
 
@@ -26658,15 +26234,12 @@ class CL0
 " }, options: WithNonNullTypesTrue());
 
             c.VerifyDiagnostics(
-                 // (10,19): warning CS8604: Possible null reference argument for parameter 'x' in 'bool CL0.operator false(CL0 x)'.
-                 //         CL0? z1 = x1 && y1;
-                 Diagnostic(ErrorCode.WRN_NullReferenceArgument, "x1").WithArguments("x", "bool CL0.operator false(CL0 x)").WithLocation(10, 19),
-                 // (10,19): warning CS8604: Possible null reference argument for parameter 'x' in 'CL0 CL0.operator &(CL0 x, CL0? y)'.
-                 //         CL0? z1 = x1 && y1;
-                 Diagnostic(ErrorCode.WRN_NullReferenceArgument, "x1").WithArguments("x", "CL0 CL0.operator &(CL0 x, CL0? y)").WithLocation(10, 19),
-                 // (17,18): hidden CS8607: Expression is probably never null.
-                 //         CL0 u2 = z2 ?? new CL0();
-                 Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "z2").WithLocation(17, 18)
+                // (10,19): warning CS8604: Possible null reference argument for parameter 'x' in 'bool CL0.operator false(CL0 x)'.
+                //         CL0? z1 = x1 && y1;
+                Diagnostic(ErrorCode.WRN_NullReferenceArgument, "x1").WithArguments("x", "bool CL0.operator false(CL0 x)").WithLocation(10, 19),
+                // (10,19): warning CS8604: Possible null reference argument for parameter 'x' in 'CL0 CL0.operator &(CL0 x, CL0? y)'.
+                //         CL0? z1 = x1 && y1;
+                Diagnostic(ErrorCode.WRN_NullReferenceArgument, "x1").WithArguments("x", "CL0 CL0.operator &(CL0 x, CL0? y)").WithLocation(10, 19)
                 );
         }
 
@@ -26987,15 +26560,6 @@ class C
 " }, options: WithNonNullTypesTrue());
 
             c.VerifyDiagnostics(
-                // (15,28): hidden CS8607: Expression is probably never null.
-                //         System.Action u2 = x2 + y2 ?? x2;
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "x2 + y2").WithLocation(15, 28),
-                // (25,28): hidden CS8607: Expression is probably never null.
-                //         System.Action u4 = x4 + y4 ?? y4;
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "x4 + y4").WithLocation(25, 28),
-                // (35,28): hidden CS8607: Expression is probably never null.
-                //         System.Action u6 = x6 + y6 ?? x6;
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "x6 + y6").WithLocation(35, 28),
                 // (40,28): warning CS8600: Converting null literal or possible null value to non-nullable type.
                 //         System.Action u7 = x7 + y7;
                 Diagnostic(ErrorCode.WRN_ConvertingNullableToNonNullable, "x7 + y7").WithLocation(40, 28),
@@ -27645,18 +27209,12 @@ class CL4 : CL3 {}
                 // (22,18): warning CS8600: Converting null literal or possible null value to non-nullable type.
                 //         CL2 u3 = x3;
                 Diagnostic(ErrorCode.WRN_ConvertingNullableToNonNullable, "x3").WithLocation(22, 18),
-                // (28,18): hidden CS8607: Expression is probably never null.
-                //         CL3 v4 = u4 ?? new CL3();
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "u4").WithLocation(28, 18),
                 // (33,18): warning CS8600: Converting null literal or possible null value to non-nullable type.
                 //         CL3 u5 = x5;
                 Diagnostic(ErrorCode.WRN_ConvertingNullableToNonNullable, "x5").WithLocation(33, 18),
                 // (44,22): warning CS8600: Converting null literal or possible null value to non-nullable type.
                 //         dynamic u7 = x7;
                 Diagnostic(ErrorCode.WRN_ConvertingNullableToNonNullable, "x7").WithLocation(44, 22),
-                // (50,22): hidden CS8607: Expression is probably never null.
-                //         dynamic v8 = u8 ?? x8;
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "u8").WithLocation(50, 22),
                 // (55,21): warning CS8600: Converting null literal or possible null value to non-nullable type.
                 //         object u9 = x9;
                 Diagnostic(ErrorCode.WRN_ConvertingNullableToNonNullable, "x9").WithLocation(55, 21),
@@ -27669,9 +27227,6 @@ class CL4 : CL3 {}
                 // (70,19): warning CS8600: Converting null literal or possible null value to non-nullable type.
                 //         CL4 u12 = (CL4)x12;
                 Diagnostic(ErrorCode.WRN_ConvertingNullableToNonNullable, "(CL4)x12").WithLocation(70, 19),
-                // (76,22): hidden CS8607: Expression is probably never null.
-                //         object v13 = u13 ?? new object();
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "u13").WithLocation(76, 22),
                 // (81,22): warning CS8600: Converting null literal or possible null value to non-nullable type.
                 //         object u14 = x14;
                 Diagnostic(ErrorCode.WRN_ConvertingNullableToNonNullable, "x14").WithLocation(81, 22),
@@ -27680,10 +27235,7 @@ class CL4 : CL3 {}
                 Diagnostic(ErrorCode.WRN_ConvertingNullableToNonNullable, "(object)x14").WithLocation(82, 23),
                 // (87,22): warning CS8600: Converting null literal or possible null value to non-nullable type.
                 //         object u15 = x15;
-                Diagnostic(ErrorCode.WRN_ConvertingNullableToNonNullable, "x15").WithLocation(87, 22),
-                // (93,22): hidden CS8607: Expression is probably never null.
-                //         object v16 = u16 ?? new object();
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "u16").WithLocation(93, 22)
+                Diagnostic(ErrorCode.WRN_ConvertingNullableToNonNullable, "x15").WithLocation(87, 22)
                 );
         }
 
@@ -28432,21 +27984,12 @@ class CL1
                 // (10,21): warning CS8604: Possible null reference argument for parameter 'x' in 'CL0 CL0.operator ++(CL0 x)'.
                 //         CL0? u1 = ++x1;
                 Diagnostic(ErrorCode.WRN_NullReferenceArgument, "x1").WithArguments("x", "CL0 CL0.operator ++(CL0 x)").WithLocation(10, 21),
-                // (11,18): hidden CS8607: Expression is probably never null.
-                //         CL0 v1 = u1 ?? new CL0();
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "u1").WithLocation(11, 18),
-                // (12,18): hidden CS8607: Expression is probably never null.
-                //         CL0 w1 = x1 ?? new CL0();
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "x1").WithLocation(12, 18),
                 // (16,18): warning CS8604: Possible null reference argument for parameter 'x' in 'CL0 CL0.operator ++(CL0 x)'.
                 //         CL0 u2 = x2++;
                 Diagnostic(ErrorCode.WRN_NullReferenceArgument, "x2").WithArguments("x", "CL0 CL0.operator ++(CL0 x)").WithLocation(16, 18),
                 // (16,18): warning CS8600: Converting null literal or possible null value to non-nullable type.
                 //         CL0 u2 = x2++;
                 Diagnostic(ErrorCode.WRN_ConvertingNullableToNonNullable, "x2++").WithLocation(16, 18),
-                // (17,18): hidden CS8607: Expression is probably never null.
-                //         CL0 v2 = x2 ?? new CL0();
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "x2").WithLocation(17, 18),
                 // (21,18): warning CS8600: Converting null literal or possible null value to non-nullable type.
                 //         CL1 u3 = --x3;
                 Diagnostic(ErrorCode.WRN_ConvertingNullableToNonNullable, "--x3").WithLocation(21, 18),
@@ -28456,9 +27999,6 @@ class CL1
                 // (26,19): warning CS8601: Possible null reference assignment.
                 //         CL1? u4 = x4--; // Result of increment is nullable, storing it in not nullable parameter.
                 Diagnostic(ErrorCode.WRN_NullReferenceAssignment, "x4--").WithLocation(26, 19),
-                // (27,18): hidden CS8607: Expression is probably never null.
-                //         CL1 v4 = u4 ?? new CL1();
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "u4").WithLocation(27, 18),
                 // (32,18): warning CS8601: Possible null reference assignment.
                 //         CL1 u5 = --x5;
                 Diagnostic(ErrorCode.WRN_NullReferenceAssignment, "--x5").WithLocation(32, 18),
@@ -28540,9 +28080,6 @@ class CL1
                 // (10,21): warning CS8604: Possible null reference argument for parameter 'x' in 'CL0 CL0.operator ++(CL0 x)'.
                 //         CL0? u1 = ++x1;
                 Diagnostic(ErrorCode.WRN_NullReferenceArgument, "x1").WithArguments("x", "CL0 CL0.operator ++(CL0 x)").WithLocation(10, 21),
-                // (11,18): hidden CS8607: Expression is probably never null.
-                //         CL0 v1 = u1 ?? new CL0();
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "u1").WithLocation(11, 18),
                 // (16,18): warning CS8604: Possible null reference argument for parameter 'x' in 'CL0 CL0.operator ++(CL0 x)'.
                 //         CL0 u2 = x2++;
                 Diagnostic(ErrorCode.WRN_NullReferenceArgument, "x2").WithArguments("x", "CL0 CL0.operator ++(CL0 x)").WithLocation(16, 18),
@@ -28555,9 +28092,6 @@ class CL1
                 // (26,19): warning CS8601: Possible null reference assignment.
                 //         CL1? u4 = x4--; // Result of increment is nullable, storing it in not nullable property.
                 Diagnostic(ErrorCode.WRN_NullReferenceAssignment, "x4--").WithLocation(26, 19),
-                // (27,18): hidden CS8607: Expression is probably never null.
-                //         CL1 v4 = u4 ?? new CL1();
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "u4").WithLocation(27, 18),
                 // (32,18): warning CS8601: Possible null reference assignment.
                 //         CL1 u5 = --x5;
                 Diagnostic(ErrorCode.WRN_NullReferenceAssignment, "--x5").WithLocation(32, 18),
@@ -28653,9 +28187,6 @@ class X4
                 // (10,21): warning CS8604: Possible null reference argument for parameter 'x' in 'CL0 CL0.operator ++(CL0 x)'.
                 //         CL0? u1 = ++x1[0];
                 Diagnostic(ErrorCode.WRN_NullReferenceArgument, "x1[0]").WithArguments("x", "CL0 CL0.operator ++(CL0 x)").WithLocation(10, 21),
-                // (11,18): hidden CS8607: Expression is probably never null.
-                //         CL0 v1 = u1 ?? new CL0();
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "u1").WithLocation(11, 18),
                 // (16,18): warning CS8604: Possible null reference argument for parameter 'x' in 'CL0 CL0.operator ++(CL0 x)'.
                 //         CL0 u2 = x2[0]++;
                 Diagnostic(ErrorCode.WRN_NullReferenceArgument, "x2[0]").WithArguments("x", "CL0 CL0.operator ++(CL0 x)").WithLocation(16, 18),
@@ -28668,9 +28199,6 @@ class X4
                 // (26,19): warning CS8601: Possible null reference assignment.
                 //         CL1? u4 = x4[0]--; // Result of increment is nullable, storing it in not nullable parameter.
                 Diagnostic(ErrorCode.WRN_NullReferenceAssignment, "x4[0]--").WithLocation(26, 19),
-                // (27,18): hidden CS8607: Expression is probably never null.
-                //         CL1 v4 = u4 ?? new CL1();
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "u4").WithLocation(27, 18),
                 // (32,18): warning CS8601: Possible null reference assignment.
                 //         CL1 u5 = --x5[0];
                 Diagnostic(ErrorCode.WRN_NullReferenceAssignment, "--x5[0]").WithLocation(32, 18),
@@ -28725,10 +28253,7 @@ class C
                 Diagnostic(ErrorCode.WRN_ConvertingNullableToNonNullable, "x2++").WithLocation(16, 22),
                 // (21,22): warning CS8600: Converting null literal or possible null value to non-nullable type.
                 //         dynamic u3 = --x3;
-                Diagnostic(ErrorCode.WRN_ConvertingNullableToNonNullable, "--x3").WithLocation(21, 22),
-                // (27,22): hidden CS8607: Expression is probably never null.
-                //         dynamic v4 = u4 ?? new object();
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "u4").WithLocation(27, 22)
+                Diagnostic(ErrorCode.WRN_ConvertingNullableToNonNullable, "--x3").WithLocation(21, 22)
                 );
         }
 
@@ -28776,10 +28301,7 @@ class B : A
                  Diagnostic(ErrorCode.WRN_NullReferenceArgument, "x1").WithArguments("x", "C? A.operator ++(A x)").WithLocation(10, 19),
                  // (10,17): warning CS8604: Possible null reference argument for parameter 'x' in 'C.implicit operator B(C x)'.
                  //         B? u1 = ++x1;
-                 Diagnostic(ErrorCode.WRN_NullReferenceArgument, "++x1").WithArguments("x", "C.implicit operator B(C x)").WithLocation(10, 17),
-                 // (11,16): hidden CS8607: Expression is probably never null.
-                 //         B v1 = u1 ?? new B();
-                 Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "u1").WithLocation(11, 16)
+                 Diagnostic(ErrorCode.WRN_NullReferenceArgument, "++x1").WithArguments("x", "C.implicit operator B(C x)").WithLocation(10, 17)
                 );
         }
 
@@ -28874,10 +28396,7 @@ class Convertible
             c.VerifyDiagnostics(
                  // (10,29): warning CS8604: Possible null reference argument for parameter 'c' in 'Convertible.implicit operator int(Convertible c)'.
                  //         Convertible? u1 = ++x1;
-                 Diagnostic(ErrorCode.WRN_NullReferenceArgument, "x1").WithArguments("c", "Convertible.implicit operator int(Convertible c)").WithLocation(10, 29),
-                 // (11,26): hidden CS8607: Expression is probably never null.
-                 //         Convertible v1 = u1 ?? new Convertible();
-                 Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "u1").WithLocation(11, 26)
+                 Diagnostic(ErrorCode.WRN_NullReferenceArgument, "x1").WithArguments("c", "Convertible.implicit operator int(Convertible c)").WithLocation(10, 29)
                 );
         }
 
@@ -28919,13 +28438,7 @@ class CL1
             c.VerifyDiagnostics(
                  // (10,19): warning CS8604: Possible null reference argument for parameter 'x' in 'CL1.implicit operator CL0(CL1 x)'.
                  //         CL1? u1 = x1 += y1;
-                 Diagnostic(ErrorCode.WRN_NullReferenceArgument, "x1").WithArguments("x", "CL1.implicit operator CL0(CL1 x)").WithLocation(10, 19),
-                 // (11,18): hidden CS8607: Expression is probably never null.
-                 //         CL1 v1 = u1 ?? new CL1();
-                 Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "u1").WithLocation(11, 18),
-                 // (12,18): hidden CS8607: Expression is probably never null.
-                 //         CL1 w1 = x1 ?? new CL1();
-                 Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "x1").WithLocation(12, 18)
+                 Diagnostic(ErrorCode.WRN_NullReferenceArgument, "x1").WithArguments("x", "CL1.implicit operator CL0(CL1 x)").WithLocation(10, 19)
                 );
         }
 
@@ -28967,13 +28480,7 @@ class CL1
             c.VerifyDiagnostics(
                  // (10,25): warning CS8604: Possible null reference argument for parameter 'y' in 'CL1 CL0.operator +(CL0 x, CL0 y)'.
                  //         CL1? u1 = x1 += y1;
-                 Diagnostic(ErrorCode.WRN_NullReferenceArgument, "y1").WithArguments("y", "CL1 CL0.operator +(CL0 x, CL0 y)").WithLocation(10, 25),
-                 // (11,18): hidden CS8607: Expression is probably never null.
-                 //         CL1 v1 = u1 ?? new CL1();
-                 Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "u1").WithLocation(11, 18),
-                 // (12,18): hidden CS8607: Expression is probably never null.
-                 //         CL1 w1 = x1 ?? new CL1();
-                 Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "x1").WithLocation(12, 18)
+                 Diagnostic(ErrorCode.WRN_NullReferenceArgument, "y1").WithArguments("y", "CL1 CL0.operator +(CL0 x, CL0 y)").WithLocation(10, 25)
                 );
         }
 
@@ -29036,12 +28543,6 @@ class CL1
                  // (10,19): warning CS8604: Possible null reference argument for parameter 'x' in 'CL1 CL0.operator +(CL0 x, CL0? y)'.
                  //         CL1? u1 = x1 += y1;
                  Diagnostic(ErrorCode.WRN_NullReferenceArgument, "x1").WithArguments("x", "CL1 CL0.operator +(CL0 x, CL0? y)").WithLocation(10, 19),
-                 // (11,18): hidden CS8607: Expression is probably never null.
-                 //         CL1 v1 = u1 ?? new CL1();
-                 Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "u1").WithLocation(11, 18),
-                 // (12,18): hidden CS8607: Expression is probably never null.
-                 //         CL1 w1 = x1 ?? new CL1();
-                 Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "x1").WithLocation(12, 18),
                  // (17,18): warning CS8604: Possible null reference argument for parameter 'x' in 'CL1 CL0.operator +(CL0 x, CL0? y)'.
                  //         CL0 u2 = x2 += y2;
                  Diagnostic(ErrorCode.WRN_NullReferenceArgument, "x2").WithArguments("x", "CL1 CL0.operator +(CL0 x, CL0? y)").WithLocation(17, 18),
@@ -29153,12 +28654,6 @@ class CL1
                 // (29,19): warning CS8604: Possible null reference argument for parameter 'x' in 'CL1.implicit operator CL0(CL1 x)'.
                 //         CL0? u4 = x4 += y4;
                 Diagnostic(ErrorCode.WRN_NullReferenceArgument, "x4 += y4").WithArguments("x", "CL1.implicit operator CL0(CL1 x)").WithLocation(29, 19),
-                // (30,18): hidden CS8607: Expression is probably never null.
-                //         CL0 v4 = u4 ?? new CL0();
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "u4").WithLocation(30, 18),
-                // (31,18): hidden CS8607: Expression is probably never null.
-                //         CL0 w4 = x4 ?? new CL0();
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "x4").WithLocation(31, 18),
                 // (36,9): warning CS8604: Possible null reference argument for parameter 'x' in 'CL1.implicit operator CL0(CL1 x)'.
                 //         x5 += y5;
                 Diagnostic(ErrorCode.WRN_NullReferenceArgument, "x5 += y5").WithArguments("x", "CL1.implicit operator CL0(CL1 x)").WithLocation(36, 9),
@@ -29257,19 +28752,7 @@ class CL1
             c.VerifyDiagnostics(
                 // (10,19): warning CS8604: Possible null reference argument for parameter 'x' in 'CL1.implicit operator CL0(CL1 x)'.
                 //         CL1? u1 = x1 += y1;
-                Diagnostic(ErrorCode.WRN_NullReferenceArgument, "x1").WithArguments("x", "CL1.implicit operator CL0(CL1 x)").WithLocation(10, 19),
-                // (11,18): hidden CS8607: Expression is probably never null.
-                //         CL1 v1 = u1 ?? new CL1();
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "u1").WithLocation(11, 18),
-                // (12,18): hidden CS8607: Expression is probably never null.
-                //         CL1 w1 = x1 ?? new CL1();
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "x1").WithLocation(12, 18),
-                // (18,18): hidden CS8607: Expression is probably never null.
-                //         CL1 v2 = u2 ?? new CL1();
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "u2").WithLocation(18, 18),
-                // (19,18): hidden CS8607: Expression is probably never null.
-                //         CL1 w2 = x2 ?? new CL1();
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "x2").WithLocation(19, 18)
+                Diagnostic(ErrorCode.WRN_NullReferenceArgument, "x1").WithArguments("x", "CL1.implicit operator CL0(CL1 x)").WithLocation(10, 19)
                 );
         }
 
@@ -29336,16 +28819,7 @@ class CL3
             c.VerifyDiagnostics(
                  // (10,19): warning CS8604: Possible null reference argument for parameter 'x' in 'CL1.implicit operator CL0(CL1 x)'.
                  //         CL1? u1 = x1[0] += y1;
-                 Diagnostic(ErrorCode.WRN_NullReferenceArgument, "x1[0]").WithArguments("x", "CL1.implicit operator CL0(CL1 x)").WithLocation(10, 19),
-                 // (11,18): hidden CS8607: Expression is probably never null.
-                 //         CL1 v1 = u1 ?? new CL1();
-                 Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "u1").WithLocation(11, 18),
-                 // (18,18): hidden CS8607: Expression is probably never null.
-                 //         CL1 v2 = u2 ?? new CL1();
-                 Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "u2").WithLocation(18, 18),
-                 // (19,18): hidden CS8607: Expression is probably never null.
-                 //         CL1 w2 = x2[0] ?? new CL1();
-                 Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "x2[0]").WithLocation(19, 18)
+                 Diagnostic(ErrorCode.WRN_NullReferenceArgument, "x1[0]").WithArguments("x", "CL1.implicit operator CL0(CL1 x)").WithLocation(10, 19)
                 );
         }
 
@@ -29512,18 +28986,6 @@ struct TS1
 " }, options: WithNonNullTypesTrue());
 
             c.VerifyDiagnostics(
-                 // (16,28): hidden CS8607: Expression is probably never null.
-                 //         System.Action y1 = E1 ?? x1;
-                 Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "E1").WithLocation(16, 28),
-                 // (20,14): hidden CS8607: Expression is probably never null.
-                 //         y1 = z1.E1 ?? x1;
-                 Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "z1.E1").WithLocation(20, 14),
-                 // (27,28): hidden CS8607: Expression is probably never null.
-                 //         System.Action y3 = s3.E1 ?? x3;
-                 Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "s3.E1").WithLocation(27, 28),
-                 // (31,14): hidden CS8607: Expression is probably never null.
-                 //         y3 = z3.E1 ?? x3;
-                 Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "z3.E1").WithLocation(31, 14)
                 );
         }
 
@@ -29747,27 +29209,21 @@ class CL1 {}
 " }, options: WithNonNullTypesTrue());
 
             c.VerifyDiagnostics(
-                 // (10,21): hidden CS8607: Expression is probably never null.
-                 //         object y1 = x1 as object ?? new object();
-                 Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "x1 as object").WithLocation(10, 21),
-                 // (15,21): hidden CS8607: Expression is probably never null.
-                 //         object y2 = x2 as object ?? new object();
-                 Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "x2 as object").WithLocation(15, 21),
-                 // (20,21): warning CS8600: Converting null literal or possible null value to non-nullable type.
-                 //         object y3 = x3 as object;
-                 Diagnostic(ErrorCode.WRN_ConvertingNullableToNonNullable, "x3 as object").WithLocation(20, 21),
-                 // (25,21): warning CS8600: Converting null literal or possible null value to non-nullable type.
-                 //         object y4 = x4 as object;
-                 Diagnostic(ErrorCode.WRN_ConvertingNullableToNonNullable, "x4 as object").WithLocation(25, 21),
-                 // (30,18): warning CS8600: Converting null literal or possible null value to non-nullable type.
-                 //         CL1 y5 = x5 as CL1;
-                 Diagnostic(ErrorCode.WRN_ConvertingNullableToNonNullable, "x5 as CL1").WithLocation(30, 18),
-                 // (35,18): warning CS8600: Converting null literal or possible null value to non-nullable type.
-                 //         CL1 y6 = null as CL1;
-                 Diagnostic(ErrorCode.WRN_ConvertingNullableToNonNullable, "null as CL1").WithLocation(35, 18),
-                 // (40,18): warning CS8600: Converting null literal or possible null value to non-nullable type.
-                 //         CL1 y7 = x7 as CL1;
-                 Diagnostic(ErrorCode.WRN_ConvertingNullableToNonNullable, "x7 as CL1").WithLocation(40, 18)
+                // (20,21): warning CS8600: Converting null literal or possible null value to non-nullable type.
+                //         object y3 = x3 as object;
+                Diagnostic(ErrorCode.WRN_ConvertingNullableToNonNullable, "x3 as object").WithLocation(20, 21),
+                // (25,21): warning CS8600: Converting null literal or possible null value to non-nullable type.
+                //         object y4 = x4 as object;
+                Diagnostic(ErrorCode.WRN_ConvertingNullableToNonNullable, "x4 as object").WithLocation(25, 21),
+                // (30,18): warning CS8600: Converting null literal or possible null value to non-nullable type.
+                //         CL1 y5 = x5 as CL1;
+                Diagnostic(ErrorCode.WRN_ConvertingNullableToNonNullable, "x5 as CL1").WithLocation(30, 18),
+                // (35,18): warning CS8600: Converting null literal or possible null value to non-nullable type.
+                //         CL1 y6 = null as CL1;
+                Diagnostic(ErrorCode.WRN_ConvertingNullableToNonNullable, "null as CL1").WithLocation(35, 18),
+                // (40,18): warning CS8600: Converting null literal or possible null value to non-nullable type.
+                //         CL1 y7 = x7 as CL1;
+                Diagnostic(ErrorCode.WRN_ConvertingNullableToNonNullable, "x7 as CL1").WithLocation(40, 18)
                 );
         }
 
@@ -30211,9 +29667,6 @@ class Awaiter : System.Runtime.CompilerServices.INotifyCompletion
     public bool IsCompleted { get { return true; } }
 }";
             CreateCompilationWithMscorlib45(new[] { source }, options: WithNonNullTypesTrue()).VerifyDiagnostics(
-                 // (10,20): hidden CS8607: Expression is probably never null.
-                 //         object x = await new D() ?? new object();
-                 Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "await new D()").WithLocation(10, 20)
                 );
         }
 
@@ -30498,9 +29951,6 @@ class UsePia
                                                 options: WithNonNullTypesTrue(TestOptions.DebugExe));
 
             compilation.VerifyDiagnostics(
-                 // (15,14): hidden CS8607: Expression is probably never null.
-                 //         x2 = new ITest28() ?? x2;
-                 Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "new ITest28()").WithLocation(15, 14)
                 );
         }
 
@@ -30992,9 +30442,6 @@ partial class C
                 // (18,18): warning CS8601: Possible null reference assignment.
                 //             E1 = x11;
                 Diagnostic(ErrorCode.WRN_NullReferenceAssignment, "x11").WithLocation(18, 18),
-                // (24,19): hidden CS8607: Expression is probably never null.
-                //             x12 = E1 ?? x12;
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "E1").WithLocation(24, 19),
                 // (30,19): warning CS8600: Converting null literal or possible null value to non-nullable type.
                 //             x13 = E2;
                 Diagnostic(ErrorCode.WRN_ConvertingNullableToNonNullable, "E2").WithLocation(30, 19),
@@ -31007,15 +30454,6 @@ partial class C
                 // (15,18): warning CS8604: Possible null reference argument for parameter 'x3' in 'void CL1.M3(Action x3)'.
                 //             c.M3(x21);
                 Diagnostic(ErrorCode.WRN_NullReferenceArgument, "x21").WithArguments("x3", "void CL1.M3(Action x3)").WithLocation(15, 18),
-                // (21,19): hidden CS8607: Expression is probably never null.
-                //             x22 = c.F1 ?? x22;
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "c.F1").WithLocation(21, 19),
-                // (22,19): hidden CS8607: Expression is probably never null.
-                //             x22 = c.P1 ?? x22;
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "c.P1").WithLocation(22, 19),
-                // (23,19): hidden CS8607: Expression is probably never null.
-                //             x22 = c.M1() ?? x22;
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "c.M1()").WithLocation(23, 19),
                 // (29,19): warning CS8600: Converting null literal or possible null value to non-nullable type.
                 //             x23 = c.F2;
                 Diagnostic(ErrorCode.WRN_ConvertingNullableToNonNullable, "c.F2").WithLocation(29, 19),
@@ -31043,15 +30481,6 @@ partial class C
                 // (15,18): warning CS8604: Possible null reference argument for parameter 'x3' in 'void CL1.M3(Action x3)'.
                 //             c.M3(x21);
                 Diagnostic(ErrorCode.WRN_NullReferenceArgument, "x21").WithArguments("x3", "void CL1.M3(Action x3)").WithLocation(15, 18),
-                // (21,19): hidden CS8607: Expression is probably never null.
-                //             x22 = c.F1 ?? x22;
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "c.F1").WithLocation(21, 19),
-                // (22,19): hidden CS8607: Expression is probably never null.
-                //             x22 = c.P1 ?? x22;
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "c.P1").WithLocation(22, 19),
-                // (23,19): hidden CS8607: Expression is probably never null.
-                //             x22 = c.M1() ?? x22;
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "c.M1()").WithLocation(23, 19),
                 // (29,19): warning CS8600: Converting null literal or possible null value to non-nullable type.
                 //             x23 = c.F2;
                 Diagnostic(ErrorCode.WRN_ConvertingNullableToNonNullable, "c.F2").WithLocation(29, 19),
@@ -31217,15 +30646,6 @@ partial class C
                 // (12,18): warning CS8604: Possible null reference argument for parameter 'x3' in 'void CL1.M3(Action x3)'.
                 //             c.M3(x21); // 7
                 Diagnostic(ErrorCode.WRN_NullReferenceArgument, "x21").WithArguments("x3", "void CL1.M3(Action x3)").WithLocation(12, 18),
-                // (17,19): hidden CS8607: Expression is probably never null.
-                //             x22 = c.F1 ?? x22; // 8
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "c.F1").WithLocation(17, 19),
-                // (18,19): hidden CS8607: Expression is probably never null.
-                //             x22 = c.P1 ?? x22; // 9
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "c.P1").WithLocation(18, 19),
-                // (19,19): hidden CS8607: Expression is probably never null.
-                //             x22 = c.M1() ?? x22; // 10
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "c.M1()").WithLocation(19, 19),
                 // (24,19): warning CS8600: Converting null literal or possible null value to non-nullable type.
                 //             x23 = c.F2;
                 Diagnostic(ErrorCode.WRN_ConvertingNullableToNonNullable, "c.F2").WithLocation(24, 19),
@@ -31355,9 +30775,6 @@ partial class C
                 // (15,18): warning CS8601: Possible null reference assignment.
                 //             E1 = x11; // 2
                 Diagnostic(ErrorCode.WRN_NullReferenceAssignment, "x11").WithLocation(15, 18),
-                // (20,19): hidden CS8607: Expression is probably never null.
-                //             x12 = E1 ?? x12; // 3
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "E1").WithLocation(20, 19),
                 // (25,19): warning CS8600: Converting null literal or possible null value to non-nullable type.
                 //             x13 = E2;
                 Diagnostic(ErrorCode.WRN_ConvertingNullableToNonNullable, "E2").WithLocation(25, 19)
@@ -31496,9 +30913,6 @@ partial class C
                 // (15,18): warning CS8601: Possible null reference assignment.
                 //             E1 = x11; // 2
                 Diagnostic(ErrorCode.WRN_NullReferenceAssignment, "x11").WithLocation(15, 18),
-                // (20,19): hidden CS8607: Expression is probably never null.
-                //             x12 = E1 ?? x12; // 3
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "E1").WithLocation(20, 19),
                 // (25,19): warning CS8600: Converting null literal or possible null value to non-nullable type.
                 //             x13 = E2;
                 Diagnostic(ErrorCode.WRN_ConvertingNullableToNonNullable, "E2").WithLocation(25, 19)
@@ -32180,9 +31594,6 @@ partial class C
                  // (18,18): warning CS8600: Converting null literal or possible null value to non-nullable type.
                  //             E1 = x11;
                  Diagnostic(ErrorCode.WRN_ConvertingNullableToNonNullable, "x11").WithLocation(18, 18),
-                 // (24,19): hidden CS8607: Expression is probably never null.
-                 //             x12 = E1 ?? x12;
-                 Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "E1").WithLocation(24, 19),
                  // (30,19): warning CS8600: Converting null literal or possible null value to non-nullable type.
                  //             x13 = E2;
                  Diagnostic(ErrorCode.WRN_ConvertingNullableToNonNullable, "E2").WithLocation(30, 19),
@@ -32195,15 +31606,6 @@ partial class C
                  // (15,18): warning CS8604: Possible null reference argument for parameter 'x3' in 'void CL1.M3(Action x3)'.
                  //             c.M3(x21);
                  Diagnostic(ErrorCode.WRN_NullReferenceArgument, "x21").WithArguments("x3", "void CL1.M3(Action x3)").WithLocation(15, 18),
-                 // (21,19): hidden CS8607: Expression is probably never null.
-                 //             x22 = c.F1 ?? x22;
-                 Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "c.F1").WithLocation(21, 19),
-                 // (22,19): hidden CS8607: Expression is probably never null.
-                 //             x22 = c.P1 ?? x22;
-                 Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "c.P1").WithLocation(22, 19),
-                 // (23,19): hidden CS8607: Expression is probably never null.
-                 //             x22 = c.M1() ?? x22;
-                 Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "c.M1()").WithLocation(23, 19),
                  // (29,19): warning CS8600: Converting null literal or possible null value to non-nullable type.
                  //             x23 = c.F2;
                  Diagnostic(ErrorCode.WRN_ConvertingNullableToNonNullable, "c.F2").WithLocation(29, 19),
@@ -32224,31 +31626,22 @@ partial class C
             var expected = new[] {
                 // (13,20): warning CS8600: Converting null literal or possible null value to non-nullable type.
                 //             c.F1 = x21;
-                 Diagnostic(ErrorCode.WRN_ConvertingNullableToNonNullable, "x21").WithLocation(13, 20),
+                Diagnostic(ErrorCode.WRN_ConvertingNullableToNonNullable, "x21").WithLocation(13, 20),
                 // (14,20): warning CS8600: Converting null literal or possible null value to non-nullable type.
                 //             c.P1 = x21;
-                 Diagnostic(ErrorCode.WRN_ConvertingNullableToNonNullable, "x21").WithLocation(14, 20),
+                Diagnostic(ErrorCode.WRN_ConvertingNullableToNonNullable, "x21").WithLocation(14, 20),
                 // (15,18): warning CS8604: Possible null reference argument for parameter 'x3' in 'void CL1.M3(Action x3)'.
                 //             c.M3(x21);
-                 Diagnostic(ErrorCode.WRN_NullReferenceArgument, "x21").WithArguments("x3", "void CL1.M3(Action x3)").WithLocation(15, 18),
-                // (21,19): hidden CS8607: Expression is probably never null.
-                //             x22 = c.F1 ?? x22;
-                 Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "c.F1").WithLocation(21, 19),
-                // (22,19): hidden CS8607: Expression is probably never null.
-                //             x22 = c.P1 ?? x22;
-                 Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "c.P1").WithLocation(22, 19),
-                // (23,19): hidden CS8607: Expression is probably never null.
-                //             x22 = c.M1() ?? x22;
-                 Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "c.M1()").WithLocation(23, 19),
+                Diagnostic(ErrorCode.WRN_NullReferenceArgument, "x21").WithArguments("x3", "void CL1.M3(Action x3)").WithLocation(15, 18),
                 // (29,19): warning CS8600: Converting null literal or possible null value to non-nullable type.
                 //             x23 = c.F2;
-                 Diagnostic(ErrorCode.WRN_ConvertingNullableToNonNullable, "c.F2").WithLocation(29, 19),
+                Diagnostic(ErrorCode.WRN_ConvertingNullableToNonNullable, "c.F2").WithLocation(29, 19),
                 // (30,19): warning CS8600: Converting null literal or possible null value to non-nullable type.
                 //             x23 = c.P2;
-                 Diagnostic(ErrorCode.WRN_ConvertingNullableToNonNullable, "c.P2").WithLocation(30, 19),
+                Diagnostic(ErrorCode.WRN_ConvertingNullableToNonNullable, "c.P2").WithLocation(30, 19),
                 // (31,19): warning CS8600: Converting null literal or possible null value to non-nullable type.
                 //             x23 = c.M2();
-                 Diagnostic(ErrorCode.WRN_ConvertingNullableToNonNullable, "c.M2()").WithLocation(31, 19)
+                Diagnostic(ErrorCode.WRN_ConvertingNullableToNonNullable, "c.M2()").WithLocation(31, 19)
                 };
 
             c = CreateCompilation(new[] { moduleAttributes, source2 }, new[] { c1.ToMetadataReference() },
@@ -32373,9 +31766,6 @@ partial class C
                  // (18,18): warning CS8600: Converting null literal or possible null value to non-nullable type.
                  //             E1 = x11;
                  Diagnostic(ErrorCode.WRN_ConvertingNullableToNonNullable, "x11").WithLocation(18, 18),
-                 // (24,19): hidden CS8607: Expression is probably never null.
-                 //             x12 = E1 ?? x12;
-                 Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "E1").WithLocation(24, 19),
                  // (30,19): warning CS8600: Converting null literal or possible null value to non-nullable type.
                  //             x13 = E2;
                  Diagnostic(ErrorCode.WRN_ConvertingNullableToNonNullable, "E2").WithLocation(30, 19),
@@ -32388,15 +31778,6 @@ partial class C
                  // (15,18): warning CS8604: Possible null reference argument for parameter 'x3' in 'void CL1.M3(Action x3)'.
                  //             c.M3(x21);
                  Diagnostic(ErrorCode.WRN_NullReferenceArgument, "x21").WithArguments("x3", "void CL1.M3(Action x3)").WithLocation(15, 18),
-                 // (21,19): hidden CS8607: Expression is probably never null.
-                 //             x22 = c.F1 ?? x22;
-                 Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "c.F1").WithLocation(21, 19),
-                 // (22,19): hidden CS8607: Expression is probably never null.
-                 //             x22 = c.P1 ?? x22;
-                 Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "c.P1").WithLocation(22, 19),
-                 // (23,19): hidden CS8607: Expression is probably never null.
-                 //             x22 = c.M1() ?? x22;
-                 Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "c.M1()").WithLocation(23, 19),
                  // (29,19): warning CS8600: Converting null literal or possible null value to non-nullable type.
                  //             x23 = c.F2;
                  Diagnostic(ErrorCode.WRN_ConvertingNullableToNonNullable, "c.F2").WithLocation(29, 19),
@@ -32424,15 +31805,6 @@ partial class C
                 // (15,18): warning CS8604: Possible null reference argument for parameter 'x3' in 'void CL1.M3(Action x3)'.
                 //             c.M3(x21);
                  Diagnostic(ErrorCode.WRN_NullReferenceArgument, "x21").WithArguments("x3", "void CL1.M3(Action x3)").WithLocation(15, 18),
-                // (21,19): hidden CS8607: Expression is probably never null.
-                //             x22 = c.F1 ?? x22;
-                 Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "c.F1").WithLocation(21, 19),
-                // (22,19): hidden CS8607: Expression is probably never null.
-                //             x22 = c.P1 ?? x22;
-                 Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "c.P1").WithLocation(22, 19),
-                // (23,19): hidden CS8607: Expression is probably never null.
-                //             x22 = c.M1() ?? x22;
-                 Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "c.M1()").WithLocation(23, 19),
                 // (29,19): warning CS8600: Converting null literal or possible null value to non-nullable type.
                 //             x23 = c.F2;
                  Diagnostic(ErrorCode.WRN_ConvertingNullableToNonNullable, "c.F2").WithLocation(29, 19),
@@ -32566,9 +31938,6 @@ partial class C
                  // (18,18): warning CS8600: Converting null literal or possible null value to non-nullable type.
                  //             E1 = x11;
                  Diagnostic(ErrorCode.WRN_ConvertingNullableToNonNullable, "x11").WithLocation(18, 18),
-                 // (24,19): hidden CS8607: Expression is probably never null.
-                 //             x12 = E1 ?? x12;
-                 Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "E1").WithLocation(24, 19),
                  // (30,19): warning CS8600: Converting null literal or possible null value to non-nullable type.
                  //             x13 = E2;
                  Diagnostic(ErrorCode.WRN_ConvertingNullableToNonNullable, "E2").WithLocation(30, 19),
@@ -32581,15 +31950,6 @@ partial class C
                  // (15,18): warning CS8604: Possible null reference argument for parameter 'x3' in 'void CL1.M3(Action x3)'.
                  //             c.M3(x21);
                  Diagnostic(ErrorCode.WRN_NullReferenceArgument, "x21").WithArguments("x3", "void CL1.M3(Action x3)").WithLocation(15, 18),
-                 // (21,19): hidden CS8607: Expression is probably never null.
-                 //             x22 = c.F1 ?? x22;
-                 Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "c.F1").WithLocation(21, 19),
-                 // (22,19): hidden CS8607: Expression is probably never null.
-                 //             x22 = c.P1 ?? x22;
-                 Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "c.P1").WithLocation(22, 19),
-                 // (23,19): hidden CS8607: Expression is probably never null.
-                 //             x22 = c.M1() ?? x22;
-                 Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "c.M1()").WithLocation(23, 19),
                  // (29,19): warning CS8600: Converting null literal or possible null value to non-nullable type.
                  //             x23 = c.F2;
                  Diagnostic(ErrorCode.WRN_ConvertingNullableToNonNullable, "c.F2").WithLocation(29, 19),
@@ -32617,15 +31977,6 @@ partial class C
                 // (15,18): warning CS8604: Possible null reference argument for parameter 'x3' in 'void CL1.M3(Action x3)'.
                 //             c.M3(x21);
                  Diagnostic(ErrorCode.WRN_NullReferenceArgument, "x21").WithArguments("x3", "void CL1.M3(Action x3)").WithLocation(15, 18),
-                // (21,19): hidden CS8607: Expression is probably never null.
-                //             x22 = c.F1 ?? x22;
-                 Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "c.F1").WithLocation(21, 19),
-                // (22,19): hidden CS8607: Expression is probably never null.
-                //             x22 = c.P1 ?? x22;
-                 Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "c.P1").WithLocation(22, 19),
-                // (23,19): hidden CS8607: Expression is probably never null.
-                //             x22 = c.M1() ?? x22;
-                 Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "c.M1()").WithLocation(23, 19),
                 // (29,19): warning CS8600: Converting null literal or possible null value to non-nullable type.
                 //             x23 = c.F2;
                  Diagnostic(ErrorCode.WRN_ConvertingNullableToNonNullable, "c.F2").WithLocation(29, 19),
@@ -32763,15 +32114,12 @@ class CL1<T>
                                                                 options: TestOptions.ReleaseDll);
 
             c.VerifyDiagnostics(
-                 // (39,9): warning CS8602: Possible dereference of a null reference.
-                 //         M3().P1.ToString();
-                 Diagnostic(ErrorCode.WRN_NullReferenceReceiver, "M3().P1").WithLocation(39, 9),
-                 // (50,19): warning CS8600: Converting null literal or possible null value to non-nullable type.
-                 //         M4().P1 = null;
-                 Diagnostic(ErrorCode.WRN_ConvertingNullableToNonNullable, "null").WithLocation(50, 19),
-                 // (51,18): hidden CS8607: Expression is probably never null.
-                 //         var x4 = M4().P1 ?? "";
-                 Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "M4().P1").WithLocation(51, 18)
+                // (39,9): warning CS8602: Possible dereference of a null reference.
+                //         M3().P1.ToString();
+                Diagnostic(ErrorCode.WRN_NullReferenceReceiver, "M3().P1").WithLocation(39, 9),
+                // (50,19): warning CS8600: Converting null literal or possible null value to non-nullable type.
+                //         M4().P1 = null;
+                Diagnostic(ErrorCode.WRN_ConvertingNullableToNonNullable, "null").WithLocation(50, 19)
                 );
         }
 
@@ -33022,10 +32370,7 @@ class CL1<T>
                  Diagnostic(ErrorCode.WRN_NullReferenceReceiver, "M3.P1").WithLocation(30, 9),
                  // (38,17): warning CS8600: Converting null literal or possible null value to non-nullable type.
                  //         M4.P1 = null;
-                 Diagnostic(ErrorCode.WRN_ConvertingNullableToNonNullable, "null").WithLocation(38, 17),
-                 // (39,18): hidden CS8607: Expression is probably never null.
-                 //         var x4 = M4.P1 ?? "";
-                 Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "M4.P1").WithLocation(39, 18)
+                 Diagnostic(ErrorCode.WRN_ConvertingNullableToNonNullable, "null").WithLocation(38, 17)
                 );
         }
 
@@ -33129,15 +32474,12 @@ class CL1<T>
                                                                 options: TestOptions.ReleaseDll);
 
             c.VerifyDiagnostics(
-                 // (30,9): warning CS8602: Possible dereference of a null reference.
-                 //         M3.P1.ToString();
-                 Diagnostic(ErrorCode.WRN_NullReferenceReceiver, "M3.P1").WithLocation(30, 9),
-                 // (38,17): warning CS8600: Converting null literal or possible null value to non-nullable type.
-                 //         M4.P1 = null;
-                 Diagnostic(ErrorCode.WRN_ConvertingNullableToNonNullable, "null").WithLocation(38, 17),
-                 // (39,18): hidden CS8607: Expression is probably never null.
-                 //         var x4 = M4.P1 ?? "";
-                 Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "M4.P1").WithLocation(39, 18)
+                // (30,9): warning CS8602: Possible dereference of a null reference.
+                //         M3.P1.ToString();
+                Diagnostic(ErrorCode.WRN_NullReferenceReceiver, "M3.P1").WithLocation(30, 9),
+                // (38,17): warning CS8600: Converting null literal or possible null value to non-nullable type.
+                //         M4.P1 = null;
+                Diagnostic(ErrorCode.WRN_ConvertingNullableToNonNullable, "null").WithLocation(38, 17)
                 );
         }
 
@@ -33236,10 +32578,7 @@ class C
             c.VerifyDiagnostics(
                  // (29,9): warning CS8602: Possible dereference of a null reference.
                  //         M3().ToString();
-                 Diagnostic(ErrorCode.WRN_NullReferenceReceiver, "M3()").WithLocation(29, 9),
-                 // (37,18): hidden CS8607: Expression is probably never null.
-                 //         var x4 = M4() ?? "";
-                 Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "M4()").WithLocation(37, 18)
+                 Diagnostic(ErrorCode.WRN_NullReferenceReceiver, "M3()").WithLocation(29, 9)
                 );
         }
 
@@ -33338,18 +32677,12 @@ class CL1<T>
                  // (44,27): warning CS8600: Converting null literal or possible null value to non-nullable type.
                  //         M4(a4 => {a4.P1 = null;});
                  Diagnostic(ErrorCode.WRN_ConvertingNullableToNonNullable, "null").WithLocation(44, 27),
-                 // (45,28): hidden CS8607: Expression is probably never null.
-                 //         M4(b4 => {var x4 = b4.P1 ?? "";});
-                 Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "b4.P1").WithLocation(45, 28),
                  // (64,25): warning CS8602: Possible dereference of a null reference.
                  //         D3 v31 = b31 => b31.P1.ToString();
                  Diagnostic(ErrorCode.WRN_NullReferenceReceiver, "b31.P1").WithLocation(64, 25),
                  // (70,35): warning CS8600: Converting null literal or possible null value to non-nullable type.
                  //         D4 u41 = a41 => {a41.P1 = null;};
-                 Diagnostic(ErrorCode.WRN_ConvertingNullableToNonNullable, "null").WithLocation(70, 35),
-                 // (71,36): hidden CS8607: Expression is probably never null.
-                 //         D4 v41 = b41 => {var x41 = b41.P1 ?? "";};
-                 Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "b41.P1").WithLocation(71, 36)
+                 Diagnostic(ErrorCode.WRN_ConvertingNullableToNonNullable, "null").WithLocation(70, 35)
                 );
         }
 
@@ -33941,9 +33274,6 @@ static class Extensions
                 // (16,9): warning CS8625: Cannot convert null literal to non-nullable reference or unconstrained type parameter.
                 //         default(string).F();
                 Diagnostic(ErrorCode.WRN_NullAsNonNullable, "default(string)").WithLocation(16, 9),
-                // (17,11): hidden CS8605: Result of the comparison is possibly always true.
-                //         ((p != null) ? p.MiddleName : null).F();
-                Diagnostic(ErrorCode.HDN_NullCheckIsProbablyAlwaysTrue, "p != null").WithLocation(17, 11),
                 // (17,10): warning CS8604: Possible null reference argument for parameter 's' in 'void Extensions.F(string s)'.
                 //         ((p != null) ? p.MiddleName : null).F();
                 Diagnostic(ErrorCode.WRN_NullReferenceArgument, "(p != null) ? p.MiddleName : null").WithArguments("s", "void Extensions.F(string s)").WithLocation(17, 10),
@@ -34011,9 +33341,6 @@ class Program
                 // (18,11): warning CS8625: Cannot convert null literal to non-nullable reference or unconstrained type parameter.
                 //         G(default);
                 Diagnostic(ErrorCode.WRN_NullAsNonNullable, "default").WithLocation(18, 11),
-                // (19,12): hidden CS8605: Result of the comparison is possibly always true.
-                //         G((p != null) ? p.MiddleName : null);
-                Diagnostic(ErrorCode.HDN_NullCheckIsProbablyAlwaysTrue, "p != null").WithLocation(19, 12),
                 // (19,11): warning CS8604: Possible null reference argument for parameter 'name' in 'void Program.G(string name)'.
                 //         G((p != null) ? p.MiddleName : null);
                 Diagnostic(ErrorCode.WRN_NullReferenceArgument, "(p != null) ? p.MiddleName : null").WithArguments("name", "void Program.G(string name)").WithLocation(19, 11),
@@ -34078,9 +33405,6 @@ class Program
                 // (16,27): warning CS8603: Possible null reference return.
                 //     static string F7() => default;
                 Diagnostic(ErrorCode.WRN_NullReferenceReturn, "default").WithLocation(16, 27),
-                // (17,36): hidden CS8605: Result of the comparison is possibly always true.
-                //     static string F8(Person p) => (p != null) ? p.MiddleName : null;
-                Diagnostic(ErrorCode.HDN_NullCheckIsProbablyAlwaysTrue, "p != null").WithLocation(17, 36),
                 // (17,35): warning CS8603: Possible null reference return.
                 //     static string F8(Person p) => (p != null) ? p.MiddleName : null;
                 Diagnostic(ErrorCode.WRN_NullReferenceReturn, "(p != null) ? p.MiddleName : null").WithLocation(17, 35),
@@ -34296,42 +33620,24 @@ class C
                 new[] { source }, options: WithNonNullTypesTrue(),
                 parseOptions: TestOptions.Regular8);
             comp.VerifyDiagnostics(
-                // (7,13): warning CS8626: No best nullability for operands of conditional expression 'C<object>' and 'C<object?>'.
-                //         a = c ? x : y; // 1 and 2
-                Diagnostic(ErrorCode.WRN_NoBestNullabilityConditionalExpression, "c ? x : y").WithArguments("C<object>", "C<object?>").WithLocation(7, 13),
                 // (7,13): warning CS8600: Converting null literal or possible null value to non-nullable type.
                 //         a = c ? x : y; // 1 and 2
                 Diagnostic(ErrorCode.WRN_ConvertingNullableToNonNullable, "c ? x : y").WithLocation(7, 13),
                 // (7,21): warning CS8619: Nullability of reference types in value of type 'C<object?>' doesn't match target type 'C<object>'.
                 //         a = c ? x : y; // 1 and 2
                 Diagnostic(ErrorCode.WRN_NullabilityMismatchInAssignment, "y").WithArguments("C<object?>", "C<object>").WithLocation(7, 21),
-                // (8,13): warning CS8626: No best nullability for operands of conditional expression 'C<object?>' and 'C<object>'.
-                //         a = c ? y : x; // 3 and 4
-                Diagnostic(ErrorCode.WRN_NoBestNullabilityConditionalExpression, "c ? y : x").WithArguments("C<object?>", "C<object>").WithLocation(8, 13),
                 // (8,13): warning CS8600: Converting null literal or possible null value to non-nullable type.
                 //         a = c ? y : x; // 3 and 4
                 Diagnostic(ErrorCode.WRN_ConvertingNullableToNonNullable, "c ? y : x").WithLocation(8, 13),
                 // (8,17): warning CS8619: Nullability of reference types in value of type 'C<object?>' doesn't match target type 'C<object>'.
                 //         a = c ? y : x; // 3 and 4
                 Diagnostic(ErrorCode.WRN_NullabilityMismatchInAssignment, "y").WithArguments("C<object?>", "C<object>").WithLocation(8, 17),
-                // (9,13): warning CS8626: No best nullability for operands of conditional expression 'C<object>' and 'C<object?>'.
-                //         a = c ? x : y!; // 5 and 6
-                Diagnostic(ErrorCode.WRN_NoBestNullabilityConditionalExpression, "c ? x : y!").WithArguments("C<object>", "C<object?>").WithLocation(9, 13),
                 // (9,13): warning CS8600: Converting null literal or possible null value to non-nullable type.
                 //         a = c ? x : y!; // 5 and 6
                 Diagnostic(ErrorCode.WRN_ConvertingNullableToNonNullable, "c ? x : y!").WithLocation(9, 13),
-                // (10,13): warning CS8626: No best nullability for operands of conditional expression 'C<object>' and 'C<object?>'.
-                //         a = c ? x! : y; // 7
-                Diagnostic(ErrorCode.WRN_NoBestNullabilityConditionalExpression, "c ? x! : y").WithArguments("C<object>", "C<object?>").WithLocation(10, 13),
                 // (10,22): warning CS8619: Nullability of reference types in value of type 'C<object?>' doesn't match target type 'C<object>'.
                 //         a = c ? x! : y; // 7
                 Diagnostic(ErrorCode.WRN_NullabilityMismatchInAssignment, "y").WithArguments("C<object?>", "C<object>").WithLocation(10, 22),
-                // (11,13): warning CS8626: No best nullability for operands of conditional expression 'C<object>' and 'C<object?>'.
-                //         a = c ? x! : y!; // 8
-                Diagnostic(ErrorCode.WRN_NoBestNullabilityConditionalExpression, "c ? x! : y!").WithArguments("C<object>", "C<object?>").WithLocation(11, 13),
-                // (13,13): warning CS8626: No best nullability for operands of conditional expression 'C<object>' and 'C<object?>'.
-                //         b = c ? x : y; // 9 and 10
-                Diagnostic(ErrorCode.WRN_NoBestNullabilityConditionalExpression, "c ? x : y").WithArguments("C<object>", "C<object?>").WithLocation(13, 13),
                 // (13,13): warning CS8600: Converting null literal or possible null value to non-nullable type.
                 //         b = c ? x : y; // 9 and 10
                 Diagnostic(ErrorCode.WRN_ConvertingNullableToNonNullable, "c ? x : y").WithLocation(13, 13),
@@ -34341,27 +33647,18 @@ class C
                 // (13,21): warning CS8619: Nullability of reference types in value of type 'C<object?>' doesn't match target type 'C<object>'.
                 //         b = c ? x : y; // 9 and 10
                 Diagnostic(ErrorCode.WRN_NullabilityMismatchInAssignment, "y").WithArguments("C<object?>", "C<object>").WithLocation(13, 21),
-                // (14,13): warning CS8626: No best nullability for operands of conditional expression 'C<object>' and 'C<object?>'.
-                //         b = c ? x : y!; // 11 and 12
-                Diagnostic(ErrorCode.WRN_NoBestNullabilityConditionalExpression, "c ? x : y!").WithArguments("C<object>", "C<object?>").WithLocation(14, 13),
                 // (14,13): warning CS8600: Converting null literal or possible null value to non-nullable type.
                 //         b = c ? x : y!; // 11 and 12
                 Diagnostic(ErrorCode.WRN_ConvertingNullableToNonNullable, "c ? x : y!").WithLocation(14, 13),
                 // (14,13): warning CS8619: Nullability of reference types in value of type 'C<object>' doesn't match target type 'C<object?>'.
                 //         b = c ? x : y!; // 11 and 12
                 Diagnostic(ErrorCode.WRN_NullabilityMismatchInAssignment, "c ? x : y!").WithArguments("C<object>", "C<object?>").WithLocation(14, 13),
-                // (15,13): warning CS8626: No best nullability for operands of conditional expression 'C<object>' and 'C<object?>'.
-                //         b = c ? x! : y; // 13
-                Diagnostic(ErrorCode.WRN_NoBestNullabilityConditionalExpression, "c ? x! : y").WithArguments("C<object>", "C<object?>").WithLocation(15, 13),
                 // (15,13): warning CS8619: Nullability of reference types in value of type 'C<object>' doesn't match target type 'C<object?>'.
                 //         b = c ? x! : y; // 13
                 Diagnostic(ErrorCode.WRN_NullabilityMismatchInAssignment, "c ? x! : y").WithArguments("C<object>", "C<object?>").WithLocation(15, 13),
                 // (15,22): warning CS8619: Nullability of reference types in value of type 'C<object?>' doesn't match target type 'C<object>'.
                 //         b = c ? x! : y; // 13
                 Diagnostic(ErrorCode.WRN_NullabilityMismatchInAssignment, "y").WithArguments("C<object?>", "C<object>").WithLocation(15, 22),
-                // (16,13): warning CS8626: No best nullability for operands of conditional expression 'C<object>' and 'C<object?>'.
-                //         b = c ? x! : y!; // 14
-                Diagnostic(ErrorCode.WRN_NoBestNullabilityConditionalExpression, "c ? x! : y!").WithArguments("C<object>", "C<object?>").WithLocation(16, 13),
                 // (16,13): warning CS8619: Nullability of reference types in value of type 'C<object>' doesn't match target type 'C<object?>'.
                 //         b = c ? x! : y!; // 14
                 Diagnostic(ErrorCode.WRN_NullabilityMismatchInAssignment, "c ? x! : y!").WithArguments("C<object>", "C<object?>").WithLocation(16, 13)
@@ -34394,49 +33691,31 @@ class C<T>
                 // (6,23): warning CS8619: Nullability of reference types in value of type 'C<object?>' doesn't match target type 'C<object>'.
                 //         var t1 = x ?? y; // 1
                 Diagnostic(ErrorCode.WRN_NullabilityMismatchInAssignment, "y").WithArguments("C<object?>", "C<object>").WithLocation(6, 23),
-                // (7,18): hidden CS8607: Expression is probably never null.
-                //         var t2 = y ?? x; // 2 and 3
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "y").WithLocation(7, 18),
                 // (7,23): warning CS8619: Nullability of reference types in value of type 'C<object>' doesn't match target type 'C<object?>'.
                 //         var t2 = y ?? x; // 2 and 3
                 Diagnostic(ErrorCode.WRN_NullabilityMismatchInAssignment, "x").WithArguments("C<object>", "C<object?>").WithLocation(7, 23),
-                // (8,18): hidden CS8607: Expression is probably never null.
-                //         var t3 = x! ?? y; // 4 and 5
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "x!").WithLocation(8, 18),
                 // (8,24): warning CS8619: Nullability of reference types in value of type 'C<object?>' doesn't match target type 'C<object>'.
                 //         var t3 = x! ?? y; // 4 and 5
                 Diagnostic(ErrorCode.WRN_NullabilityMismatchInAssignment, "y").WithArguments("C<object?>", "C<object>").WithLocation(8, 24),
-                // (9,18): hidden CS8607: Expression is probably never null.
-                //         var t4 = y! ?? x; // 6 and 7
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "y!").WithLocation(9, 18),
                 // (9,24): warning CS8619: Nullability of reference types in value of type 'C<object>' doesn't match target type 'C<object?>'.
                 //         var t4 = y! ?? x; // 6 and 7
                 Diagnostic(ErrorCode.WRN_NullabilityMismatchInAssignment, "x").WithArguments("C<object>", "C<object?>").WithLocation(9, 24),
                 // (10,23): warning CS8619: Nullability of reference types in value of type 'C<object?>' doesn't match target type 'C<object>'.
                 //         var t5 = x ?? y!; // 8
                 Diagnostic(ErrorCode.WRN_NullabilityMismatchInAssignment, "y!").WithArguments("C<object?>", "C<object>").WithLocation(10, 23),
-                // (11,18): hidden CS8607: Expression is probably never null.
-                //         var t6 = y ?? x!; // 9 and 10
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "y").WithLocation(11, 18),
                 // (11,23): warning CS8619: Nullability of reference types in value of type 'C<object>' doesn't match target type 'C<object?>'.
                 //         var t6 = y ?? x!; // 9 and 10
                 Diagnostic(ErrorCode.WRN_NullabilityMismatchInAssignment, "x!").WithArguments("C<object>", "C<object?>").WithLocation(11, 23),
-                // (12,18): hidden CS8607: Expression is probably never null.
-                //         var t7 = x! ?? y!; // 11 and 12
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "x!").WithLocation(12, 18),
                 // (12,24): warning CS8619: Nullability of reference types in value of type 'C<object?>' doesn't match target type 'C<object>'.
                 //         var t7 = x! ?? y!; // 11 and 12
                 Diagnostic(ErrorCode.WRN_NullabilityMismatchInAssignment, "y!").WithArguments("C<object?>", "C<object>").WithLocation(12, 24),
-                // (13,18): hidden CS8607: Expression is probably never null.
-                //         var t8 = y! ?? x!; // 13 and 14
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "y!").WithLocation(13, 18),
                 // (13,24): warning CS8619: Nullability of reference types in value of type 'C<object>' doesn't match target type 'C<object?>'.
                 //         var t8 = y! ?? x!; // 13 and 14
                 Diagnostic(ErrorCode.WRN_NullabilityMismatchInAssignment, "x!").WithArguments("C<object>", "C<object?>").WithLocation(13, 24)
                 );
         }
 
-        [Fact]
+        [Fact, WorkItem(33346, "https://github.com/dotnet/roslyn/issues/33346")]
         public void SuppressNullableWarning_ArrayInitializer()
         {
             var source =
@@ -34445,28 +33724,14 @@ class C<T>
 {
     static void F(C<object>? x, C<object?> y)
     {
-        var a1 = new[] { x, y }; // 1
+        var a1 = new[] { x, y }; // 1 (missing warning converting element to inferred element type)
         var a2 = new[] { x!, y }; // 2
         var a3 = new[] { x, y! }; // 3
         var a4 = new[] { x!, y! }; // 4
     }
 }";
             var comp = CreateCompilation(new[] { source }, options: WithNonNullTypesTrue());
-            // https://github.com/dotnet/roslyn/issues/30151: ! should suppress WRN_NoBestNullabilityArrayElements.
-            comp.VerifyDiagnostics(
-                // (6,18): warning CS8639: No best nullability found for implicitly-typed array.
-                //         var a1 = new[] { x, y }; // 1
-                Diagnostic(ErrorCode.WRN_NoBestNullabilityArrayElements, "new[] { x, y }").WithLocation(6, 18),
-                // (7,18): warning CS8639: No best nullability found for implicitly-typed array.
-                //         var a2 = new[] { x!, y }; // 2
-                Diagnostic(ErrorCode.WRN_NoBestNullabilityArrayElements, "new[] { x!, y }").WithLocation(7, 18),
-                // (8,18): warning CS8639: No best nullability found for implicitly-typed array.
-                //         var a3 = new[] { x, y! }; // 3
-                Diagnostic(ErrorCode.WRN_NoBestNullabilityArrayElements, "new[] { x, y! }").WithLocation(8, 18),
-                // (9,18): warning CS8639: No best nullability found for implicitly-typed array.
-                //         var a4 = new[] { x!, y! }; // 4
-                Diagnostic(ErrorCode.WRN_NoBestNullabilityArrayElements, "new[] { x!, y! }").WithLocation(9, 18)
-                );
+            comp.VerifyDiagnostics();
         }
 
         [Fact, WorkItem(29642, "https://github.com/dotnet/roslyn/issues/29642")]
@@ -36031,16 +35296,7 @@ class C
 }";
             // https://github.com/dotnet/roslyn/issues/30952: `is` declaration does not set not nullable for declared local.
             var comp = CreateCompilation(source, options: WithNonNullTypesTrue());
-            comp.VerifyDiagnostics(
-                // (7,13): hidden CS8607: Expression is probably never null.
-                //             x1?.ToString(); // 1
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "x1").WithLocation(7, 13),
-                // (10,9): hidden CS8607: Expression is probably never null.
-                //         x1?.ToString(); // 3
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "x1").WithLocation(10, 9),
-                // (16,13): hidden CS8607: Expression is probably never null.
-                //             x2?.ToString(); // 4
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "x2").WithLocation(16, 13));
+            comp.VerifyDiagnostics();
         }
 
         [Fact]
@@ -36075,15 +35331,7 @@ class C
             // https://github.com/dotnet/roslyn/issues/30952: `is` declaration does not set not nullable for declared local.
             var comp = CreateCompilation(source, options: WithNonNullTypesTrue());
             comp.VerifyDiagnostics(
-                // (9,13): hidden CS8607: Expression is probably never null.
-                //             t1?.ToString(); // 1
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "t1").WithLocation(9, 13),
-                // (12,9): hidden CS8607: Expression is probably never null.
-                //         t1?.ToString(); // 3
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "t1").WithLocation(12, 9),
-                // (20,13): hidden CS8607: Expression is probably never null.
-                //             t2?.ToString(); // 4
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "t2").WithLocation(20, 13));
+                );
         }
 
         [Fact]
@@ -40241,9 +39489,6 @@ class Program
             // https://github.com/dotnet/roslyn/issues/32703: Not inferring nullability of non-nullable value compared to null (see // 1).
             // https://github.com/dotnet/roslyn/issues/31395: Nullability of class members should be copied on assignment (see // 2).
             comp.VerifyDiagnostics(
-                // (13,13): hidden CS8605: Result of the comparison is possibly always true.
-                //         if (x.G != null) return;
-                Diagnostic(ErrorCode.HDN_NullCheckIsProbablyAlwaysTrue, "x.G != null").WithLocation(13, 13),
                 // (17,9): warning CS8602: Possible dereference of a null reference.
                 //         y.F.ToString();
                 Diagnostic(ErrorCode.WRN_NullReferenceReceiver, "y.F").WithLocation(17, 9));
@@ -40276,9 +39521,7 @@ class Program
             var comp = CreateCompilation(source, options: WithNonNullTypesTrue());
             // https://github.com/dotnet/roslyn/issues/32703: Not inferring nullability of non-nullable value compared to null (see // 1, 2).
             comp.VerifyDiagnostics(
-                // (12,13): hidden CS8605: Result of the comparison is possibly always true.
-                //         if (x.G != null) return;
-                Diagnostic(ErrorCode.HDN_NullCheckIsProbablyAlwaysTrue, "x.G != null").WithLocation(12, 13));
+                );
         }
 
         [Fact]
@@ -40308,10 +39551,7 @@ class Program
 }";
             var comp = CreateCompilation(source, options: WithNonNullTypesTrue());
             // https://github.com/dotnet/roslyn/issues/32703: Not inferring nullability of non-nullable value compared to null (see //1, 2).
-            comp.VerifyDiagnostics(
-                // (13,13): hidden CS8605: Result of the comparison is possibly always true.
-                //         if (x.Value.G != null) return;
-                Diagnostic(ErrorCode.HDN_NullCheckIsProbablyAlwaysTrue, "x.Value.G != null").WithLocation(13, 13));
+            comp.VerifyDiagnostics();
         }
 
         [Fact]
@@ -42245,13 +41485,7 @@ class C
                 Diagnostic(ErrorCode.WRN_NullReferenceReceiver, "c.F").WithLocation(12, 9),
                 // (13,9): warning CS8602: Possible dereference of a null reference.
                 //         c.P.ToString(); // 4
-                Diagnostic(ErrorCode.WRN_NullReferenceReceiver, "c.P").WithLocation(13, 9),
-                // (14,13): hidden CS8606: Result of the comparison is possibly always false.
-                //         if (c.F == null) return;
-                Diagnostic(ErrorCode.HDN_NullCheckIsProbablyAlwaysFalse, "c.F == null").WithLocation(14, 13),
-                // (15,13): hidden CS8606: Result of the comparison is possibly always false.
-                //         if (c.P == null) return;
-                Diagnostic(ErrorCode.HDN_NullCheckIsProbablyAlwaysFalse, "c.P == null").WithLocation(15, 13));
+                Diagnostic(ErrorCode.WRN_NullReferenceReceiver, "c.P").WithLocation(13, 9));
         }
 
         [Fact]
@@ -43474,10 +42708,8 @@ class C
                 Diagnostic(ErrorCode.WRN_NullReferenceReceiver, "y").WithLocation(16, 13),
                 // (19,13): warning CS8602: Possible dereference of a null reference.
                 //             z.ToString();
-                Diagnostic(ErrorCode.WRN_NullReferenceReceiver, "z").WithLocation(19, 13),
-                // (20,17): hidden CS8605: Result of the comparison is possibly always true.
-                //             if (z != null) z.ToString();
-                Diagnostic(ErrorCode.HDN_NullCheckIsProbablyAlwaysTrue, "z != null").WithLocation(20, 17));
+                Diagnostic(ErrorCode.WRN_NullReferenceReceiver, "z").WithLocation(19, 13)
+                );
         }
 
         [WorkItem(23493, "https://github.com/dotnet/roslyn/issues/23493")]
@@ -45065,22 +44297,22 @@ class C
     static B<T, U> CreateB<T, U>(T t, U u) => throw null;
     static void G(object? t1, object t2, string? u1, string u2)
     {
-        var t3 = A.F/*T:object*/;
-        var u3 = A.G/*T:string*/;
+        var t3 = A.F/*T:object!*/;
+        var u3 = A.G/*T:string!*/;
         var x0 = CreateB(t1, u2)/*T:B<object?, string!>!*/;
         var y0 = CreateB(t2, u1)/*T:B<object!, string?>!*/;
-        var z0 = CreateB(t1, u3)/*T:B<object?, string>!*/;
-        var w0 = CreateB(t3, u2)/*T:B<object, string!>!*/;
+        var z0 = CreateB(t1, u3)/*T:B<object?, string!>!*/;
+        var w0 = CreateB(t3, u2)/*T:B<object!, string!>!*/;
         var x = x0;
         var y = y0;
         var z = z0;
         var w = w0;
         x = y0; // 1
         x = z0;
-        x = w0;
-        y = z0; // 2
-        y = w0; // 3
-        w = z0;
+        x = w0; // 2
+        y = z0; // 3
+        y = w0; // 4
+        w = z0; // 5
     }
 }";
             var comp = CreateCompilation(new[] { source }, options: WithNonNullTypesTrue(), references: new[] { ref0 });
@@ -45089,12 +44321,19 @@ class C
                 // (17,13): warning CS8619: Nullability of reference types in value of type 'B<object, string?>' doesn't match target type 'B<object?, string>'.
                 //         x = y0; // 1
                 Diagnostic(ErrorCode.WRN_NullabilityMismatchInAssignment, "y0").WithArguments("B<object, string?>", "B<object?, string>").WithLocation(17, 13),
+                // (19,13): warning CS8619: Nullability of reference types in value of type 'B<object, string>' doesn't match target type 'B<object?, string>'.
+                //         x = w0; // 2
+                Diagnostic(ErrorCode.WRN_NullabilityMismatchInAssignment, "w0").WithArguments("B<object, string>", "B<object?, string>").WithLocation(19, 13),
                 // (20,13): warning CS8619: Nullability of reference types in value of type 'B<object?, string>' doesn't match target type 'B<object, string?>'.
-                //         y = z0; // 2
+                //         y = z0; // 3
                 Diagnostic(ErrorCode.WRN_NullabilityMismatchInAssignment, "z0").WithArguments("B<object?, string>", "B<object, string?>").WithLocation(20, 13),
                 // (21,13): warning CS8619: Nullability of reference types in value of type 'B<object, string>' doesn't match target type 'B<object, string?>'.
-                //         y = w0; // 3
-                Diagnostic(ErrorCode.WRN_NullabilityMismatchInAssignment, "w0").WithArguments("B<object, string>", "B<object, string?>").WithLocation(21, 13));
+                //         y = w0; // 4
+                Diagnostic(ErrorCode.WRN_NullabilityMismatchInAssignment, "w0").WithArguments("B<object, string>", "B<object, string?>").WithLocation(21, 13),
+                // (22,13): warning CS8619: Nullability of reference types in value of type 'B<object?, string>' doesn't match target type 'B<object, string>'.
+                //         w = z0; // 5
+                Diagnostic(ErrorCode.WRN_NullabilityMismatchInAssignment, "z0").WithArguments("B<object?, string>", "B<object, string>").WithLocation(22, 13)
+                );
         }
 
         [Fact]
@@ -45726,12 +44965,6 @@ class C
                 new[] { source }, options: WithNonNullTypesTrue(),
                 parseOptions: TestOptions.Regular8);
             comp.VerifyDiagnostics(
-                // (6,11): hidden CS8607: Expression is probably never null.
-                //         F(x ?? x).ToString();
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "x").WithLocation(6, 11),
-                // (7,11): hidden CS8607: Expression is probably never null.
-                //         F(x ?? y).ToString();
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "x").WithLocation(7, 11),
                 // (9,9): warning CS8602: Possible dereference of a null reference.
                 //         F(y ?? y).ToString();
                 Diagnostic(ErrorCode.WRN_NullReferenceReceiver, "F(y ?? y)").WithLocation(9, 9));
@@ -53069,21 +52302,9 @@ class C
                 // (11,9): warning CS8602: Possible dereference of a null reference.
                 //         x1.ToString(); // warn 3
                 Diagnostic(ErrorCode.WRN_NullReferenceReceiver, "x1").WithLocation(11, 9),
-                // (13,9): hidden CS8607: Expression is probably never null.
-                //         x1?.ToString();
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "x1").WithLocation(13, 9),
-                // (14,13): hidden CS8605: Result of the comparison is possibly always true.
-                //         if (x1 != null) x1.ToString();
-                Diagnostic(ErrorCode.HDN_NullCheckIsProbablyAlwaysTrue, "x1 != null").WithLocation(14, 13),
                 // (20,9): warning CS8602: Possible dereference of a null reference.
                 //         x2.ToString(); // warn 4
                 Diagnostic(ErrorCode.WRN_NullReferenceReceiver, "x2").WithLocation(20, 9),
-                // (22,9): hidden CS8607: Expression is probably never null.
-                //         x2?.ToString();
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "x2").WithLocation(22, 9),
-                // (23,13): hidden CS8605: Result of the comparison is possibly always true.
-                //         if (x2 != null) x2.ToString();
-                Diagnostic(ErrorCode.HDN_NullCheckIsProbablyAlwaysTrue, "x2 != null").WithLocation(23, 13),
                 // (26,9): warning CS8602: Possible dereference of a null reference.
                 //         a2[0].ToString(); // warn 5
                 Diagnostic(ErrorCode.WRN_NullReferenceReceiver, "a2[0]").WithLocation(26, 9),
@@ -53119,10 +52340,8 @@ class C
                 Diagnostic(ErrorCode.WRN_ConvertingNullableToNonNullable, "(object)t1").WithLocation(8, 11),
                 // (8,11): warning CS8604: Possible null reference argument for parameter 'o' in 'void C.F(object o)'.
                 //         F((object)t1);
-                Diagnostic(ErrorCode.WRN_NullReferenceArgument, "(object)t1").WithArguments("o", "void C.F(object o)").WithLocation(8, 11),
-                // (14,13): hidden CS8605: Result of the comparison is possibly always true.
-                //         if (t2 != null) F((object)t2);
-                Diagnostic(ErrorCode.HDN_NullCheckIsProbablyAlwaysTrue, "t2 != null").WithLocation(14, 13));
+                Diagnostic(ErrorCode.WRN_NullReferenceArgument, "(object)t1").WithArguments("o", "void C.F(object o)").WithLocation(8, 11)
+                );
         }
 
         [Fact]
@@ -58040,10 +57259,8 @@ static class E
                 Diagnostic(ErrorCode.ERR_UseDefViolation, "y").WithArguments("y").WithLocation(7, 9),
                 // (9,9): warning CS8602: Possible dereference of a null reference.
                 //         y.ToString(); // 2
-                Diagnostic(ErrorCode.WRN_NullReferenceReceiver, "y").WithLocation(9, 9),
-                // (13,13): hidden CS8605: Result of the comparison is possibly always true.
-                //         if (y != null)
-                Diagnostic(ErrorCode.HDN_NullCheckIsProbablyAlwaysTrue, "y != null").WithLocation(13, 13));
+                Diagnostic(ErrorCode.WRN_NullReferenceReceiver, "y").WithLocation(9, 9)
+                );
         }
 
         [Fact]
@@ -58083,10 +57300,8 @@ static class E
                 Diagnostic(ErrorCode.WRN_ConvertingNullableToNonNullable, "default").WithLocation(8, 13),
                 // (9,9): warning CS8602: Possible dereference of a null reference.
                 //         y.ToString(); // 2
-                Diagnostic(ErrorCode.WRN_NullReferenceReceiver, "y").WithLocation(9, 9),
-                // (13,13): hidden CS8605: Result of the comparison is possibly always true.
-                //         if (y != null)
-                Diagnostic(ErrorCode.HDN_NullCheckIsProbablyAlwaysTrue, "y != null").WithLocation(13, 13));
+                Diagnostic(ErrorCode.WRN_NullReferenceReceiver, "y").WithLocation(9, 9)
+                );
         }
 
         [Fact]
@@ -62102,9 +61317,6 @@ class Outer
 ";
 
             CreateCompilation(source, options: WithNonNullTypesTrue()).VerifyDiagnostics(
-                // (7,10): hidden CS8607: Expression is probably never null.
-                //         (x0 ?? y0)?.ToString();
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "x0 ?? y0").WithLocation(7, 10)
                 );
         }
 
@@ -62368,15 +61580,9 @@ class Outer
 ";
 
             CreateCompilation(source, options: WithNonNullTypesTrue()).VerifyDiagnostics(
-                // (7,16): hidden CS8607: Expression is probably never null.
-                //         T z0 = x0 ?? y0;
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "x0").WithLocation(7, 16),
                 // (8,9): warning CS8602: Possible dereference of a null reference.
                 //         M1(z0).ToString();
-                Diagnostic(ErrorCode.WRN_NullReferenceReceiver, "M1(z0)").WithLocation(8, 9),
-                // (11,9): hidden CS8607: Expression is probably never null.
-                //         z0?.ToString();
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "z0").WithLocation(11, 9)
+                Diagnostic(ErrorCode.WRN_NullReferenceReceiver, "M1(z0)").WithLocation(8, 9)
                 );
         }
 
@@ -62401,12 +61607,6 @@ class Outer
 ";
 
             CreateCompilation(source, options: WithNonNullTypesTrue()).VerifyDiagnostics(
-                // (8,16): hidden CS8607: Expression is probably never null.
-                //         T z0 = x0 ?? y0;
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "x0").WithLocation(8, 16),
-                // (10,9): hidden CS8607: Expression is probably never null.
-                //         z0?.ToString();
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "z0").WithLocation(10, 9),
                 // (11,9): warning CS8602: Possible dereference of a null reference.
                 //         M1(z0).ToString();
                 Diagnostic(ErrorCode.WRN_NullReferenceReceiver, "M1(z0)").WithLocation(11, 9)
@@ -63059,9 +62259,6 @@ class Outer<T>
 ";
 
             CreateCompilation(source, options: WithNonNullTypesTrue()).VerifyDiagnostics(
-                // (7,16): hidden CS8607: Expression is probably never null.
-                //         T z0 = y0 ?? M2();
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "y0").WithLocation(7, 16),
                 // (11,9): warning CS8602: Possible dereference of a null reference.
                 //         M1(z0).ToString();
                 Diagnostic(ErrorCode.WRN_NullReferenceReceiver, "M1(z0)").WithLocation(11, 9)
@@ -63301,9 +62498,6 @@ class Outer
 ";
 
             CreateCompilation(source, options: WithNonNullTypesTrue()).VerifyDiagnostics(
-                // (10,9): hidden CS8607: Expression is probably never null.
-                //         z0?.ToString();
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "z0").WithLocation(10, 9),
                 // (11,9): warning CS8602: Possible dereference of a null reference.
                 //         M1(z0).ToString();
                 Diagnostic(ErrorCode.WRN_NullReferenceReceiver, "M1(z0)").WithLocation(11, 9)
@@ -63538,10 +62732,7 @@ class Outer
             CreateCompilation(source, options: WithNonNullTypesTrue()).VerifyDiagnostics(
                 // (10,9): warning CS8602: Possible dereference of a null reference.
                 //         M1(z0).ToString();
-                Diagnostic(ErrorCode.WRN_NullReferenceReceiver, "M1(z0)").WithLocation(10, 9),
-                // (11,9): hidden CS8607: Expression is probably never null.
-                //         z0?.ToString();
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "z0").WithLocation(11, 9)
+                Diagnostic(ErrorCode.WRN_NullReferenceReceiver, "M1(z0)").WithLocation(10, 9)
                 );
         }
 
@@ -63596,10 +62787,7 @@ class Outer<T>
             CreateCompilation(source, options: WithNonNullTypesTrue()).VerifyDiagnostics(
                 // (9,9): warning CS8602: Possible dereference of a null reference.
                 //         M1(z0).ToString();
-                Diagnostic(ErrorCode.WRN_NullReferenceReceiver, "M1(z0)").WithLocation(9, 9),
-                // (10,9): hidden CS8607: Expression is probably never null.
-                //         z0?.ToString();
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "z0").WithLocation(10, 9)
+                Diagnostic(ErrorCode.WRN_NullReferenceReceiver, "M1(z0)").WithLocation(9, 9)
                 );
         }
 
@@ -63761,10 +62949,7 @@ class Outer
             CreateCompilation(source, options: WithNonNullTypesTrue()).VerifyDiagnostics(
                 // (10,9): warning CS8602: Possible dereference of a null reference.
                 //         M1(z0).ToString();
-                Diagnostic(ErrorCode.WRN_NullReferenceReceiver, "M1(z0)").WithLocation(10, 9),
-                // (11,9): hidden CS8607: Expression is probably never null.
-                //         z0?.ToString();
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "z0").WithLocation(11, 9)
+                Diagnostic(ErrorCode.WRN_NullReferenceReceiver, "M1(z0)").WithLocation(10, 9)
                 );
         }
 
@@ -63794,10 +62979,7 @@ class Outer<T>
             CreateCompilation(source, options: WithNonNullTypesTrue()).VerifyDiagnostics(
                 // (9,9): warning CS8602: Possible dereference of a null reference.
                 //         M1(z0).ToString();
-                Diagnostic(ErrorCode.WRN_NullReferenceReceiver, "M1(z0)").WithLocation(9, 9),
-                // (10,9): hidden CS8607: Expression is probably never null.
-                //         z0?.ToString();
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "z0").WithLocation(10, 9)
+                Diagnostic(ErrorCode.WRN_NullReferenceReceiver, "M1(z0)").WithLocation(9, 9)
                 );
         }
 
@@ -64055,9 +63237,6 @@ class Outer<T, U> where T : Outer<T, U>?, U
 ";
 
             CreateCompilation(source, options: WithNonNullTypesTrue()).VerifyDiagnostics(
-                // (7,16): hidden CS8607: Expression is probably never null.
-                //         T z0 = x0?.M1();
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "x0").WithLocation(7, 16),
                 // (10,9): warning CS8602: Possible dereference of a null reference.
                 //         y0.ToString();
                 Diagnostic(ErrorCode.WRN_NullReferenceReceiver, "y0").WithLocation(10, 9),
@@ -64124,9 +63303,6 @@ class Outer<T, U> where T : Outer<T, U>?, U
 ";
 
             CreateCompilation(source, options: WithNonNullTypesTrue()).VerifyDiagnostics(
-                // (6,16): hidden CS8607: Expression is probably never null.
-                //         T z0 = x0?.M1();
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "x0").WithLocation(6, 16),
                 // (9,9): warning CS8602: Possible dereference of a null reference.
                 //         y0.ToString();
                 Diagnostic(ErrorCode.WRN_NullReferenceReceiver, "y0").WithLocation(9, 9),
@@ -64182,12 +63358,6 @@ class Outer<T> where T : Outer<T>?
 ";
 
             CreateCompilation(source, options: WithNonNullTypesTrue()).VerifyDiagnostics(
-                // (7,23): hidden CS8607: Expression is probably never null.
-                //         Outer<T> z0 = x0?.M1();
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "x0").WithLocation(7, 23),
-                // (8,9): hidden CS8607: Expression is probably never null.
-                //         z0?.ToString();
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "z0").WithLocation(8, 9)
                 );
         }
 
@@ -64237,9 +63407,6 @@ class Outer<T> where T : Outer<T>?
 ";
 
             CreateCompilation(source, options: WithNonNullTypesTrue()).VerifyDiagnostics(
-                // (7,23): hidden CS8607: Expression is probably never null.
-                //         Outer<T> z0 = x0?.M1();
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "x0").WithLocation(7, 23),
                 // (7,23): warning CS8600: Converting null literal or possible null value to non-nullable type.
                 //         Outer<T> z0 = x0?.M1();
                 Diagnostic(ErrorCode.WRN_ConvertingNullableToNonNullable, "x0?.M1()").WithLocation(7, 23),
@@ -64292,9 +63459,6 @@ class Outer<T, U> where T : Outer<T, U>?, U where U : class?
 ";
 
             CreateCompilation(source, options: WithNonNullTypesTrue()).VerifyDiagnostics(
-                // (7,16): hidden CS8607: Expression is probably never null.
-                //         U z0 = x0?.M1();
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "x0").WithLocation(7, 16),
                 // (9,9): warning CS8602: Possible dereference of a null reference.
                 //         z0.ToString();
                 Diagnostic(ErrorCode.WRN_NullReferenceReceiver, "z0").WithLocation(9, 9)
@@ -64376,9 +63540,6 @@ class Outer<T, U> where T : U where U : Outer<T, U>?
 ";
 
             CreateCompilation(source, options: WithNonNullTypesTrue()).VerifyDiagnostics(
-                // (7,16): hidden CS8607: Expression is probably never null.
-                //         U z0 = x0?.M1();
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "x0").WithLocation(7, 16),
                 // (9,9): warning CS8602: Possible dereference of a null reference.
                 //         z0.ToString();
                 Diagnostic(ErrorCode.WRN_NullReferenceReceiver, "z0").WithLocation(9, 9)
@@ -64404,9 +63565,6 @@ class Outer<T, U> where T : U where U : Outer<T, U>?
 ";
 
             CreateCompilation(source, options: WithNonNullTypesTrue()).VerifyDiagnostics(
-                // (7,16): hidden CS8607: Expression is probably never null.
-                //         T z0 = x0?.M1();
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "x0").WithLocation(7, 16),
                 // (9,9): warning CS8602: Possible dereference of a null reference.
                 //         z0.ToString();
                 Diagnostic(ErrorCode.WRN_NullReferenceReceiver, "z0").WithLocation(9, 9)
@@ -64459,9 +63617,6 @@ class Outer<T, U> where T : Outer<T, U>? where U : class?
 ";
 
             CreateCompilation(source, options: WithNonNullTypesTrue()).VerifyDiagnostics(
-                // (7,16): hidden CS8607: Expression is probably never null.
-                //         U z0 = x0?.M1();
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "x0").WithLocation(7, 16),
                 // (9,9): warning CS8602: Possible dereference of a null reference.
                 //         z0.ToString();
                 Diagnostic(ErrorCode.WRN_NullReferenceReceiver, "z0").WithLocation(9, 9)
@@ -64514,12 +63669,6 @@ class Outer<T, U> where T : Outer<T, U>? where U : class
 ";
 
             CreateCompilation(source, options: WithNonNullTypesTrue()).VerifyDiagnostics(
-                // (7,16): hidden CS8607: Expression is probably never null.
-                //         U z0 = x0?.M1();
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "x0").WithLocation(7, 16),
-                // (8,9): hidden CS8607: Expression is probably never null.
-                //         z0?.ToString();
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "z0").WithLocation(8, 9)
                 );
         }
 
@@ -64565,9 +63714,6 @@ class Outer<T>
 ";
 
             CreateCompilation(source, options: WithNonNullTypesTrue()).VerifyDiagnostics(
-                // (8,9): hidden CS8607: Expression is probably never null.
-                //         y0?.ToString();
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "y0").WithLocation(8, 9)
                 );
         }
 
@@ -64613,9 +63759,6 @@ class Outer<T>
 ";
 
             CreateCompilation(source, options: WithNonNullTypesTrue()).VerifyDiagnostics(
-                // (8,9): hidden CS8607: Expression is probably never null.
-                //         y0?.ToString();
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "y0").WithLocation(8, 9)
                 );
         }
 
@@ -64787,9 +63930,6 @@ class Outer<T> where T : object
 ";
 
             CreateCompilation(source, options: WithNonNullTypesTrue()).VerifyDiagnostics(
-                // (7,9): hidden CS8607: Expression is probably never null.
-                //         y0?.ToString();
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "y0").WithLocation(7, 9)
                 );
         }
 
@@ -64809,9 +63949,6 @@ class Outer<T> where T : object
 ";
 
             CreateCompilation(source, options: WithNonNullTypesTrue()).VerifyDiagnostics(
-                // (7,9): hidden CS8607: Expression is probably never null.
-                //         y0?.ToString();
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "y0").WithLocation(7, 9)
                 );
         }
 
@@ -65237,9 +64374,6 @@ class Outer<T> where T : Outer<T>?
 ";
 
             CreateCompilation(source, options: WithNonNullTypesTrue()).VerifyDiagnostics(
-                // (8,9): hidden CS8607: Expression is probably never null.
-                //         y0?.ToString();
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "y0").WithLocation(8, 9)
                 );
         }
 
@@ -65284,9 +64418,6 @@ class Outer<T> where T : Outer<T>
 ";
 
             CreateCompilation(source, options: WithNonNullTypesTrue()).VerifyDiagnostics(
-                // (7,9): hidden CS8607: Expression is probably never null.
-                //         y0?.ToString();
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "y0").WithLocation(7, 9)
                 );
         }
 
@@ -65412,9 +64543,6 @@ interface I1{}
 ";
 
             CreateCompilation(source, options: WithNonNullTypesTrue()).VerifyDiagnostics(
-                // (8,9): hidden CS8607: Expression is probably never null.
-                //         y0?.ToString();
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "y0").WithLocation(8, 9)
                 );
         }
 
@@ -65463,9 +64591,6 @@ interface I1{}
 ";
 
             CreateCompilation(source, options: WithNonNullTypesTrue()).VerifyDiagnostics(
-                // (7,9): hidden CS8607: Expression is probably never null.
-                //         y0?.ToString();
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "y0").WithLocation(7, 9)
                 );
         }
 
@@ -65590,9 +64715,6 @@ class Outer<T> where T : class?
 ";
 
             CreateCompilation(source, options: WithNonNullTypesTrue()).VerifyDiagnostics(
-                // (8,9): hidden CS8607: Expression is probably never null.
-                //         y0?.ToString();
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "y0").WithLocation(8, 9)
                 );
         }
 
@@ -65612,9 +64734,6 @@ class Outer<T> where T : class
 ";
 
             CreateCompilation(source, options: WithNonNullTypesTrue()).VerifyDiagnostics(
-                // (7,9): hidden CS8607: Expression is probably never null.
-                //         y0?.ToString();
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "y0").WithLocation(7, 9)
                 );
         }
 
@@ -65657,9 +64776,6 @@ class Outer<T, U> where T : U where U : class?
 ";
 
             CreateCompilation(source, options: WithNonNullTypesTrue()).VerifyDiagnostics(
-                // (8,9): hidden CS8607: Expression is probably never null.
-                //         y0?.ToString();
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "y0").WithLocation(8, 9)
                 );
         }
 
@@ -65679,9 +64795,6 @@ class Outer<T, U> where T : U where U : class
 ";
 
             CreateCompilation(source, options: WithNonNullTypesTrue()).VerifyDiagnostics(
-                // (7,9): hidden CS8607: Expression is probably never null.
-                //         y0?.ToString();
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "y0").WithLocation(7, 9)
                 );
         }
 
@@ -65701,9 +64814,6 @@ class Outer<T, U> where T : class, U where U : class?
 ";
 
             CreateCompilation(source, options: WithNonNullTypesTrue()).VerifyDiagnostics(
-                // (7,9): hidden CS8607: Expression is probably never null.
-                //         y0?.ToString();
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "y0").WithLocation(7, 9)
                 );
         }
 
@@ -65746,9 +64856,6 @@ class Outer<T, U> where T : class?, U where U : class?
 ";
 
             CreateCompilation(source, options: WithNonNullTypesTrue()).VerifyDiagnostics(
-                // (8,9): hidden CS8607: Expression is probably never null.
-                //         y0?.ToString();
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "y0").WithLocation(8, 9)
                 );
         }
 
@@ -65768,9 +64875,6 @@ class Outer<T, U> where T : class?, U where U : class
 ";
 
             CreateCompilation(source, options: WithNonNullTypesTrue()).VerifyDiagnostics(
-                // (7,9): hidden CS8607: Expression is probably never null.
-                //         y0?.ToString();
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "y0").WithLocation(7, 9)
                 );
         }
 
@@ -66088,9 +65192,6 @@ class Outer
 ";
 
             CreateCompilation(source, options: WithNonNullTypesTrue()).VerifyDiagnostics(
-                // (7,10): hidden CS8607: Expression is probably never null.
-                //         (x0 ??= y0)?.ToString();
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "x0 ??= y0").WithLocation(7, 10)
                 );
         }
 
@@ -66115,15 +65216,10 @@ class Outer
 ";
 
             CreateCompilation(source, options: WithNonNullTypesTrue()).VerifyDiagnostics(
-                // (7,9): hidden CS8607: Expression is probably never null.
-                //         x0 ??= y0;
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "x0").WithLocation(7, 9),
                 // (8,9): warning CS8602: Possible dereference of a null reference.
                 //         M1(x0).ToString();
-                Diagnostic(ErrorCode.WRN_NullReferenceReceiver, "M1(x0)").WithLocation(8, 9),
-                // (10,9): hidden CS8607: Expression is probably never null.
-                //         x0?.ToString();
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "x0").WithLocation(10, 9));
+                Diagnostic(ErrorCode.WRN_NullReferenceReceiver, "M1(x0)").WithLocation(8, 9)
+                );
         }
 
         [Fact]
@@ -66147,12 +65243,6 @@ class Outer
 ";
 
             CreateCompilation(source, options: WithNonNullTypesTrue()).VerifyDiagnostics(
-                // (8,9): hidden CS8607: Expression is probably never null.
-                //         x0 ??= y0;
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "x0").WithLocation(8, 9),
-                // (10,9): hidden CS8607: Expression is probably never null.
-                //         x0?.ToString();
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "x0").WithLocation(10, 9),
                 // (11,9): warning CS8602: Possible dereference of a null reference.
                 //         M1(x0).ToString();
                 Diagnostic(ErrorCode.WRN_NullReferenceReceiver, "M1(x0)").WithLocation(11, 9));
@@ -66183,9 +65273,6 @@ class Outer<T>
 ";
 
             CreateCompilation(source, options: WithNonNullTypesTrue()).VerifyDiagnostics(
-                // (7,9): hidden CS8607: Expression is probably never null.
-                //         y0 ??= M2();
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "y0").WithLocation(7, 9),
                 // (11,9): warning CS8602: Possible dereference of a null reference.
                 //         M1(y0).ToString();
                 Diagnostic(ErrorCode.WRN_NullReferenceReceiver, "M1(y0)").WithLocation(11, 9));
@@ -66231,15 +65318,9 @@ class Outer<T1, T2> where T1 : class, T2
 ";
 
             CreateCompilation(source, options: WithNonNullTypesTrue()).VerifyDiagnostics(
-                // (6,9): hidden CS8607: Expression is probably never null.
-                //         t1 ??= t2 as T1;
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "t1").WithLocation(6, 9),
                 // (6,16): warning CS8600: Converting null literal or possible null value to non-nullable type.
                 //         t1 ??= t2 as T1;
                 Diagnostic(ErrorCode.WRN_ConvertingNullableToNonNullable, "t2 as T1").WithLocation(6, 16),
-                // (7,9): hidden CS8607: Expression is probably never null.
-                //         M1(t1) ??= t2 as T1;
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "M1(t1)").WithLocation(7, 9),
                 // (7,20): warning CS8601: Possible null reference assignment.
                 //         M1(t1) ??= t2 as T1;
                 Diagnostic(ErrorCode.WRN_NullReferenceAssignment, "t2 as T1").WithLocation(7, 20));
@@ -69842,6 +68923,7 @@ partial class Program
 
         private readonly static NullableAnnotation[] s_AllNullableAnnotations = (NullableAnnotation[])Enum.GetValues(typeof(NullableAnnotation));
         private readonly static NullableAnnotation[] s_AllSpeakableNullableAnnotations = new[] { NullableAnnotation.Unknown, NullableAnnotation.NotAnnotated, NullableAnnotation.Annotated };
+        private readonly static NullableFlowState[] s_AllNullableFlowStates = (NullableFlowState[])Enum.GetValues(typeof(NullableFlowState));
 
         [Fact]
         public void TestJoinForFixingLowerBounds()
@@ -69860,42 +68942,16 @@ partial class Program
         }
 
         [Fact]
-        public void TestJoinForFlowAnalysisBranches_IsPossiblyNullableReferenceTypeTypeParameterFalse()
+        public void TestJoinForFlowAnalysisBranches()
         {
-            var inputs = new[] { NullableAnnotation.Annotated, NullableAnnotation.Nullable, NullableAnnotation.Unknown, NullableAnnotation.NotNullable, NullableAnnotation.NotAnnotated };
+            var inputs = new[] { NullableFlowState.NotNull, NullableFlowState.MaybeNull };
 
-            Func<int, int, NullableAnnotation> getResult =
-                (i, j) => NullableAnnotationExtensions.JoinForFlowAnalysisBranches<string>(
-                    inputs[i], inputs[j], type: null, isPossiblyNullableReferenceTypeTypeParameter: _ => false);
+            Func<int, int, NullableFlowState> getResult = (i, j) => inputs[i].JoinForFlowAnalysisBranches(inputs[j]);
 
-            var expected = new NullableAnnotation[5, 5]
+            var expected = new NullableFlowState[2, 2]
             {
-                { NullableAnnotation.Annotated,     NullableAnnotation.Annotated,     NullableAnnotation.Annotated,     NullableAnnotation.Annotated,     NullableAnnotation.Annotated    },
-                { NullableAnnotation.Annotated,     NullableAnnotation.Nullable,      NullableAnnotation.Nullable,      NullableAnnotation.Nullable,      NullableAnnotation.Nullable     },
-                { NullableAnnotation.Annotated,     NullableAnnotation.Nullable,      NullableAnnotation.Unknown,       NullableAnnotation.Unknown,       NullableAnnotation.Unknown      },
-                { NullableAnnotation.Annotated,     NullableAnnotation.Nullable,      NullableAnnotation.Unknown,       NullableAnnotation.NotNullable,   NullableAnnotation.NotAnnotated },
-                { NullableAnnotation.Annotated,     NullableAnnotation.Nullable,      NullableAnnotation.Unknown,       NullableAnnotation.NotAnnotated,  NullableAnnotation.NotAnnotated },
-            };
-
-            AssertEqual(expected, getResult, inputs.Length);
-        }
-
-        [Fact]
-        public void TestJoinForFlowAnalysisBranches_IsPossiblyNullableReferenceTypeTypeParameterTrue()
-        {
-            var inputs = new[] { NullableAnnotation.Annotated, NullableAnnotation.Nullable, NullableAnnotation.Unknown, NullableAnnotation.NotNullable, NullableAnnotation.NotAnnotated };
-
-            Func<int, int, NullableAnnotation> getResult =
-                (i, j) => NullableAnnotationExtensions.JoinForFlowAnalysisBranches<string>(
-                    inputs[i], inputs[j], type: null, isPossiblyNullableReferenceTypeTypeParameter: _ => true);
-
-            var expected = new NullableAnnotation[5, 5]
-            {
-                { NullableAnnotation.Annotated,     NullableAnnotation.Annotated,     NullableAnnotation.Annotated,     NullableAnnotation.Annotated,     NullableAnnotation.Annotated    },
-                { NullableAnnotation.Annotated,     NullableAnnotation.Nullable,      NullableAnnotation.Nullable,      NullableAnnotation.Nullable,      NullableAnnotation.Nullable     },
-                { NullableAnnotation.Annotated,     NullableAnnotation.Nullable,      NullableAnnotation.Unknown,       NullableAnnotation.Unknown,       NullableAnnotation.NotAnnotated },
-                { NullableAnnotation.Annotated,     NullableAnnotation.Nullable,      NullableAnnotation.Unknown,       NullableAnnotation.NotNullable,   NullableAnnotation.NotAnnotated },
-                { NullableAnnotation.Annotated,     NullableAnnotation.Nullable,      NullableAnnotation.NotAnnotated,  NullableAnnotation.NotAnnotated,  NullableAnnotation.NotAnnotated },
+                { NullableFlowState.NotNull, NullableFlowState.MaybeNull },
+                { NullableFlowState.MaybeNull, NullableFlowState.MaybeNull },
             };
 
             AssertEqual(expected, getResult, inputs.Length);
@@ -69918,18 +68974,15 @@ partial class Program
         }
 
         [Fact]
-        public void TestJoinMeetForFlowAnalysisFinally()
+        public void TestMeetForFlowAnalysisFinally()
         {
-            var inputs = new[] { NullableAnnotation.Annotated, NullableAnnotation.Nullable, NullableAnnotation.Unknown, NullableAnnotation.NotNullable, NullableAnnotation.NotAnnotated };
-            Func<int, int, NullableAnnotation> getResult = (i, j) => NullableAnnotationExtensions.MeetForFlowAnalysisFinally(inputs[i], inputs[j]);
+            var inputs = new[] { NullableFlowState.NotNull, NullableFlowState.MaybeNull };
+            Func<int, int, NullableFlowState> getResult = (i, j) => inputs[i].MeetForFlowAnalysisFinally(inputs[j]);
 
-            var expected = new NullableAnnotation[5, 5]
+            var expected = new NullableFlowState[2, 2]
             {
-                { NullableAnnotation.Annotated,    NullableAnnotation.Nullable,     NullableAnnotation.Unknown,      NullableAnnotation.NotNullable,  NullableAnnotation.NotAnnotated  },
-                { NullableAnnotation.Nullable,     NullableAnnotation.Nullable,     NullableAnnotation.Unknown,      NullableAnnotation.NotNullable,  NullableAnnotation.NotAnnotated  },
-                { NullableAnnotation.Unknown,      NullableAnnotation.Unknown,      NullableAnnotation.Unknown,      NullableAnnotation.NotNullable,  NullableAnnotation.NotAnnotated  },
-                { NullableAnnotation.NotNullable,  NullableAnnotation.NotNullable,  NullableAnnotation.NotNullable,  NullableAnnotation.NotNullable,  NullableAnnotation.NotNullable   },
-                { NullableAnnotation.NotAnnotated, NullableAnnotation.NotAnnotated, NullableAnnotation.NotAnnotated, NullableAnnotation.NotNullable,  NullableAnnotation.NotAnnotated  },
+                { NullableFlowState.NotNull, NullableFlowState.NotNull },
+                { NullableFlowState.NotNull, NullableFlowState.MaybeNull },
             };
 
             AssertEqual(expected, getResult, inputs.Length);
@@ -69939,7 +68992,7 @@ partial class Program
         public void TestEnsureCompatible()
         {
             var inputs = new[] { NullableAnnotation.Annotated, NullableAnnotation.Unknown, NullableAnnotation.NotAnnotated };
-            Func<int, int, NullableAnnotation> getResult = (i, j) => NullableAnnotationExtensions.EnsureCompatible(inputs[i], inputs[j], out _);
+            Func<int, int, NullableAnnotation> getResult = (i, j) => NullableAnnotationExtensions.EnsureCompatible(inputs[i], inputs[j]);
 
             var expected = new NullableAnnotation[3, 3]
             {
@@ -69952,29 +69005,11 @@ partial class Program
         }
 
         [Fact]
-        public void TestEnsureCompatible_IsPossiblyNullableReferenceTypeTypeParameterTrue_HadNullabilityMismatch()
-        {
-            var inputs = new[] { NullableAnnotation.Annotated, NullableAnnotation.Unknown, NullableAnnotation.NotAnnotated };
-            Func<int, int, bool> getResult = (i, j) => { NullableAnnotationExtensions.EnsureCompatible(inputs[i], inputs[j], out var hadNullabilityMismatch); return hadNullabilityMismatch; };
-
-            var expected = new bool[3, 3]
-            {
-                { false, false, true  },
-                { false, false, false },
-                { true,  false, false },
-            };
-
-            AssertEx.Equal(expected, getResult, inputs.Length);
-        }
-
-        [Fact]
         public void TestEnsureCompatibleForTuples_IsPossiblyNullableReferenceTypeTypeParameterFalse()
         {
             var inputs = new[] { NullableAnnotation.Annotated, NullableAnnotation.Nullable, NullableAnnotation.Unknown, NullableAnnotation.NotNullable, NullableAnnotation.NotAnnotated };
 
-            Func<int, int, NullableAnnotation> getResult =
-                (i, j) => NullableAnnotationExtensions.EnsureCompatibleForTuples<string>(
-                    inputs[i], inputs[j], type: null, isPossiblyNullableReferenceTypeTypeParameter: _ => false, hadNullabilityMismatch: out _);
+            Func<int, int, NullableAnnotation> getResult = (i, j) => inputs[i].EnsureCompatibleForTuples(inputs[j]);
 
             var expected = new NullableAnnotation[5, 5]
             {
@@ -69986,78 +69021,16 @@ partial class Program
             };
 
             AssertEqual(expected, getResult, inputs.Length);
-        }
-
-        [Fact]
-        public void TestEnsureCompatibleForTuples_IsPossiblyNullableReferenceTypeTypeParameterFalse_HadNullabilityMismatch()
-        {
-            var inputs = new[] { NullableAnnotation.Annotated, NullableAnnotation.Nullable, NullableAnnotation.Unknown, NullableAnnotation.NotNullable, NullableAnnotation.NotAnnotated };
-            Func<int, int, bool> getResult = (i, j) =>
-            {
-                NullableAnnotationExtensions.EnsureCompatibleForTuples<string>(
-                    inputs[i], inputs[j], type: null, isPossiblyNullableReferenceTypeTypeParameter: _ => false, hadNullabilityMismatch: out var hadNullabilityMismatch);
-                return hadNullabilityMismatch;
-            };
-
-            var expected = new bool[5, 5]
-            {
-                { false, false, false, true,  true  },
-                { false, false, false, true,  true  },
-                { false, false, false, false, false },
-                { true,  true,  false, false, false },
-                { true,  true,  false, false, false },
-            };
-
-            AssertEx.Equal(expected, getResult, inputs.Length);
-        }
-
-        [Fact]
-        public void TestEnsureCompatibleForTuples_IsPossiblyNullableReferenceTypeTypeParameterTrue()
-        {
-            var inputs = new[] { NullableAnnotation.Annotated, NullableAnnotation.Nullable, NullableAnnotation.Unknown, NullableAnnotation.NotNullable, NullableAnnotation.NotAnnotated };
-
-            Func<int, int, NullableAnnotation> getResult =
-                (i, j) => NullableAnnotationExtensions.EnsureCompatibleForTuples<string>(
-                    inputs[i], inputs[j], type: null, isPossiblyNullableReferenceTypeTypeParameter: _ => true, hadNullabilityMismatch: out _);
-
-            var expected = new NullableAnnotation[5, 5]
-            {
-                { NullableAnnotation.Annotated,    NullableAnnotation.Annotated,    NullableAnnotation.Annotated,    NullableAnnotation.NotAnnotated, NullableAnnotation.NotAnnotated },
-                { NullableAnnotation.Annotated,    NullableAnnotation.Nullable,     NullableAnnotation.Nullable,     NullableAnnotation.NotAnnotated, NullableAnnotation.NotAnnotated },
-                { NullableAnnotation.Annotated,    NullableAnnotation.Nullable,     NullableAnnotation.Unknown,      NullableAnnotation.NotNullable,  NullableAnnotation.NotAnnotated },
-                { NullableAnnotation.NotAnnotated, NullableAnnotation.NotAnnotated, NullableAnnotation.NotNullable,  NullableAnnotation.NotNullable,  NullableAnnotation.NotAnnotated },
-                { NullableAnnotation.NotAnnotated, NullableAnnotation.NotAnnotated, NullableAnnotation.NotAnnotated, NullableAnnotation.NotAnnotated, NullableAnnotation.NotAnnotated },
-            };
-
-            AssertEqual(expected, getResult, inputs.Length);
-        }
-
-        [Fact]
-        public void TestEnsureCompatibleForTuples_IsPossiblyNullableReferenceTypeTypeParameterTrue_HadNullabilityMismatch()
-        {
-            var inputs = new[] { NullableAnnotation.Annotated, NullableAnnotation.Nullable, NullableAnnotation.Unknown, NullableAnnotation.NotNullable, NullableAnnotation.NotAnnotated };
-            Func<int, int, bool> getResult = (i, j) =>
-            {
-                NullableAnnotationExtensions.EnsureCompatibleForTuples<string>(
-                    inputs[i], inputs[j], type: null, isPossiblyNullableReferenceTypeTypeParameter: _ => true, hadNullabilityMismatch: out var hadNullabilityMismatch);
-                return hadNullabilityMismatch;
-            };
-
-            var expected = new bool[5, 5]
-            {
-                { false, false, false, true,  true  },
-                { false, false, false, true,  true  },
-                { false, false, false, false, false },
-                { true,  true,  false, false, true  },
-                { true,  true,  false, true,  false },
-            };
-
-            AssertEx.Equal(expected, getResult, inputs.Length);
         }
 
         private static void AssertEqual(NullableAnnotation[,] expected, Func<int, int, NullableAnnotation> getResult, int size)
         {
             AssertEx.Equal<NullableAnnotation>(expected, getResult, (na1, na2) => na1 == na2, na => $"NullableAnnotation.{na}", "{0,-32:G}", size);
+        }
+
+        private static void AssertEqual(NullableFlowState[,] expected, Func<int, int, NullableFlowState> getResult, int size)
+        {
+            AssertEx.Equal<NullableFlowState>(expected, getResult, (na1, na2) => na1 == na2, na => $"NullableFlowState.{na}", "{0,-32:G}", size);
         }
 
         [Fact]
@@ -70080,19 +69053,15 @@ partial class Program
         [Fact]
         public void TestJoinForFlowAnalysisBranchesIsAssociative()
         {
-            Func<bool, bool> identity = x => x;
-            foreach (var a in s_AllNullableAnnotations)
+            foreach (var a in s_AllNullableFlowStates)
             {
-                foreach (var b in s_AllNullableAnnotations)
+                foreach (var b in s_AllNullableFlowStates)
                 {
-                    foreach (var c in s_AllNullableAnnotations)
+                    foreach (var c in s_AllNullableFlowStates)
                     {
-                        foreach (bool isPossiblyNullableReferenceTypeTypeParameter in new[] { true, false })
-                        {
-                            var leftFirst = a.JoinForFlowAnalysisBranches(b, isPossiblyNullableReferenceTypeTypeParameter, identity).JoinForFlowAnalysisBranches(c, isPossiblyNullableReferenceTypeTypeParameter, identity);
-                            var rightFirst = a.JoinForFlowAnalysisBranches(b.JoinForFlowAnalysisBranches(c, isPossiblyNullableReferenceTypeTypeParameter, identity), isPossiblyNullableReferenceTypeTypeParameter, identity);
-                            Assert.Equal(leftFirst, rightFirst);
-                        }
+                        var leftFirst = a.JoinForFlowAnalysisBranches(b).JoinForFlowAnalysisBranches(c);
+                        var rightFirst = a.JoinForFlowAnalysisBranches(b.JoinForFlowAnalysisBranches(c));
+                        Assert.Equal(leftFirst, rightFirst);
                     }
                 }
             }
@@ -70118,11 +69087,11 @@ partial class Program
         [Fact]
         public void TestMeetForFlowAnalysisFinallyIsAssociative()
         {
-            foreach (var a in s_AllNullableAnnotations)
+            foreach (var a in s_AllNullableFlowStates)
             {
-                foreach (var b in s_AllNullableAnnotations)
+                foreach (var b in s_AllNullableFlowStates)
                 {
-                    foreach (var c in s_AllNullableAnnotations)
+                    foreach (var c in s_AllNullableFlowStates)
                     {
                         var leftFirst = a.MeetForFlowAnalysisFinally(b).MeetForFlowAnalysisFinally(c);
                         var rightFirst = a.MeetForFlowAnalysisFinally(b.MeetForFlowAnalysisFinally(c));
@@ -70144,10 +69113,9 @@ partial class Program
                     {
                         foreach (bool isPossiblyNullableReferenceTypeTypeParameter in new[] { true, false })
                         {
-                            var leftFirst = a.EnsureCompatible(b, out var w1a).EnsureCompatible(c, out var w1b);
-                            var rightFirst = a.EnsureCompatible(b.EnsureCompatible(c, out var w2a), out var w2b);
+                            var leftFirst = a.EnsureCompatible(b).EnsureCompatible(c);
+                            var rightFirst = a.EnsureCompatible(b.EnsureCompatible(c));
                             Assert.Equal(leftFirst, rightFirst);
-                            Assert.Equal(w1a | w1b, w2a | w2b);
                         }
                     }
                 }
@@ -70172,14 +69140,14 @@ partial class Program
         public void TestJoinForFlowAnalysisBranchesIsCommutative()
         {
             Func<bool, bool> identity = x => x;
-            foreach (var a in s_AllNullableAnnotations)
+            foreach (var a in s_AllNullableFlowStates)
             {
-                foreach (var b in s_AllNullableAnnotations)
+                foreach (var b in s_AllNullableFlowStates)
                 {
                     foreach (bool isPossiblyNullableReferenceTypeTypeParameter in new[] { true, false })
                     {
-                        var leftFirst = a.JoinForFlowAnalysisBranches(b, isPossiblyNullableReferenceTypeTypeParameter, identity);
-                        var rightFirst = b.JoinForFlowAnalysisBranches(a, isPossiblyNullableReferenceTypeTypeParameter, identity);
+                        var leftFirst = a.JoinForFlowAnalysisBranches(b);
+                        var rightFirst = b.JoinForFlowAnalysisBranches(a);
                         Assert.Equal(leftFirst, rightFirst);
                     }
                 }
@@ -70203,16 +69171,13 @@ partial class Program
         [Fact]
         public void TestMeetForFlowAnalysisFinallyIsCommutative()
         {
-            foreach (var a in s_AllNullableAnnotations)
+            foreach (var a in s_AllNullableFlowStates)
             {
-                foreach (var b in s_AllNullableAnnotations)
+                foreach (var b in s_AllNullableFlowStates)
                 {
-                    foreach (var c in s_AllNullableAnnotations)
-                    {
-                        var leftFirst = a.MeetForFlowAnalysisFinally(b);
-                        var rightFirst = b.MeetForFlowAnalysisFinally(a);
-                        Assert.Equal(leftFirst, rightFirst);
-                    }
+                    var leftFirst = a.MeetForFlowAnalysisFinally(b);
+                    var rightFirst = b.MeetForFlowAnalysisFinally(a);
+                    Assert.Equal(leftFirst, rightFirst);
                 }
             }
         }
@@ -70220,50 +69185,13 @@ partial class Program
         [Fact]
         public void TestEnsureCompatibleIsCommutative()
         {
-            Func<bool, bool> identity = x => x;
             foreach (var a in s_AllSpeakableNullableAnnotations)
             {
                 foreach (var b in s_AllSpeakableNullableAnnotations)
                 {
-                    foreach (bool isPossiblyNullableReferenceTypeTypeParameter in new[] { true, false })
-                    {
-                        var leftFirst = a.EnsureCompatible(b, out var w1);
-                        var rightFirst = b.EnsureCompatible(a, out var w2);
-                        Assert.Equal(leftFirst, rightFirst);
-                        Assert.Equal(w1, w2);
-                    }
-                }
-            }
-        }
-
-        [Fact(Skip = "Two different implementations of NullableAnnotation Join do not agree")]
-        public void TestJoinsAgree()
-        {
-            Func<bool, bool> identity = x => x;
-            foreach (var a in s_AllNullableAnnotations)
-            {
-                foreach (var b in s_AllNullableAnnotations)
-                {
-                    foreach (bool isPossiblyNullableReferenceTypeTypeParameter in new[] { true, false })
-                    {
-                        var result1 = a.JoinForFixingLowerBounds(b);
-                        var result2 = a.JoinForFlowAnalysisBranches(b, isPossiblyNullableReferenceTypeTypeParameter, identity);
-                        Assert.Equal(result1, result2);
-                    }
-                }
-            }
-        }
-
-        [Fact(Skip = "Two different implementations of NullableAnnotation Meet do not agree")]
-        public void TestMeetsAgree()
-        {
-            foreach (var a in s_AllNullableAnnotations)
-            {
-                foreach (var b in s_AllNullableAnnotations)
-                {
-                    var result1 = a.MeetForFixingUpperBounds(b);
-                    var result2 = a.MeetForFlowAnalysisFinally(b);
-                    Assert.Equal(result1, result2);
+                    var leftFirst = a.EnsureCompatible(b);
+                    var rightFirst = b.EnsureCompatible(a);
+                    Assert.Equal(leftFirst, rightFirst);
                 }
             }
         }
@@ -73327,9 +72255,7 @@ class Program
 }";
             var comp = CreateCompilation(source, options: WithNonNullTypesTrue());
             comp.VerifyDiagnostics(
-                // (6,13): hidden CS8607: Expression is probably never null.
-                //         _ = t ?? default(T);
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "t").WithLocation(6, 13));
+                );
         }
 
         [Fact]
@@ -73420,33 +72346,7 @@ class Program
     }
 }";
             var comp = CreateCompilation(source, options: WithNonNullTypesTrue());
-            // https://github.com/dotnet/roslyn/issues/31516: Report HDN_NullCheckIsProbablyAlwaysTrue/False
-            // when HasValue check is unnecessary.
-            comp.VerifyDiagnostics(
-                // (8,13): hidden CS8605: Result of the comparison is possibly always true.
-                //         if (t1 != null) { } // always false
-                Diagnostic(ErrorCode.HDN_NullCheckIsProbablyAlwaysTrue, "t1 != null").WithLocation(8, 13),
-                // (9,13): hidden CS8606: Result of the comparison is possibly always false.
-                //         if (t1 == null) { } // always true
-                Diagnostic(ErrorCode.HDN_NullCheckIsProbablyAlwaysFalse, "t1 == null").WithLocation(9, 13),
-                // (14,13): hidden CS8606: Result of the comparison is possibly always false.
-                //         if (t2 == null) { } // always false
-                Diagnostic(ErrorCode.HDN_NullCheckIsProbablyAlwaysFalse, "t2 == null").WithLocation(14, 13),
-                // (15,13): hidden CS8605: Result of the comparison is possibly always true.
-                //         if (t2 != null) { } // always true
-                Diagnostic(ErrorCode.HDN_NullCheckIsProbablyAlwaysTrue, "t2 != null").WithLocation(15, 13),
-                // (24,13): hidden CS8606: Result of the comparison is possibly always false.
-                //         if (t3 == null) { } // always true
-                Diagnostic(ErrorCode.HDN_NullCheckIsProbablyAlwaysFalse, "t3 == null").WithLocation(24, 13),
-                // (25,13): hidden CS8605: Result of the comparison is possibly always true.
-                //         if (t3 != null) { } // always false
-                Diagnostic(ErrorCode.HDN_NullCheckIsProbablyAlwaysTrue, "t3 != null").WithLocation(25, 13),
-                // (30,13): hidden CS8605: Result of the comparison is possibly always true.
-                //         if (t4 != null) { } // always true
-                Diagnostic(ErrorCode.HDN_NullCheckIsProbablyAlwaysTrue, "t4 != null").WithLocation(30, 13),
-                // (31,13): hidden CS8606: Result of the comparison is possibly always false.
-                //         if (t4 == null) { } // always false
-                Diagnostic(ErrorCode.HDN_NullCheckIsProbablyAlwaysFalse, "t4 == null").WithLocation(31, 13));
+            comp.VerifyDiagnostics();
         }
 
         [Fact]
@@ -74179,7 +73079,7 @@ class Program
             comp.VerifyTypes();
         }
 
-        [Fact]
+        [Fact(Skip = "https://github.com/dotnet/roslyn/issues/33344")]
         [WorkItem(32575, "https://github.com/dotnet/roslyn/issues/32575")]
         public void BestType_DifferentTupleNullability_10()
         {
@@ -74189,10 +73089,10 @@ class Program
     static void F<T, U>(bool b, T t, U u)
         where U : class
     {
-        var x = (b ? (t, u) : default)/*T:(T t, U u)*/;
+        var x = (b ? (t, u) : default)/*T:(T t, U? u)*/;
         x.Item1.ToString(); // 1
         x.Item2.ToString(); // 2
-        var y = (b ? default :  (t, u))/*T:(T t, U u)*/;
+        var y = (b ? default : (t, u))/*T:(T t, U? u)*/;
         y.Item1.ToString(); // 3
         y.Item2.ToString(); // 4
     }
@@ -74204,12 +73104,19 @@ class Program
                 //         x.Item1.ToString(); // 1
                 Diagnostic(ErrorCode.WRN_NullReferenceReceiver, "x.Item1").WithLocation(7, 9),
                 // (10,9): warning CS8602: Possible dereference of a null reference.
+                //         x.Item2.ToString(); // 2
+                Diagnostic(ErrorCode.WRN_NullReferenceReceiver, "x.Item2").WithLocation(8, 9),
+                // (10,9): warning CS8602: Possible dereference of a null reference.
                 //         y.Item1.ToString(); // 3
-                Diagnostic(ErrorCode.WRN_NullReferenceReceiver, "y.Item1").WithLocation(10, 9));
+                Diagnostic(ErrorCode.WRN_NullReferenceReceiver, "y.Item1").WithLocation(10, 9),
+                // (10,9): warning CS8602: Possible dereference of a null reference.
+                //         y.Item2.ToString(); // 4
+                Diagnostic(ErrorCode.WRN_NullReferenceReceiver, "y.Item2").WithLocation(11, 9)
+                );
             comp.VerifyTypes();
         }
 
-        [Fact]
+        [Fact(Skip = "https://github.com/dotnet/roslyn/issues/33344")]
         [WorkItem(32575, "https://github.com/dotnet/roslyn/issues/32575")]
         public void BestType_DifferentTupleNullability_11()
         {
@@ -74219,10 +73126,10 @@ class Program
     static void F<T, U>(T t, U u)
         where U : class
     {
-        var x = new[] { (t, u), default }[0]/*T:(T t, U u)*/;
+        var x = new[] { (t, u), default }[0]/*T:(T t, U? u)*/;
         x.Item1.ToString(); // 1
         x.Item2.ToString(); // 2
-        var y = new[] { default, (t, u) }[0]/*T:(T t, U u)*/;
+        var y = new[] { default, (t, u) }[0]/*T:(T t, U? u)*/;
         y.Item1.ToString(); // 3
         y.Item2.ToString(); // 4
     }
@@ -74672,21 +73579,13 @@ class C
                 // (19,9): warning CS8602: Possible dereference of a null reference.
                 //         c1.F.ToString(); // Warn 2
                 Diagnostic(ErrorCode.WRN_NullReferenceReceiver, "c1.F").WithLocation(19, 9),
-                // (21,13): hidden CS8606: Result of the comparison is possibly always false.
-                //         if (c1.F == null) return; // Hidden 3
-                Diagnostic(ErrorCode.HDN_NullCheckIsProbablyAlwaysFalse, "c1.F == null").WithLocation(21, 13),
-                // (22,9): hidden CS8607: Expression is probably never null.
-                //         c1 ??= c2; // Hidden 4
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "c1").WithLocation(22, 9),
                 // (23,9): warning CS8602: Possible dereference of a null reference.
                 //         c1.F.ToString(); // Warn 5
                 Diagnostic(ErrorCode.WRN_NullReferenceReceiver, "c1.F").WithLocation(23, 9),
                 // (27,9): warning CS8602: Possible dereference of a null reference.
                 //         (c1 ??= c3).F.ToString(); // Warn 6, Hidden 7
-                Diagnostic(ErrorCode.WRN_NullReferenceReceiver, "(c1 ??= c3).F").WithLocation(27, 9),
-                // (27,10): hidden CS8607: Expression is probably never null.
-                //         (c1 ??= c3).F.ToString(); // Warn 6, Hidden 7
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "c1").WithLocation(27, 10));
+                Diagnostic(ErrorCode.WRN_NullReferenceReceiver, "(c1 ??= c3).F").WithLocation(27, 9)
+                );
         }
 
         [WorkItem(30140, "https://github.com/dotnet/roslyn/issues/30140")]
@@ -74771,10 +73670,7 @@ class C
 }";
 
             var comp = CreateCompilation(source, options: WithNonNullTypesTrue());
-            comp.VerifyDiagnostics(
-                // (30,19): hidden CS8607: Expression is probably never null.
-                //         var c6 = (c2 ??= GetC());
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "c2").WithLocation(32, 19));
+            comp.VerifyDiagnostics();
             comp.VerifyTypes();
         }
 
@@ -74820,9 +73716,6 @@ class C
 
             var comp = CreateCompilation(source, options: WithNonNullTypesTrue());
             comp.VerifyDiagnostics(
-                // (6,9): hidden CS8607: Expression is probably never null.
-                //         M2(c1) ??= c2; // Warn 1, 2
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "M2(c1)").WithLocation(6, 9),
                 // (6,20): warning CS8601: Possible null reference assignment.
                 //         M2(c1) ??= c2; // Warn 1, 2
                 Diagnostic(ErrorCode.WRN_NullReferenceAssignment, "c2").WithLocation(6, 20),
@@ -74869,9 +73762,6 @@ class C<T>
                 // (6,16): warning CS8619: Nullability of reference types in value of type 'C<object?>' doesn't match target type 'C<object>'.
                 //         c1 ??= c2;
                 Diagnostic(ErrorCode.WRN_NullabilityMismatchInAssignment, "c2").WithArguments("C<object?>", "C<object>").WithLocation(6, 16),
-                // (7,9): hidden CS8607: Expression is probably never null.
-                //         c3 ??= c4;
-                Diagnostic(ErrorCode.HDN_ExpressionIsProbablyNeverNull, "c3").WithLocation(7, 9),
                 // (7,16): warning CS8600: Converting null literal or possible null value to non-nullable type.
                 //         c3 ??= c4;
                 Diagnostic(ErrorCode.WRN_ConvertingNullableToNonNullable, "c4").WithLocation(7, 16),
@@ -74923,5 +73813,24 @@ class B : A
             var comp = CreateCompilation(source);
             comp.VerifyDiagnostics();
         }
+
+        [Fact(Skip = "https://github.com/dotnet/roslyn/issues/33347")]
+        public void NestedNullConditionalAccess()
+        {
+            var source =
+@"class Node
+{
+    public Node? Next = null;
+    void M(Node node) { }
+    private static void Test(Node? node)
+    {
+        node?.Next?.Next?.M(node.Next);
+    }
+}
+";
+            var comp = CreateCompilation(new[] { source }, options: WithNonNullTypesTrue());
+            comp.VerifyDiagnostics();
+        }
+
     }
 }

@@ -10699,60 +10699,6 @@ namespace Microsoft.CodeAnalysis.CSharp {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Expression is probably never null..
-        /// </summary>
-        internal static string HDN_ExpressionIsProbablyNeverNull {
-            get {
-                return ResourceManager.GetString("HDN_ExpressionIsProbablyNeverNull", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Expression is probably never null..
-        /// </summary>
-        internal static string HDN_ExpressionIsProbablyNeverNull_Title {
-            get {
-                return ResourceManager.GetString("HDN_ExpressionIsProbablyNeverNull_Title", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Result of the comparison is possibly always false..
-        /// </summary>
-        internal static string HDN_NullCheckIsProbablyAlwaysFalse {
-            get {
-                return ResourceManager.GetString("HDN_NullCheckIsProbablyAlwaysFalse", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Result of the comparison is possibly always false..
-        /// </summary>
-        internal static string HDN_NullCheckIsProbablyAlwaysFalse_Title {
-            get {
-                return ResourceManager.GetString("HDN_NullCheckIsProbablyAlwaysFalse_Title", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Result of the comparison is possibly always true..
-        /// </summary>
-        internal static string HDN_NullCheckIsProbablyAlwaysTrue {
-            get {
-                return ResourceManager.GetString("HDN_NullCheckIsProbablyAlwaysTrue", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Result of the comparison is possibly always true..
-        /// </summary>
-        internal static string HDN_NullCheckIsProbablyAlwaysTrue_Title {
-            get {
-                return ResourceManager.GetString("HDN_NullCheckIsProbablyAlwaysTrue_Title", resourceCulture);
-            }
-        }
-        
-        /// <summary>
         ///   Looks up a localized string similar to Unused extern alias..
         /// </summary>
         internal static string HDN_UnusedExternAlias {
@@ -14878,42 +14824,6 @@ namespace Microsoft.CodeAnalysis.CSharp {
         internal static string WRN_NoAnalyzerInAssembly_Title {
             get {
                 return ResourceManager.GetString("WRN_NoAnalyzerInAssembly_Title", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to No best nullability found for implicitly-typed array..
-        /// </summary>
-        internal static string WRN_NoBestNullabilityArrayElements {
-            get {
-                return ResourceManager.GetString("WRN_NoBestNullabilityArrayElements", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to No best nullability found for implicitly-typed array..
-        /// </summary>
-        internal static string WRN_NoBestNullabilityArrayElements_Title {
-            get {
-                return ResourceManager.GetString("WRN_NoBestNullabilityArrayElements_Title", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to No best nullability for operands of conditional expression &apos;{0}&apos; and &apos;{1}&apos;..
-        /// </summary>
-        internal static string WRN_NoBestNullabilityConditionalExpression {
-            get {
-                return ResourceManager.GetString("WRN_NoBestNullabilityConditionalExpression", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to No best nullability for operands of conditional expression..
-        /// </summary>
-        internal static string WRN_NoBestNullabilityConditionalExpression_Title {
-            get {
-                return ResourceManager.GetString("WRN_NoBestNullabilityConditionalExpression_Title", resourceCulture);
             }
         }
         
