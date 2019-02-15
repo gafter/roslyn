@@ -882,6 +882,16 @@
         <target state="new">Converting null literal or possible null value to non-nullable type.</target>
         <note />
       </trans-unit>
+      <trans-unit id="WRN_DefaultExpressionMayIntroduceNullT">
+        <source>A default expression introduces a null value when '{0}' is a non-nullable reference type.</source>
+        <target state="new">A default expression introduces a null value when '{0}' is a non-nullable reference type.</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="WRN_DefaultExpressionMayIntroduceNullT_Title">
+        <source>A default expression introduces a null value for a type parameter.</source>
+        <target state="new">A default expression introduces a null value for a type parameter.</target>
+        <note />
+      </trans-unit>
       <trans-unit id="WRN_DefaultLiteralConvertedToNullIsNotIntended">
         <source>'default' is converted to 'null', not 'default({0})'</source>
         <target state="new">'default' is converted to 'null', not 'default({0})'</target>

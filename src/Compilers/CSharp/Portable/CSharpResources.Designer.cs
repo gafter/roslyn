@@ -13553,6 +13553,24 @@ namespace Microsoft.CodeAnalysis.CSharp {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to A default expression introduces a null value when &apos;{0}&apos; is a non-nullable reference type..
+        /// </summary>
+        internal static string WRN_DefaultExpressionMayIntroduceNullT {
+            get {
+                return ResourceManager.GetString("WRN_DefaultExpressionMayIntroduceNullT", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to A default expression introduces a null value for a type parameter..
+        /// </summary>
+        internal static string WRN_DefaultExpressionMayIntroduceNullT_Title {
+            get {
+                return ResourceManager.GetString("WRN_DefaultExpressionMayIntroduceNullT_Title", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to &apos;default&apos; is converted to &apos;null&apos;, not &apos;default({0})&apos;.
         /// </summary>
         internal static string WRN_DefaultLiteralConvertedToNullIsNotIntended {

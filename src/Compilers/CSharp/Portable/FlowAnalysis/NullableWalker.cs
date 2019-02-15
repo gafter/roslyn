@@ -566,6 +566,11 @@ namespace Microsoft.CodeAnalysis.CSharp
                 case BoundKind.ArrayAccess:
                     result = VisitArrayAccessLvalue((BoundArrayAccess)node);
                     break;
+                case BoundKind.DiscardExpression:
+                    // https://github.com/dotnet/roslyn/issues/29635: the discard's type should be inferred from the
+                    // type from the right-hand-side of the assignment that was computed during flow analysis.
+                    result = TypeSymbolWithAnnotations.Create(node.Type, NullableAnnotation.Nullable).AsSpeakable();
+                    break;
                 default:
                     var resultType = VisitRvalueWithState(node);
                     result = resultType.ToTypeSymbolWithAnnotations();
@@ -602,20 +607,31 @@ namespace Microsoft.CodeAnalysis.CSharp
         /// <summary>
         /// Reports top-level nullability problem in assignment.
         /// </summary>
-        private bool ReportNullableAssignmentIfNecessary(BoundExpression value, TypeSymbolWithAnnotations targetType, TypeWithState valueType, bool useLegacyWarnings, AssignmentKind assignmentKind = AssignmentKind.Assignment, Symbol target = null)
+        private bool ReportNullableAssignmentIfNecessary(
+            BoundExpression value,
+            TypeSymbolWithAnnotations targetType,
+            TypeWithState valueType,
+            bool useLegacyWarnings,
+            AssignmentKind assignmentKind = AssignmentKind.Assignment,
+            Symbol target = null)
         {
             Debug.Assert((object)target != null || assignmentKind != AssignmentKind.Argument);
 
-            if (value == null)
+            if (value == null ||
+                !targetType.HasType ||
+                valueType.HasNullType ||
+                targetType.IsValueType ||
+                targetType.ValueCanBeNull() != false ||
+                valueType.State == NullableFlowState.NotNull)
             {
                 return false;
             }
 
-            if (targetType.IsDefault ||
-                targetType.IsValueType ||
-                !targetType.NullableAnnotation.IsAnyNotNullable() ||
-                valueType.HasNullType ||
-                valueType.State == NullableFlowState.NotNull)
+            // For type parameters that cannot be annotated, the analysis must report those
+            // places where null values first sneak in, like `default`, `null`, and `GetFirstOrDefault`,
+            // as a safety diagnostic.  But we do not warn when such values flow.
+            if (valueType.Type.IsTypeParameterDisallowingAnnotation() &&
+                targetType.TypeSymbol.IsTypeParameterDisallowingAnnotation())
             {
                 return false;
             }
@@ -657,7 +673,10 @@ namespace Microsoft.CodeAnalysis.CSharp
                     return false;
                 }
 
-                if (useLegacyWarnings)
+                // For type parameters that cannot be annotated, the analysis must report those
+                // places where null values first sneak in, like `default`, `null`, and `GetFirstOrDefault`,
+                // as a safety diagnostic.  This is one of those places.
+                if (useLegacyWarnings && !IsTypeParameterDisallowingAnnotation(expr.Type))
                 {
                     ReportNonSafetyDiagnostic(expr.Syntax);
                 }
@@ -2132,7 +2151,9 @@ namespace Microsoft.CodeAnalysis.CSharp
 
             var accessExpressionType = VisitRvalueWithState(node.AccessExpression);
             Join(ref this.State, ref receiverState);
-            NullableFlowState resultState = receiverType.State.MeetForFlowAnalysisFinally(accessExpressionType.State);
+            // Per LDM 2019-02-13 decision, the result of a conditional access might be null even if
+            // both the receiver and right-hand-side are believed not to be null.
+            NullableFlowState resultState = NullableFlowState.MaybeNull;
 
             // https://github.com/dotnet/roslyn/issues/29956 Use flow analysis type rather than node.Type
             // so that nested nullability is inferred from flow analysis. See VisitConditionalOperator.
@@ -3724,9 +3745,7 @@ namespace Microsoft.CodeAnalysis.CSharp
 
                 case ConversionKind.ExplicitDynamic:
                 case ConversionKind.ImplicitDynamic:
-                    // Since the conversion occurs at runtime, anything may happen.
-                    // PROTOTYPE(ngafter): Should we suppress later diagnostics by inferring not null?
-                    resultState = NullableFlowState.MaybeNull;
+                    resultState = NullableFlowState.NotNull;
                     break;
 
                 case ConversionKind.ImplicitThrow:
@@ -4303,9 +4322,6 @@ namespace Microsoft.CodeAnalysis.CSharp
             if (node.Arguments.Length == 1 &&
                 TypeSymbol.Equals(node.Arguments[0].Type, compilation.GetWellKnownType(WellKnownType.System_Range), TypeCompareKind.ConsiderEverything2))
             {
-                // PROTOTYPE(ngafter): How should we compute the null state of this result?
-                // PROTOTYPE(ngafter): Should this use the flow type for the node rather than the original bound type?
-                // PROTOTYPE(ngafter): Does this undermine analysis of user-defined indexers with a Range index?
                 _resultType = new TypeWithState(node.Type, NullableFlowState.NotNull);
             }
             else
@@ -4714,6 +4730,15 @@ namespace Microsoft.CodeAnalysis.CSharp
             // https://github.com/dotnet/roslyn/issues/33344: this fails to produce an updated tuple type for a default expression
             // (should produce nullable element types for those elements that are of reference types)
             _resultType = TypeWithState.ForType(type);
+
+            if (_resultType.State == NullableFlowState.MaybeNull && IsTypeParameterDisallowingAnnotation(_resultType.Type))
+            {
+                // For type parameters that cannot be annotated, the analysis must report those
+                // places where null values first sneak in, like `default`, `null`, and `GetFirstOrDefault`.
+                // This is one of those places.
+                ReportSafetyDiagnostic(ErrorCode.WRN_DefaultExpressionMayIntroduceNullT, node.Syntax, GetTypeAsDiagnosticArgument(_resultType.Type));
+            }
+
             return result;
         }
 
@@ -5143,7 +5168,7 @@ namespace Microsoft.CodeAnalysis.CSharp
 
         public override BoundNode VisitDiscardExpression(BoundDiscardExpression node)
         {
-            SetNotNullResult(node);
+            _resultType = new TypeWithState(node.Type, NullableFlowState.MaybeNull);
             return null;
         }
 

@@ -1678,6 +1678,7 @@ namespace Microsoft.CodeAnalysis.CSharp
         ERR_GoToBackwardJumpOverUsingVar = 8649,
         ERR_IsNullableType = 8650,
         ERR_AsNullableType = 8651,
+        WRN_DefaultExpressionMayIntroduceNullT = 8652,
 
         #endregion diagnostics introduced for C# 8.0
 
