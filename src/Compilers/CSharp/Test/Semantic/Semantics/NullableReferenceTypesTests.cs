@@ -36929,7 +36929,7 @@ class C
 }";
             var comp = CreateCompilation(new[] { source }, options: WithNonNullTypesTrue());
             comp.VerifyDiagnostics(
-                // this test is still under development, so I don't know for sure what errors are expected.
+                // this test is still under development, so I don't know for sure what errors are expected...
                 );
         }
 
