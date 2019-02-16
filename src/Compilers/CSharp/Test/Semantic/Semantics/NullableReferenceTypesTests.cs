@@ -36880,7 +36880,7 @@ class C
         }
 
         [Fact]
-        public void NullCastToTypeParameter()
+        public void NullCastToUnannotatableReferenceTypedTypeParameter()
         {
             var source =
 @"struct S { }
@@ -36890,46 +36890,33 @@ class C
     {
         return (T)null; // 1
     }
-    static T M2<T>() where T: class
+    static T M2<T>() where T: C?
     {
         return (T)null; // 2
     }
-    static T M3<T>() where T: object
+    static T M3<T>() where T: class?
     {
-        return (T)null; // 3
+        return null; // 3
     }
     static T M4<T>() where T: C?
     {
-        return (T)null; // 4
-    }
-    static T M5<T>() where T: C
-    {
-        return (T)null; // 5
-    }
-    static T M6<T>() where T: class?
-    {
-        return null; // 6
-    }
-    static T M7<T>() where T: class
-    {
-        return null; // 7
-    }
-    static T M8<T>() where T: object
-    {
-        return null; // 8
-    }
-    static T M9<T>() where T: C?
-    {
-        return null; // 9
-    }
-    static T MA<T>() where T: C
-    {
-        return null; // A
+        return null; // 4
     }
 }";
             var comp = CreateCompilation(new[] { source }, options: WithNonNullTypesTrue());
             comp.VerifyDiagnostics(
-                // this test is still under development, so I don't know for sure what errors are expected...
+                // (6,16): warning CS8653: A null literal introduces a null value when '<null>' is a non-nullable reference type.
+                //         return (T)null; // 1
+                Diagnostic(ErrorCode.WRN_NullLiteralMayIntroduceNullT, "(T)null").WithArguments("<null>").WithLocation(6, 16),
+                // (10,16): warning CS8653: A null literal introduces a null value when '<null>' is a non-nullable reference type.
+                //         return (T)null; // 2
+                Diagnostic(ErrorCode.WRN_NullLiteralMayIntroduceNullT, "(T)null").WithArguments("<null>").WithLocation(10, 16),
+                // (14,16): warning CS8653: A null literal introduces a null value when '<null>' is a non-nullable reference type.
+                //         return null; // 3
+                Diagnostic(ErrorCode.WRN_NullLiteralMayIntroduceNullT, "null").WithArguments("<null>").WithLocation(14, 16),
+                // (18,16): warning CS8653: A null literal introduces a null value when '<null>' is a non-nullable reference type.
+                //         return null; // 4
+                Diagnostic(ErrorCode.WRN_NullLiteralMayIntroduceNullT, "null").WithArguments("<null>").WithLocation(18, 16)
                 );
         }
 
@@ -52027,33 +52014,7 @@ class A
             var comp = CreateCompilation(new[] { source }, options: WithNonNullTypesTrue());
 
             comp.VerifyDiagnostics(
-                // (19,44): warning CS8600: Converting null literal or possible null value to non-nullable type.
-                //     static U F17<T, U>(T t) where U : T => (U)t;
-                Diagnostic(ErrorCode.WRN_ConvertingNullableToNonNullable, "(U)t").WithLocation(19, 44),
-                // (19,44): warning CS8603: Possible null reference return.
-                //     static U F17<T, U>(T t) where U : T => (U)t;
-                Diagnostic(ErrorCode.WRN_NullReferenceReturn, "(U)t").WithLocation(19, 44),
-                // (20,51): warning CS8600: Converting null literal or possible null value to non-nullable type.
-                //     static U F18<T, U>(T t) where U : class, T => (U)t;
-                Diagnostic(ErrorCode.WRN_ConvertingNullableToNonNullable, "(U)t").WithLocation(20, 51),
-                // (20,51): warning CS8603: Possible null reference return.
-                //     static U F18<T, U>(T t) where U : class, T => (U)t;
-                Diagnostic(ErrorCode.WRN_NullReferenceReturn, "(U)t").WithLocation(20, 51),
-                // (22,51): warning CS8600: Converting null literal or possible null value to non-nullable type.
-                //     static U F20<T, U>(T t) where U : T, new() => (U)t;
-                Diagnostic(ErrorCode.WRN_ConvertingNullableToNonNullable, "(U)t").WithLocation(22, 51),
-                // (22,51): warning CS8603: Possible null reference return.
-                //     static U F20<T, U>(T t) where U : T, new() => (U)t;
-                Diagnostic(ErrorCode.WRN_NullReferenceReturn, "(U)t").WithLocation(22, 51),
-                // (23,32): warning CS8600: Converting null literal or possible null value to non-nullable type.
-                //     static U F21<T, U>(T t) => (U)(object)t;
-                Diagnostic(ErrorCode.WRN_ConvertingNullableToNonNullable, "(U)(object)t").WithLocation(23, 32),
-                // (23,32): warning CS8603: Possible null reference return.
-                //     static U F21<T, U>(T t) => (U)(object)t;
-                Diagnostic(ErrorCode.WRN_NullReferenceReturn, "(U)(object)t").WithLocation(23, 32),
-                // (23,35): warning CS8600: Converting null literal or possible null value to non-nullable type.
-                //     static U F21<T, U>(T t) => (U)(object)t;
-                Diagnostic(ErrorCode.WRN_ConvertingNullableToNonNullable, "(object)t").WithLocation(23, 35)
+            // PROTOTYPE(ngafter): what diagnostics are expected?
             );
         }
 

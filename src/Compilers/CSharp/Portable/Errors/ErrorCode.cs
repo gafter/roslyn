@@ -1679,6 +1679,7 @@ namespace Microsoft.CodeAnalysis.CSharp
         ERR_IsNullableType = 8650,
         ERR_AsNullableType = 8651,
         WRN_DefaultExpressionMayIntroduceNullT = 8652,
+        WRN_NullLiteralMayIntroduceNullT = 8653,
 
         #endregion diagnostics introduced for C# 8.0
 

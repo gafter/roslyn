@@ -15350,6 +15350,24 @@ namespace Microsoft.CodeAnalysis.CSharp {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to A null literal introduces a null value when &apos;{0}&apos; is a non-nullable reference type..
+        /// </summary>
+        internal static string WRN_NullLiteralMayIntroduceNullT {
+            get {
+                return ResourceManager.GetString("WRN_NullLiteralMayIntroduceNullT", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to A null literal introduces a null value for a type parameter..
+        /// </summary>
+        internal static string WRN_NullLiteralMayIntroduceNullT_Title {
+            get {
+                return ResourceManager.GetString("WRN_NullLiteralMayIntroduceNullT_Title", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Possible null reference argument for parameter &apos;{0}&apos; in &apos;{1}&apos;..
         /// </summary>
         internal static string WRN_NullReferenceArgument {

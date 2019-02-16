@@ -621,17 +621,8 @@ namespace Microsoft.CodeAnalysis.CSharp
                 !targetType.HasType ||
                 valueType.HasNullType ||
                 targetType.IsValueType ||
-                targetType.ValueCanBeNull() != false ||
+                targetType.CanBeAssignedNull ||
                 valueType.State == NullableFlowState.NotNull)
-            {
-                return false;
-            }
-
-            // For type parameters that cannot be annotated, the analysis must report those
-            // places where null values first sneak in, like `default`, `null`, and `GetFirstOrDefault`,
-            // as a safety diagnostic.  But we do not warn when such values flow.
-            if (valueType.Type.IsTypeParameterDisallowingAnnotation() &&
-                targetType.TypeSymbol.IsTypeParameterDisallowingAnnotation())
             {
                 return false;
             }
@@ -3785,6 +3776,15 @@ namespace Microsoft.CodeAnalysis.CSharp
                     goto case ConversionKind.ImplicitReference;
 
                 case ConversionKind.ImplicitReference:
+                    if (operandOpt?.Kind == BoundKind.Literal && operandOpt.ConstantValue?.IsNull == true && IsTypeParameterDisallowingAnnotation(targetType))
+                    {
+                        // For type parameters that cannot be annotated, the analysis must report those
+                        // places where null values first sneak in, like `default`, `null`, and `GetFirstOrDefault`.
+                        // This is one of those places.
+                        ReportSafetyDiagnostic(ErrorCode.WRN_NullLiteralMayIntroduceNullT, node.Syntax, GetTypeAsDiagnosticArgument(_resultType.Type));
+                    }
+                    goto case ConversionKind.ExplicitReference;
+
                 case ConversionKind.ExplicitReference:
                     // Inherit state from the operand.
                     if (checkConversion)
@@ -3864,7 +3864,16 @@ namespace Microsoft.CodeAnalysis.CSharp
                 // Need to report all warnings that apply since the warnings can be suppressed individually.
                 if (reportTopLevelWarnings)
                 {
-                    ReportNullableAssignmentIfNecessary(node, targetTypeWithNullability, resultType, useLegacyWarnings: useLegacyWarnings, assignmentKind, target);
+                    if (IsTypeParameterDisallowingAnnotation(targetType) && conversion.IsImplicit)
+                    {
+                        // For type parameters that cannot be annotated, the analysis must report those
+                        // places where null values first sneak in, like `default`, `null`, and `GetFirstOrDefault`,
+                        // as a safety diagnostic.  But we do not warn when such values flow through implicit conversion.
+                    }
+                    else
+                    {
+                        ReportNullableAssignmentIfNecessary(node, targetTypeWithNullability, resultType, useLegacyWarnings: useLegacyWarnings, assignmentKind, target);
+                    }
                 }
                 if (reportRemainingWarnings && !canConvertNestedNullability)
                 {

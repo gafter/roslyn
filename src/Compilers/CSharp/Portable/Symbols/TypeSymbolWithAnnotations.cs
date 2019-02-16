@@ -450,6 +450,31 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             }
         }
 
+        internal bool CanBeAssignedNull
+        {
+            get
+            {
+                switch (NullableAnnotation)
+                {
+                    case NullableAnnotation.Unknown:
+                        return true;
+
+                    case NullableAnnotation.Annotated:
+                    case NullableAnnotation.Nullable:
+                        return true;
+
+                    case NullableAnnotation.NotNullable:
+                        return false;
+
+                    case NullableAnnotation.NotAnnotated:
+                        return TypeSymbol.IsNullableType();
+
+                    default:
+                        throw ExceptionUtilities.UnexpectedValue(NullableAnnotation);
+                }
+            }
+        }
+
         private static bool IsIndexedTypeParameter(TypeSymbol typeSymbol)
         {
             return typeSymbol is IndexedTypeParameterSymbol ||

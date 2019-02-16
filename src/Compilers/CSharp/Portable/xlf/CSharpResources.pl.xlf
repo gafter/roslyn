@@ -972,6 +972,16 @@
         <target state="new">Cannot convert null literal to non-nullable reference or unconstrained type parameter.</target>
         <note />
       </trans-unit>
+      <trans-unit id="WRN_NullLiteralMayIntroduceNullT">
+        <source>A null literal introduces a null value when '{0}' is a non-nullable reference type.</source>
+        <target state="new">A null literal introduces a null value when '{0}' is a non-nullable reference type.</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="WRN_NullLiteralMayIntroduceNullT_Title">
+        <source>A null literal introduces a null value for a type parameter.</source>
+        <target state="new">A null literal introduces a null value for a type parameter.</target>
+        <note />
+      </trans-unit>
       <trans-unit id="WRN_NullReferenceArgument">
         <source>Possible null reference argument for parameter '{0}' in '{1}'.</source>
         <target state="new">Possible null reference argument for parameter '{0}' in '{1}'.</target>
