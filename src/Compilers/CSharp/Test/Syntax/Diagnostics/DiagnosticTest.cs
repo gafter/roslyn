@@ -293,7 +293,6 @@ class X
                         case ErrorCode.WRN_MissingNonNullTypesContextForAnnotation:
                         case ErrorCode.WRN_NullabilityMismatchInConstraintsOnImplicitImplementation:
                         case ErrorCode.WRN_NullabilityMismatchInTypeParameterReferenceTypeConstraint:
-                        case ErrorCode.WRN_CantInferNullabilityOfMethodTypeArgs:
                         case ErrorCode.WRN_CaseConstantNamedUnderscore:
                             Assert.Equal(1, ErrorFacts.GetWarningLevel(errorCode));
                             break;

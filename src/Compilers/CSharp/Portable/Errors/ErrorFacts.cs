@@ -34,7 +34,6 @@ namespace Microsoft.CodeAnalysis.CSharp
             builder.Add(getId(ErrorCode.WRN_NullableValueTypeMayBeNull));
             builder.Add(getId(ErrorCode.WRN_NullabilityMismatchInTypeParameterConstraint));
             builder.Add(getId(ErrorCode.WRN_NullabilityMismatchInTypeParameterReferenceTypeConstraint));
-            builder.Add(getId(ErrorCode.WRN_CantInferNullabilityOfMethodTypeArgs));
             builder.Add(getId(ErrorCode.WRN_DefaultExpressionMayIntroduceNullT));
             builder.Add(getId(ErrorCode.WRN_NullLiteralMayIntroduceNullT));
 
@@ -390,7 +389,6 @@ namespace Microsoft.CodeAnalysis.CSharp
                 case ErrorCode.WRN_MissingNonNullTypesContextForAnnotation:
                 case ErrorCode.WRN_NullabilityMismatchInConstraintsOnImplicitImplementation:
                 case ErrorCode.WRN_NullabilityMismatchInTypeParameterReferenceTypeConstraint:
-                case ErrorCode.WRN_CantInferNullabilityOfMethodTypeArgs:
                 case ErrorCode.WRN_SwitchExpressionNotExhaustive:
                 case ErrorCode.WRN_IsTypeNamedUnderscore:
                 case ErrorCode.WRN_GivenExpressionNeverMatchesPattern:

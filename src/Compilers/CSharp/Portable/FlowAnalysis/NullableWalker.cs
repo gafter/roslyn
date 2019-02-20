@@ -613,13 +613,13 @@ namespace Microsoft.CodeAnalysis.CSharp
             TypeWithState valueType,
             bool useLegacyWarnings,
             AssignmentKind assignmentKind = AssignmentKind.Assignment,
-            Symbol target = null)
+            Symbol target = null,
+            Conversion conversion = default)
         {
             Debug.Assert((object)target != null || assignmentKind != AssignmentKind.Argument);
 
             if (value == null ||
                 !targetType.HasType ||
-                valueType.HasNullType ||
                 targetType.IsValueType ||
                 targetType.CanBeAssignedNull ||
                 valueType.State == NullableFlowState.NotNull)
@@ -636,6 +636,20 @@ namespace Microsoft.CodeAnalysis.CSharp
             if (reportNullLiteralAssignmentIfNecessary(value))
             {
                 return true;
+            }
+
+            HashSet<DiagnosticInfo> useSiteDiagnostics = null;
+            if (targetType.TypeSymbol.IsTypeParameterDisallowingAnnotation())
+            {
+                if (conversion.Kind == 0)
+                    conversion = this._conversions.ClassifyImplicitConversionFromType(valueType.Type, targetType.TypeSymbol, ref useSiteDiagnostics);
+                if (conversion.IsImplicit && !conversion.IsDynamic)
+                {
+                    // For type parameters that cannot be annotated, the analysis must report those
+                    // places where null values first sneak in, like `default`, `null`, and `GetFirstOrDefault`,
+                    // as a safety diagnostic.  This is NOT one of those places.
+                    return false;
+                }
             }
 
             if (assignmentKind == AssignmentKind.Argument)
@@ -714,7 +728,11 @@ namespace Microsoft.CodeAnalysis.CSharp
         }
 
         // Maybe this method can be replaced by VisitOptionalImplicitConversion or ApplyConversion
-        private void ReportAssignmentWarnings(BoundExpression value, TypeSymbolWithAnnotations targetType, TypeWithState valueType, bool useLegacyWarnings)
+        private void ReportAssignmentWarnings(
+            BoundExpression value,
+            TypeSymbolWithAnnotations targetType,
+            TypeWithState valueType,
+            bool useLegacyWarnings)
         {
             Debug.Assert(value != null);
 
@@ -1116,7 +1134,6 @@ namespace Microsoft.CodeAnalysis.CSharp
                     else
                     {
                         whenTrue = NullableFlowState.NotNull; // the pattern tells us the expression is not null
-                        whenFalse = NullableFlowState.MaybeNull;
                     }
                     break;
                 default:
@@ -2817,7 +2834,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                         }
 
                         var parameterState = parameterType.ToTypeWithState();
-                        if (!ReportNullableAssignmentIfNecessary(argument, resultType, parameterState, useLegacyWarnings: UseLegacyWarnings(argument)))
+                        if (!ReportNullableAssignmentIfNecessary(argument, resultType, parameterState, useLegacyWarnings: UseLegacyWarnings(argument), conversion: conversion))
                         {
                             HashSet<DiagnosticInfo> useSiteDiagnostics = null;
                             if (!_conversions.HasIdentityOrImplicitReferenceConversion(parameterType.TypeSymbol, argumentType, ref useSiteDiagnostics))
@@ -3736,7 +3753,7 @@ namespace Microsoft.CodeAnalysis.CSharp
 
                 case ConversionKind.ExplicitDynamic:
                 case ConversionKind.ImplicitDynamic:
-                    resultState = NullableFlowState.NotNull;
+                    resultState = operandType.State;
                     break;
 
                 case ConversionKind.ImplicitThrow:
@@ -3864,7 +3881,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                 // Need to report all warnings that apply since the warnings can be suppressed individually.
                 if (reportTopLevelWarnings)
                 {
-                    if (IsTypeParameterDisallowingAnnotation(targetType) && conversion.IsImplicit)
+                    if (IsTypeParameterDisallowingAnnotation(targetType) && conversion.IsImplicit && !conversion.IsDynamic)
                     {
                         // For type parameters that cannot be annotated, the analysis must report those
                         // places where null values first sneak in, like `default`, `null`, and `GetFirstOrDefault`,
@@ -3872,7 +3889,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                     }
                     else
                     {
-                        ReportNullableAssignmentIfNecessary(node, targetTypeWithNullability, resultType, useLegacyWarnings: useLegacyWarnings, assignmentKind, target);
+                        ReportNullableAssignmentIfNecessary(node, targetTypeWithNullability, operandType, useLegacyWarnings: useLegacyWarnings, assignmentKind, target, conversion: conversion);
                     }
                 }
                 if (reportRemainingWarnings && !canConvertNestedNullability)
