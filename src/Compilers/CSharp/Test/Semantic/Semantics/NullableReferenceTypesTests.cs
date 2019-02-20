@@ -59718,9 +59718,9 @@ interface I1 {}
 ";
 
             CreateCompilation(source, options: WithNonNullTypesTrue()).VerifyDiagnostics(
-                // (6,13): warning CS8600: Converting null literal or possible null value to non-nullable type.
+                // (6,13): warning CS8652: A default expression introduces a null value when 'T' is a non-nullable reference type.
                 //         x = default(T);
-                Diagnostic(ErrorCode.WRN_ConvertingNullableToNonNullable, "default(T)").WithLocation(6, 13),
+                Diagnostic(ErrorCode.WRN_DefaultExpressionMayIntroduceNullT, "default(T)").WithArguments("T").WithLocation(6, 13),
                 // (7,9): warning CS8602: Possible dereference of a null reference.
                 //         x.ToString();
                 Diagnostic(ErrorCode.WRN_NullReferenceReceiver, "x").WithLocation(7, 9)
@@ -59953,9 +59953,9 @@ class Outer
 ";
 
             CreateCompilation(source, options: WithNonNullTypesTrue()).VerifyDiagnostics(
-                // (6,13): warning CS8600: Converting null literal or possible null value to non-nullable type.
+                // (6,13): warning CS8653: A null literal introduces a null value when '<null>' is a non-nullable reference type.
                 //         x = null;
-                Diagnostic(ErrorCode.WRN_ConvertingNullableToNonNullable, "null").WithLocation(6, 13),
+                Diagnostic(ErrorCode.WRN_NullLiteralMayIntroduceNullT, "null").WithArguments("<null>").WithLocation(6, 13),
                 // (7,9): warning CS8602: Possible dereference of a null reference.
                 //         x.ToString();
                 Diagnostic(ErrorCode.WRN_NullReferenceReceiver, "x").WithLocation(7, 9)
@@ -60001,9 +60001,9 @@ class Outer
 ";
 
             CreateCompilation(source, options: WithNonNullTypesTrue()).VerifyDiagnostics(
-                // (6,13): warning CS8600: Converting null literal or possible null value to non-nullable type.
+                // (6,13): warning CS8653: A null literal introduces a null value when '<null>' is a non-nullable reference type.
                 //         x = null;
-                Diagnostic(ErrorCode.WRN_ConvertingNullableToNonNullable, "null").WithLocation(6, 13),
+                Diagnostic(ErrorCode.WRN_NullLiteralMayIntroduceNullT, "null").WithArguments("<null>").WithLocation(6, 13),
                 // (7,9): warning CS8602: Possible dereference of a null reference.
                 //         x.ToString();
                 Diagnostic(ErrorCode.WRN_NullReferenceReceiver, "x").WithLocation(7, 9)
@@ -63129,9 +63129,6 @@ class Outer<T, U> where T : Outer<T, U>? where U : T
                 // (6,16): warning CS8600: Converting null literal or possible null value to non-nullable type.
                 //         U y0 = (U)x0;
                 Diagnostic(ErrorCode.WRN_ConvertingNullableToNonNullable, "(U)x0").WithLocation(6, 16),
-                // (7,16): warning CS8600: Converting null literal or possible null value to non-nullable type.
-                //         U z0 = y0;
-                Diagnostic(ErrorCode.WRN_ConvertingNullableToNonNullable, "y0").WithLocation(7, 16),
                 // (9,9): warning CS8602: Possible dereference of a null reference.
                 //         y0.ToString();
                 Diagnostic(ErrorCode.WRN_NullReferenceReceiver, "y0").WithLocation(9, 9),
@@ -63293,9 +63290,6 @@ class Outer<T, U> where T : Outer<T, U>?, U
                 // (6,16): warning CS8600: Converting null literal or possible null value to non-nullable type.
                 //         T z0 = x0?.M1();
                 Diagnostic(ErrorCode.WRN_ConvertingNullableToNonNullable, "x0?.M1()").WithLocation(6, 16),
-                // (7,16): warning CS8600: Converting null literal or possible null value to non-nullable type.
-                //         U y0 = z0;
-                Diagnostic(ErrorCode.WRN_ConvertingNullableToNonNullable, "z0").WithLocation(7, 16),
                 // (9,9): warning CS8602: Possible dereference of a null reference.
                 //         y0.ToString();
                 Diagnostic(ErrorCode.WRN_NullReferenceReceiver, "y0").WithLocation(9, 9),
