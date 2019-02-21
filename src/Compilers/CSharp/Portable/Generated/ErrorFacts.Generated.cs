@@ -218,6 +218,8 @@
                 case ErrorCode.WRN_DuplicateInterfaceWithNullabilityMismatchInBaseList:
                 case ErrorCode.WRN_DefaultExpressionMayIntroduceNullT:
                 case ErrorCode.WRN_NullLiteralMayIntroduceNullT:
+                case ErrorCode.WRN_ConditionalAccessMayReturnNull:
+                case ErrorCode.WRN_AsOperatorMayReturnNull:
                     return true;
                 default:
                     return false;

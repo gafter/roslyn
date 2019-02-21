@@ -34,17 +34,20 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
     /// <summary>
     /// A type and its corresponding flow state resulting from evaluating an rvalue expression.
     /// </summary>
+    [DebuggerDisplay("{GetDebuggerDisplay(), nq}")]
     internal struct TypeWithState
     {
         public TypeSymbol Type { get; }
         public NullableFlowState State { get; }
         public bool HasNullType => Type is null;
         public bool MaybeNull => State == NullableFlowState.MaybeNull;
+        public bool NotNull => State == NullableFlowState.NotNull;
         public bool IsDefault => Type is null;
         public static TypeWithState ForType(TypeSymbol type) => new TypeWithState(type, type?.CanContainNull() == true ? NullableFlowState.MaybeNull : NullableFlowState.NotNull);
         public TypeWithState(TypeSymbol type, NullableFlowState state) => (Type, State) = (type, state);
         public void Deconstruct(out TypeSymbol type, out NullableFlowState state) => (type, state) = (Type, State);
         public static implicit operator TypeWithState((TypeSymbol type, NullableFlowState state) a) => new TypeWithState(a.type, a.state);
+        public string GetDebuggerDisplay() => $"{{Type:{Type?.GetDebuggerDisplay()}, State:{State}{"}"}";
         public TypeSymbolWithAnnotations ToTypeSymbolWithAnnotations()
         {
             // PROTOTYPE(ngafter): use context from caller to infer oblivious (when the feature is disabled) instead of NotAnnotated if appropriate
@@ -407,14 +410,16 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             return CreateNonLazyType(typeSymbol, nullableAnnotation, customModifiers.NullToEmpty());
         }
 
-        internal bool IsPossiblyNullableReferenceTypeTypeParameter()
+        internal bool IsPossiblyNullableTypeTypeParameter()
         {
-            return NullableAnnotation == NullableAnnotation.NotAnnotated && TypeSymbol?.IsPossiblyNullableReferenceTypeTypeParameter() == true;
+            return NullableAnnotation == NullableAnnotation.NotAnnotated &&
+                (TypeSymbol?.IsPossiblyNullableReferenceTypeTypeParameter() == true ||
+                 TypeSymbol?.IsNullableTypeOrTypeParameter() == true);
         }
 
         internal NullableAnnotation GetValueNullableAnnotation()
         {
-            if (IsPossiblyNullableReferenceTypeTypeParameter())
+            if (IsPossiblyNullableTypeTypeParameter())
             {
                 return NullableAnnotation.Nullable;
             }
@@ -628,7 +633,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             return str;
         }
 
-        internal string GetDebuggerDisplay() => _defaultType is null ? "null" : ToDisplayString(DebuggerDisplayFormat);
+        internal string GetDebuggerDisplay() => this.IsDefault ? "null" : ToDisplayString(DebuggerDisplayFormat);
 
         string IFormattable.ToString(string format, IFormatProvider formatProvider)
         {
@@ -1378,7 +1383,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             // even though the type parameter isn't annotated.
             return new TypeWithState(
                 this.TypeSymbol,
-                IsPossiblyNullableReferenceTypeTypeParameter() ? NullableFlowState.MaybeNull : this.NullableAnnotation.ToState());
+                IsPossiblyNullableTypeTypeParameter() ? NullableFlowState.MaybeNull : this.NullableAnnotation.ToState());
         }
     }
 }

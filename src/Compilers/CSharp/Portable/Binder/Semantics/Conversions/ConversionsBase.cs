@@ -1410,12 +1410,12 @@ namespace Microsoft.CodeAnalysis.CSharp
                 return true;
             }
 
-            if (source.IsPossiblyNullableReferenceTypeTypeParameter() && !destination.IsPossiblyNullableReferenceTypeTypeParameter())
+            if (source.IsPossiblyNullableTypeTypeParameter() && !destination.IsPossiblyNullableTypeTypeParameter())
             {
                 return destination.NullableAnnotation.IsAnyNullable();
             }
 
-            if (destination.IsPossiblyNullableReferenceTypeTypeParameter() && !source.IsPossiblyNullableReferenceTypeTypeParameter())
+            if (destination.IsPossiblyNullableTypeTypeParameter() && !source.IsPossiblyNullableTypeTypeParameter())
             {
                 return source.NullableAnnotation.IsAnyNullable();
             }
@@ -1442,7 +1442,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                 return true;
             }
 
-            if (source.IsPossiblyNullableReferenceTypeTypeParameter() && !destination.IsPossiblyNullableReferenceTypeTypeParameter())
+            if (source.IsPossiblyNullableTypeTypeParameter() && !destination.IsPossiblyNullableTypeTypeParameter())
             {
                 return false;
             }

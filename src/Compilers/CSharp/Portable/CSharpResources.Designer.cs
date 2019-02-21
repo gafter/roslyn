@@ -12320,6 +12320,24 @@ namespace Microsoft.CodeAnalysis.CSharp {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to The &apos;as&apos; operator may produce a null value of type &apos;{0}&apos;..
+        /// </summary>
+        internal static string WRN_AsOperatorMayReturnNull {
+            get {
+                return ResourceManager.GetString("WRN_AsOperatorMayReturnNull", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to The &apos;as&apos; operator may produce null..
+        /// </summary>
+        internal static string WRN_AsOperatorMayReturnNull_Title {
+            get {
+                return ResourceManager.GetString("WRN_AsOperatorMayReturnNull_Title", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Attribute &apos;{0}&apos; from module &apos;{1}&apos; will be ignored in favor of the instance appearing in source.
         /// </summary>
         internal static string WRN_AssemblyAttributeFromModuleIsOverridden {
@@ -13459,6 +13477,24 @@ namespace Microsoft.CodeAnalysis.CSharp {
         internal static string WRN_ComparisonToSelf_Title {
             get {
                 return ResourceManager.GetString("WRN_ComparisonToSelf_Title", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Conditional access may produce a null value of type &apos;{0}&apos;..
+        /// </summary>
+        internal static string WRN_ConditionalAccessMayReturnNull {
+            get {
+                return ResourceManager.GetString("WRN_ConditionalAccessMayReturnNull", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Conditional access may produce null..
+        /// </summary>
+        internal static string WRN_ConditionalAccessMayReturnNull_Title {
+            get {
+                return ResourceManager.GetString("WRN_ConditionalAccessMayReturnNull_Title", resourceCulture);
             }
         }
         

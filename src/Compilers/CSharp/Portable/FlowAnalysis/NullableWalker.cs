@@ -20,6 +20,7 @@ namespace Microsoft.CodeAnalysis.CSharp
     /// <summary>
     /// Nullability flow analysis.
     /// </summary>
+    [DebuggerDisplay("{GetDebuggerDisplay(), nq}")]
     internal sealed partial class NullableWalker : LocalDataFlowPass<NullableWalker.LocalState>
     {
         /// <summary>
@@ -158,6 +159,18 @@ namespace Microsoft.CodeAnalysis.CSharp
             }
         }
 
+        public string GetDebuggerDisplay()
+        {
+            if (this.IsConditionalState)
+            {
+                return $"{{{GetType().Name} WhenTrue:{Dump(StateWhenTrue)} WhenFalse:{Dump(StateWhenFalse)}{"}"}";
+            }
+            else
+            {
+                return $"{{{GetType().Name} {Dump(State)}{"}"}";
+            }
+
+        }
         // For purpose of nullability analysis, awaits create pending branches, so async usings and foreachs do too
         public sealed override bool AwaitUsingAndForeachAddsPendingBranch => true;
 
@@ -650,6 +663,8 @@ namespace Microsoft.CodeAnalysis.CSharp
                     // as a safety diagnostic.  This is NOT one of those places.
                     return false;
                 }
+
+                useLegacyWarnings = false;
             }
 
             if (assignmentKind == AssignmentKind.Argument)
@@ -1729,16 +1744,10 @@ namespace Microsoft.CodeAnalysis.CSharp
             NullableFlowState resultState = NullableFlowState.NotNull;
             if (operatorKind.IsUserDefined())
             {
-                if (operatorKind.IsLifted())
-                {
-                    // https://github.com/dotnet/roslyn/issues/29953 Conversions: Lifted operator
-                    return new TypeWithState(resultType, resultState);
-                }
-
                 // Update method based on operand types: see https://github.com/dotnet/roslyn/issues/29605.
                 if ((object)methodOpt != null && methodOpt.ParameterCount == 2)
                 {
-                    return methodOpt.ReturnType.ToTypeWithState();
+                    resultState = methodOpt.ReturnType.ToTypeWithState().State;
                 }
             }
             else if (!operatorKind.IsDynamic() && !resultType.IsValueType)
@@ -1747,10 +1756,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                 {
                     case BinaryOperatorKind.DelegateCombination:
                         {
-                            NullableFlowState left = leftType.State;
-                            NullableFlowState right = rightType.State;
-                            resultState = (left == NullableFlowState.NotNull || right == NullableFlowState.NotNull)
-                                ? NullableFlowState.NotNull : NullableFlowState.MaybeNull;
+                            resultState = leftType.State.MeetForFlowAnalysisFinally(rightType.State);
                         }
                         break;
                     case BinaryOperatorKind.DelegateRemoval:
@@ -1760,6 +1766,11 @@ namespace Microsoft.CodeAnalysis.CSharp
                         resultState = NullableFlowState.NotNull;
                         break;
                 }
+            }
+
+            if (operatorKind.IsLifted() && (leftType.MaybeNull || rightType.MaybeNull))
+            {
+                resultState = NullableFlowState.MaybeNull;
             }
 
             return new TypeWithState(resultType, resultState);
@@ -2166,6 +2177,14 @@ namespace Microsoft.CodeAnalysis.CSharp
             // https://github.com/dotnet/roslyn/issues/29956 Use flow analysis type rather than node.Type
             // so that nested nullability is inferred from flow analysis. See VisitConditionalOperator.
             TypeSymbol type = node.Type;
+
+            // If the result type does not allow annotations, the we produce a warning because
+            // the result may be null.
+            if (IsTypeParameterDisallowingAnnotation(type))
+            {
+                ReportSafetyDiagnostic(ErrorCode.WRN_ConditionalAccessMayReturnNull, node.Syntax, node.Type);
+            }
+
             _resultType = new TypeWithState(type, resultState);
             return null;
         }
@@ -3326,7 +3345,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                 operandType,
                 checkConversion: true,
                 fromExplicitCast: fromExplicitCast,
-                useLegacyWarnings: fromExplicitCast,
+                useLegacyWarnings: fromExplicitCast && !explicitType.TypeSymbol.IsTypeParameterDisallowingAnnotation(),
                 AssignmentKind.Assignment,
                 reportTopLevelWarnings: fromExplicitCast,
                 reportRemainingWarnings: true);
@@ -3874,6 +3893,11 @@ namespace Microsoft.CodeAnalysis.CSharp
                     break;
             }
 
+            if (fromExplicitCast && targetTypeWithNullability.NullableAnnotation == NullableAnnotation.Annotated)
+            {
+                resultState = NullableFlowState.MaybeNull;
+            }
+
             var resultType = new TypeWithState(targetType, resultState);
 
             if (operandType.Type?.IsErrorType() != true && !targetType.IsErrorType())
@@ -4070,10 +4094,10 @@ namespace Microsoft.CodeAnalysis.CSharp
             switch (expr.Kind)
             {
                 case BoundKind.Local:
-                    return true;
+                    return !expr.Type.IsTypeParameterDisallowingAnnotation();
                 case BoundKind.Parameter:
                     RefKind kind = ((BoundParameter)expr).ParameterSymbol.RefKind;
-                    return kind == RefKind.None;
+                    return kind == RefKind.None && !expr.Type.IsTypeParameterDisallowingAnnotation();
                 default:
                     return false;
             }
@@ -4554,17 +4578,20 @@ namespace Microsoft.CodeAnalysis.CSharp
             TypeWithState resultType = default;
 
             // Update method based on inferred operand type: see https://github.com/dotnet/roslyn/issues/29605.
-            if (node.OperatorKind.IsUserDefined())
+
+            if (node.OperatorKind.IsUserDefined() && (object)node.MethodOpt != null && node.MethodOpt.ParameterCount == 1)
             {
-                if (node.OperatorKind.IsLifted())
-                {
-                    // https://github.com/dotnet/roslyn/issues/29953 Conversions: Lifted operator
-                }
-                else if ((object)node.MethodOpt != null && node.MethodOpt.ParameterCount == 1)
-                {
-                    ReportArgumentWarnings(node.Operand, argumentResult, node.MethodOpt.Parameters[0]);
-                    resultType = node.MethodOpt.ReturnType.ToTypeWithState();
-                }
+                ReportArgumentWarnings(node.Operand, argumentResult, node.MethodOpt.Parameters[0]);
+                resultType = node.MethodOpt.ReturnType.ToTypeWithState();
+            }
+            else
+            {
+                resultType = new TypeWithState(node.Type, NullableFlowState.NotNull);
+            }
+
+            if (node.OperatorKind.IsLifted())
+            {
+                resultType = new TypeWithState(resultType.Type, argumentResult.State);
             }
 
             _resultType = resultType.IsDefault ? new TypeWithState(node.Type, NullableFlowState.NotNull) : resultType;
@@ -4796,45 +4823,46 @@ namespace Microsoft.CodeAnalysis.CSharp
         {
             VisitRvalue(node.Operand);
 
-            //if (this.State.Reachable) // Consider reachability: see https://github.com/dotnet/roslyn/issues/28798
+            NullableFlowState resultState = NullableFlowState.NotNull;
+            var type = node.Type;
+
+            if (!type.IsValueType || type.IsNullableType())
             {
-                NullableFlowState resultState = NullableFlowState.NotNull;
-                var type = node.Type;
-
-                if (!type.IsValueType || type.IsNullableType())
+                var operandType = _resultType;
+                switch (node.Conversion.Kind)
                 {
-                    var operandType = _resultType;
-                    switch (node.Conversion.Kind)
-                    {
-                        case ConversionKind.Identity:
-                            // Inherit nullability from the operand
-                            resultState = operandType.State;
-                            break;
+                    case ConversionKind.Identity:
+                        // Inherit nullability from the operand
+                        resultState = operandType.State;
+                        break;
 
-                        case ConversionKind.ImplicitReference:
-                            // Inherit nullability from the operand
-                            resultState = operandType.State;
-                            break;
+                    case ConversionKind.ImplicitReference:
+                        // Inherit nullability from the operand
+                        resultState = operandType.State;
+                        break;
 
-                        case ConversionKind.Boxing:
-                            // Inherit nullability from the operand
-                            resultState = operandType.State;
-                            break;
+                    case ConversionKind.Boxing:
+                        // Inherit nullability from the operand
+                        resultState = operandType.State;
+                        break;
 
-                        case ConversionKind.ImplicitNullable:
-                            Debug.Assert(!operandType.Type.IsNullableType()); // PROTOTYPE(ngafter): temporary
-                            resultState = operandType.Type.IsNullableType() ? operandType.State : NullableFlowState.NotNull;
-                            break;
+                    case ConversionKind.ImplicitNullable:
+                        // conversion of a value of type `X` to the type `Nullable<X>`
+                        Debug.Assert(!operandType.Type.IsNullableType());
+                        resultState = NullableFlowState.NotNull;
+                        break;
 
-                        default:
-                            resultState = NullableFlowState.MaybeNull;
-                            break;
-                    }
+                    default:
+                        resultState = NullableFlowState.MaybeNull;
+                        if (IsTypeParameterDisallowingAnnotation(type))
+                        {
+                            ReportSafetyDiagnostic(ErrorCode.WRN_AsOperatorMayReturnNull, node.Syntax, type);
+                        }
+                        break;
                 }
-
-                _resultType = new TypeWithState(type, resultState);
             }
 
+            _resultType = new TypeWithState(type, resultState);
             return null;
         }
 
