@@ -652,7 +652,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             }
 
             HashSet<DiagnosticInfo> useSiteDiagnostics = null;
-            if (targetType.TypeSymbol.IsTypeParameterDisallowingAnnotation())
+            if (RequiresSafetyWarningWhenNullIntroduced(targetType.TypeSymbol))
             {
                 if (conversion.Kind == 0)
                     conversion = this._conversions.ClassifyImplicitConversionFromType(valueType.Type, targetType.TypeSymbol, ref useSiteDiagnostics);
@@ -696,7 +696,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                 // For type parameters that cannot be annotated, the analysis must report those
                 // places where null values first sneak in, like `default`, `null`, and `GetFirstOrDefault`,
                 // as a safety diagnostic.  This is one of those places.
-                if (useLegacyWarnings && !IsTypeParameterDisallowingAnnotation(expr.Type))
+                if (useLegacyWarnings && !RequiresSafetyWarningWhenNullIntroduced(expr.Type))
                 {
                     ReportNonSafetyDiagnostic(expr.Syntax);
                 }
@@ -719,7 +719,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                             IsDefaultOfUnconstrainedTypeParameter(conversion.Operand);
                     }
                 case BoundKind.DefaultExpression:
-                    return IsTypeParameterDisallowingAnnotation(expr.Type);
+                    return RequiresSafetyWarningWhenNullIntroduced(expr.Type);
                 default:
                     return false;
             }
@@ -1229,9 +1229,9 @@ namespace Microsoft.CodeAnalysis.CSharp
             return returnType;
         }
 
-        private static bool IsTypeParameterDisallowingAnnotation(TypeSymbol typeOpt)
+        private static bool RequiresSafetyWarningWhenNullIntroduced(TypeSymbol typeOpt)
         {
-            return typeOpt?.IsTypeParameterDisallowingAnnotation() == true;
+            return typeOpt?.IsTypeParameterDisallowingAnnotation() == true && !typeOpt.IsNullableTypeOrTypeParameter();
         }
 
         public override BoundNode VisitLocal(BoundLocal node)
@@ -2180,7 +2180,7 @@ namespace Microsoft.CodeAnalysis.CSharp
 
             // If the result type does not allow annotations, the we produce a warning because
             // the result may be null.
-            if (IsTypeParameterDisallowingAnnotation(type))
+            if (RequiresSafetyWarningWhenNullIntroduced(type))
             {
                 ReportSafetyDiagnostic(ErrorCode.WRN_ConditionalAccessMayReturnNull, node.Syntax, node.Type);
             }
@@ -3345,7 +3345,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                 operandType,
                 checkConversion: true,
                 fromExplicitCast: fromExplicitCast,
-                useLegacyWarnings: fromExplicitCast && !explicitType.TypeSymbol.IsTypeParameterDisallowingAnnotation(),
+                useLegacyWarnings: fromExplicitCast && !RequiresSafetyWarningWhenNullIntroduced(explicitType.TypeSymbol),
                 AssignmentKind.Assignment,
                 reportTopLevelWarnings: fromExplicitCast,
                 reportRemainingWarnings: true);
@@ -3750,6 +3750,10 @@ namespace Microsoft.CodeAnalysis.CSharp
                                     compilation.GetSpecialType(SpecialType.System_Nullable_T).Construct(ImmutableArray.Create(methodReturnType)) :
                                     methodReturnType.TypeSymbol,
                                 methodReturnType.ToTypeWithState().State.JoinForFlowAnalysisBranches(operandState));
+                            if (RequiresSafetyWarningWhenNullIntroduced(methodReturnType.TypeSymbol) && operandState == NullableFlowState.MaybeNull)
+                            {
+                                ReportNullableAssignmentIfNecessary(node, targetTypeWithNullability, operandType, useLegacyWarnings: useLegacyWarnings, assignmentKind, target, conversion: conversion);
+                            }
                         }
                         else
                         {
@@ -3812,7 +3816,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                     goto case ConversionKind.ImplicitReference;
 
                 case ConversionKind.ImplicitReference:
-                    if (operandOpt?.Kind == BoundKind.Literal && operandOpt.ConstantValue?.IsNull == true && IsTypeParameterDisallowingAnnotation(targetType))
+                    if (operandOpt?.Kind == BoundKind.Literal && operandOpt.ConstantValue?.IsNull == true && RequiresSafetyWarningWhenNullIntroduced(targetType))
                     {
                         // For type parameters that cannot be annotated, the analysis must report those
                         // places where null values first sneak in, like `default`, `null`, and `GetFirstOrDefault`.
@@ -3893,7 +3897,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                     break;
             }
 
-            if (fromExplicitCast && targetTypeWithNullability.NullableAnnotation == NullableAnnotation.Annotated)
+            if (fromExplicitCast && targetTypeWithNullability.NullableAnnotation == NullableAnnotation.Annotated && !targetType.IsNullableType())
             {
                 resultState = NullableFlowState.MaybeNull;
             }
@@ -3905,7 +3909,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                 // Need to report all warnings that apply since the warnings can be suppressed individually.
                 if (reportTopLevelWarnings)
                 {
-                    if (IsTypeParameterDisallowingAnnotation(targetType) && conversion.IsImplicit && !conversion.IsDynamic)
+                    if (RequiresSafetyWarningWhenNullIntroduced(targetType) && conversion.IsImplicit && !conversion.IsDynamic)
                     {
                         // For type parameters that cannot be annotated, the analysis must report those
                         // places where null values first sneak in, like `default`, `null`, and `GetFirstOrDefault`,
@@ -4094,10 +4098,10 @@ namespace Microsoft.CodeAnalysis.CSharp
             switch (expr.Kind)
             {
                 case BoundKind.Local:
-                    return !expr.Type.IsTypeParameterDisallowingAnnotation();
+                    return !RequiresSafetyWarningWhenNullIntroduced(expr.Type);
                 case BoundKind.Parameter:
                     RefKind kind = ((BoundParameter)expr).ParameterSymbol.RefKind;
-                    return kind == RefKind.None && !expr.Type.IsTypeParameterDisallowingAnnotation();
+                    return kind == RefKind.None && !RequiresSafetyWarningWhenNullIntroduced(expr.Type);
                 default:
                     return false;
             }
@@ -4508,7 +4512,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                         destinationType,
                         sourceType,
                         checkConversion: false,
-                        fromExplicitCast: true,
+                        fromExplicitCast: false,
                         useLegacyWarnings: false,
                         AssignmentKind.Assignment,
                         reportTopLevelWarnings: false,
@@ -4784,7 +4788,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             // (should produce nullable element types for those elements that are of reference types)
             _resultType = TypeWithState.ForType(type);
 
-            if (_resultType.State == NullableFlowState.MaybeNull && IsTypeParameterDisallowingAnnotation(_resultType.Type))
+            if (_resultType.State == NullableFlowState.MaybeNull && RequiresSafetyWarningWhenNullIntroduced(_resultType.Type))
             {
                 // For type parameters that cannot be annotated, the analysis must report those
                 // places where null values first sneak in, like `default`, `null`, and `GetFirstOrDefault`.
@@ -4854,7 +4858,7 @@ namespace Microsoft.CodeAnalysis.CSharp
 
                     default:
                         resultState = NullableFlowState.MaybeNull;
-                        if (IsTypeParameterDisallowingAnnotation(type))
+                        if (RequiresSafetyWarningWhenNullIntroduced(type))
                         {
                             ReportSafetyDiagnostic(ErrorCode.WRN_AsOperatorMayReturnNull, node.Syntax, type);
                         }

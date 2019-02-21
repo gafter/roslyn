@@ -577,7 +577,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
         /// <summary>
         /// Is this System.Nullable`1 type, or its substitution.
         /// </summary>
-        public bool IsNullableType() => TypeSymbol.IsNullableType();
+        public bool IsNullableType() => TypeSymbol?.IsNullableType() == true;
 
         /// <summary>
         /// The list of custom modifiers, if any, associated with the <see cref="TypeSymbol"/>.
