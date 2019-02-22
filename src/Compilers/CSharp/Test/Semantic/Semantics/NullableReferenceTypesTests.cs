@@ -74096,5 +74096,56 @@ class B : A
             comp.VerifyDiagnostics();
         }
 
+        [Fact(Skip = "https://github.com/dotnet/roslyn/issues/33615")]
+        public void TestSubsituteMemberOfTuple()
+        {
+            var source =
+@"using System;
+
+class C
+{
+    static void Main()
+    {
+        Console.WriteLine(Test(42));
+    }
+
+    public static Test(object? a)
+    {
+        if (a == null) return;
+        var x = (f1: a, f2: a);
+        Func<object> f = () => x.Test(a);
+        f();
     }
 }
+
+namespace System
+{
+    public struct ValueTuple<T1, T2>
+    {
+        public T1 Item1;
+        public T2 Item2;
+
+        public ValueTuple(T1 item1, T2 item2)
+        {
+            this.Item1 = item1;
+            this.Item2 = item2;
+        }
+
+        public override string ToString()
+        {
+            return '{' + Item1?.ToString() + "", "" + Item2?.ToString() + '}';
+        }
+
+        public U Test<U>(U val)
+        {
+            return val;
+        }
+    }
+}
+";
+            var comp = CreateCompilation(new[] { source }, options: WithNonNullTypesTrue());
+            comp.VerifyDiagnostics();
+        }
+    }
+}
+
