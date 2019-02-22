@@ -294,6 +294,10 @@ class X
                         case ErrorCode.WRN_NullabilityMismatchInConstraintsOnImplicitImplementation:
                         case ErrorCode.WRN_NullabilityMismatchInTypeParameterReferenceTypeConstraint:
                         case ErrorCode.WRN_CaseConstantNamedUnderscore:
+                        case ErrorCode.WRN_ConditionalAccessMayReturnNull:
+                        case ErrorCode.WRN_AsOperatorMayReturnNull:
+                        case ErrorCode.WRN_DefaultExpressionMayIntroduceNullT:
+                        case ErrorCode.WRN_NullLiteralMayIntroduceNullT:
                             Assert.Equal(1, ErrorFacts.GetWarningLevel(errorCode));
                             break;
                         case ErrorCode.WRN_InvalidVersionFormat:

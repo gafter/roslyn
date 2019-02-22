@@ -1944,7 +1944,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             }
 
             bool shouldUpdateType(TypeSymbol operandType)
-                => !(operandType is null) && (!operandType.IsValueType || operandType.IsNullableType());
+                => !(operandType is null) && operandType.CanContainNull();
         }
 
         private static void MarkSlotsAsNotNull(ArrayBuilder<int> slots, ref LocalState stateToUpdate)
@@ -2505,7 +2505,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                 }
 
                 // NotNullWhenSense must be applied to a reference type, a nullable value type, or an unconstrained generic type
-                if ((annotations & whenSense) != 0 && parameter.Type.IsValueType && !parameter.Type.IsNullableType())
+                if ((annotations & whenSense) != 0 && !parameter.Type.TypeSymbol.CanContainNull())
                 {
                     annotations &= ~whenSense;
                 }
@@ -2734,7 +2734,7 @@ namespace Microsoft.CodeAnalysis.CSharp
 
                 var argument = arguments[i];
                 var argumentType = argument.Type;
-                if ((object)argumentType == null || (argumentType.IsValueType && !argumentType.IsNullableType()))
+                if (argumentType?.CanContainNull() != true)
                 {
                     continue;
                 }
@@ -4470,17 +4470,13 @@ namespace Microsoft.CodeAnalysis.CSharp
 
             // We are supposed to track information for the node. Use whatever we managed to
             // accumulate so far.
-            if (!resultTypeWithAnnotations.IsValueType || resultTypeWithAnnotations.IsNullableType())
+            if (resultTypeWithAnnotations.TypeSymbol.CanContainNull())
             {
                 int containingSlot = getReceiverSlot();
                 int slot = (containingSlot < 0) ? -1 : GetOrCreateSlot(member, containingSlot);
                 if (slot > 0 && slot < this.State.Capacity)
                 {
-                    var state = this.State[slot];
-                    if ((state == NullableFlowState.MaybeNull) != resultTypeWithAnnotations.NullableAnnotation.IsAnyNullable())
-                    {
-                        result = (resultTypeWithAnnotations.TypeSymbol, state);
-                    }
+                    result = (resultTypeWithAnnotations.TypeSymbol, this.State[slot]);
                 }
             }
 
@@ -4856,7 +4852,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             NullableFlowState resultState = NullableFlowState.NotNull;
             var type = node.Type;
 
-            if (!type.IsValueType || type.IsNullableType())
+            if (type.CanContainNull())
             {
                 var operandType = _resultType;
                 switch (node.Conversion.Kind)
@@ -4878,8 +4874,8 @@ namespace Microsoft.CodeAnalysis.CSharp
 
                     case ConversionKind.ImplicitNullable:
                         // conversion of a value of type `X` to the type `Nullable<X>`
-                        Debug.Assert(!operandType.Type.IsNullableType());
-                        resultState = NullableFlowState.NotNull;
+                        // conversion of a value of type `int?` to the type `long?`
+                        resultState = operandType.State;
                         break;
 
                     default:

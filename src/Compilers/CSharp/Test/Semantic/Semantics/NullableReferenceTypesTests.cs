@@ -18263,7 +18263,7 @@ class C
     static void F5(A<object>? x5, B<object?>? y5)
     {
         (x5 ?? y5)/*T:B<object?>?*/.F.ToString();
-        (y5 ?? x5)/*T:B<object?>!*/.F.ToString();
+        (y5 ?? x5)/*T:B<object?>?*/.F.ToString();
     }
     static void F6(A<object?>? x6, B<object>? y6)
     {
@@ -45197,20 +45197,20 @@ class C<T>
 
     static void F(C<T> a, bool c)
     {
-        if (c) a.field.ToString();
+        if (c) a.field.ToString(); // 1
         else if (a.field != null) a.field.ToString();
         C<T> b = new C<T>();
-        if (c) b.field.ToString();
+        if (c) b.field.ToString(); // 2
         else if (b.field != null) b.field.ToString();
     }
 }";
             var comp = CreateCompilation(new[] { source }, options: WithNonNullTypesTrue());
             comp.VerifyDiagnostics(
                 // (8,16): warning CS8602: Possible dereference of a null reference.
-                //         if (c) a.field.ToString();
+                //         if (c) a.field.ToString(); // 1
                 Diagnostic(ErrorCode.WRN_NullReferenceReceiver, "a.field").WithLocation(8, 16),
                 // (11,16): warning CS8602: Possible dereference of a null reference.
-                //         if (c) b.field.ToString();
+                //         if (c) b.field.ToString(); // 2
                 Diagnostic(ErrorCode.WRN_NullReferenceReceiver, "b.field").WithLocation(11, 16)
                 );
         }

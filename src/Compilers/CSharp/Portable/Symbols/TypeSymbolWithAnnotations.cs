@@ -1009,7 +1009,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
 
         public TypeSymbolWithAnnotations SetSpeakableNullabilityForReferenceTypes()
         {
-            if (IsDefault)
+            if (!HasType)
             {
                 return default;
             }
