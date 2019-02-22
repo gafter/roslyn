@@ -247,15 +247,27 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
         /// </summary>
         public static NullableAnnotation EnsureCompatibleForTuples(this NullableAnnotation a, NullableAnnotation b)
         {
-            if (a.IsAnyNotNullable())
-                return a;
-            if (b.IsAnyNotNullable())
-                return b;
-            if (a.IsAnyNullable())
-                return a;
-            if (b.IsAnyNullable())
-                return b;
-            return a;
+            if (a == NullableAnnotation.NotNullable || b == NullableAnnotation.NotNullable)
+            {
+                return NullableAnnotation.NotNullable;
+            }
+
+            if (a == NullableAnnotation.NotAnnotated || b == NullableAnnotation.NotAnnotated)
+            {
+                return NullableAnnotation.NotAnnotated;
+            }
+
+            if (a == NullableAnnotation.Nullable || b == NullableAnnotation.Nullable)
+            {
+                return NullableAnnotation.Nullable;
+            }
+
+            if (a == NullableAnnotation.Annotated || b == NullableAnnotation.Annotated)
+            {
+                return NullableAnnotation.Annotated;
+            }
+
+            return NullableAnnotation.Unknown;
         }
     }
 
