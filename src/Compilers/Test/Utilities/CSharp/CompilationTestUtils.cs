@@ -15,6 +15,7 @@ using System.Collections.Immutable;
 using System.Linq;
 using Xunit;
 using Microsoft.CodeAnalysis.CSharp.Test.Utilities;
+using System.Diagnostics;
 
 namespace Microsoft.CodeAnalysis.CSharp.UnitTests
 {
@@ -331,6 +332,9 @@ namespace Microsoft.CodeAnalysis.CSharp.UnitTests
 
                 string toDisplayString(SyntaxNode syntaxOpt)
                 {
+                    // We don't support VerifyTypes on suppressions at the moment
+                    Assert.NotEqual(syntaxOpt.Kind(), SyntaxKind.SuppressNullableWarningExpression);
+
                     return (syntaxOpt != null) && dictionary.TryGetValue(syntaxOpt, out var type) ?
                         (!type.HasType ? "<null>" : type.ToDisplayString(TypeSymbolWithAnnotations.TestDisplayFormat)) :
                         null;

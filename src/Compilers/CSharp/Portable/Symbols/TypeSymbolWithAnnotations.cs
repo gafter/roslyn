@@ -48,9 +48,9 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
         public void Deconstruct(out TypeSymbol type, out NullableFlowState state) => (type, state) = (Type, State);
         public static implicit operator TypeWithState((TypeSymbol type, NullableFlowState state) a) => new TypeWithState(a.type, a.state);
         public string GetDebuggerDisplay() => $"{{Type:{Type?.GetDebuggerDisplay()}, State:{State}{"}"}";
+        public TypeWithState WithTopLevelNonNullability() => new TypeWithState(Type, NullableFlowState.NotNull);
         public TypeSymbolWithAnnotations ToTypeSymbolWithAnnotations()
         {
-            // PROTOTYPE(ngafter): use context from caller to infer oblivious (when the feature is disabled) instead of NotAnnotated if appropriate
             NullableAnnotation annotation;
             switch (this.State)
             {
@@ -58,7 +58,6 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                     annotation = NullableAnnotation.NotNullable;
                     break;
                 default: // MaybeNull
-                    // PROTOTYPE(ngafter): do we treat nullable value types as annotated?
                     annotation = NullableAnnotation.Nullable;
                     break;
             }
@@ -221,7 +220,8 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
 
         /// <summary>
         /// Check that two nullable annotations are "compatible", which means they could be the same. Return the
-        /// nullable annotation to be used as a result. This uses the invariant merging rules.
+        /// nullable annotation to be used as a result.
+        /// This uses the invariant merging rules.
         /// </summary>
         public static NullableAnnotation EnsureCompatible(this NullableAnnotation a, NullableAnnotation b)
         {
@@ -272,7 +272,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
     }
 
     /// <summary>
-    /// A type and its corresponding declared nullable annotation resulting from evaluating an lvalue.
+    /// A simple class that combines a single type symbol with annotations
     /// </summary>
     [DebuggerDisplay("{GetDebuggerDisplay(), nq}")]
     internal readonly struct TypeSymbolWithAnnotations : IFormattable
@@ -357,7 +357,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
 
         public TypeSymbolWithAnnotations AsSpeakable()
         {
-            if (IsDefault)
+            if (!HasType)
             {
                 return default;
             }
@@ -750,9 +750,9 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                    Symbol.GetUnificationUseSiteDiagnosticRecursive(ref result, this.CustomModifiers, owner, ref checkedTypes);
         }
 
-        public void CheckAllConstraints(ConversionsBase conversions, Location location, DiagnosticBag diagnostics)
+        public void CheckAllConstraints(CSharpCompilation compilation, ConversionsBase conversions, Location location, DiagnosticBag diagnostics)
         {
-            TypeSymbol.CheckAllConstraints(conversions, location, diagnostics);
+            TypeSymbol.CheckAllConstraints(compilation, conversions, location, diagnostics);
         }
 
         public bool IsAtLeastAsVisibleAs(Symbol sym, ref HashSet<DiagnosticInfo> useSiteDiagnostics)

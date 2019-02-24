@@ -1280,7 +1280,9 @@ namespace Microsoft.CodeAnalysis.CSharp
                 return false;
             }
 
-            NullableAnnotation returnIsNullable = NullableAnnotation.Unknown; // https://github.com/dotnet/roslyn/issues/27961 Review this
+            // https://github.com/dotnet/roslyn/issues/33635 : We should preserve the return nullability from the
+            // selected method of the method group, possibly turning oblivious into non-null.
+            NullableAnnotation returnIsNullable = NullableAnnotation.Unknown;
             LowerBoundInference(TypeSymbolWithAnnotations.Create(returnType, returnIsNullable), delegateReturnType, ref useSiteDiagnostics);
 
             return true;
