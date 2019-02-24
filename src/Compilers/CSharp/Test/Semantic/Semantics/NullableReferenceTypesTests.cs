@@ -27351,6 +27351,27 @@ class C
                 Diagnostic(ErrorCode.WRN_NullReferenceReceiver, "z").WithLocation(9, 45));
         }
 
+        [Fact(Skip = "https://github.com/dotnet/roslyn/issues/33645")]
+        [WorkItem(33645, "https://github.com/dotnet/roslyn/issues/33645")]
+        public void ReinferLambdaReturnType()
+        {
+            var source =
+@"using System;
+class C
+{
+    static T F<T>(Func<T> f) => f();
+    static void G(object? x)
+    {
+        F(() => x)/*T:object?*/;
+        if (x == null) return;
+        F(() => x)/*T:object!*/;
+    }
+}";
+            var comp = CreateCompilation(new[] { source }, options: WithNonNullTypesTrue());
+            comp.VerifyDiagnostics();
+            comp.VerifyTypes();
+        }
+
         [Fact]
         public void IdentityConversion_LambdaReturnType()
         {
