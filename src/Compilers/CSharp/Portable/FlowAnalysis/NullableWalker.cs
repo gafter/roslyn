@@ -176,7 +176,7 @@ namespace Microsoft.CodeAnalysis.CSharp
         /// <summary>
         /// Instances being constructed.
         /// </summary>
-        private PooledDictionary<BoundExpression, ObjectCreationPlaceholderLocal> _placeholderLocalsOpt;
+        private PooledDictionary<BoundExpression, ExpressionPlaceholderLocal> _placeholderLocalsOpt;
 
         /// <summary>
         /// For methods with annotations, we'll need to visit the arguments twice.
@@ -566,17 +566,15 @@ namespace Microsoft.CodeAnalysis.CSharp
                         return _lastConditionalAccessSlot;
                     }
                 default:
-                    // If there was a placeholder local for this node, we should
-                    // use the placeholder for the slot. See other cases above.
-                    Debug.Assert(_placeholderLocalsOpt?.TryGetValue(node, out _) != true);
-                    return base.MakeSlot(node);
+                    int slot = getPlaceholderSlot(node);
+                    return (slot > 0) ? slot : base.MakeSlot(node);
             }
 
             return -1;
 
             int getPlaceholderSlot(BoundExpression expr)
             {
-                if (_placeholderLocalsOpt != null && _placeholderLocalsOpt.TryGetValue(expr, out ObjectCreationPlaceholderLocal placeholder))
+                if (_placeholderLocalsOpt != null && _placeholderLocalsOpt.TryGetValue(expr, out ExpressionPlaceholderLocal placeholder))
                 {
                     return GetOrCreateSlot(placeholder);
                 }
@@ -1128,106 +1126,6 @@ namespace Microsoft.CodeAnalysis.CSharp
             }
         }
 
-        public override BoundNode VisitIsPatternExpression(BoundIsPatternExpression node)
-        {
-            var resultType = VisitRvalueWithState(node.Expression);
-            VisitPattern(node.Expression, resultType, node.Pattern);
-            SetNotNullResult(node);
-            return node;
-        }
-
-        /// <summary>
-        /// Examples:
-        /// `x is Point p`
-        /// `switch (x) ... case Point p:` // https://github.com/dotnet/roslyn/issues/29873 not yet handled
-        ///
-        /// If the expression is trackable, we'll return with different null-states for that expression in the two conditional states.
-        /// If the pattern is a `var` pattern, we'll also have re-inferred the `var` type with nullability and
-        /// updated the state for that declared local.
-        /// </summary>
-        private void VisitPattern(BoundExpression expression, TypeWithState expressionResultType, BoundPattern pattern)
-        {
-            NullableFlowState whenTrue = expressionResultType.State;
-            NullableFlowState whenFalse = expressionResultType.State;
-
-            switch (pattern.Kind)
-            {
-                case BoundKind.ConstantPattern:
-                    // If the constant is null, the pattern tells us the expression is null.
-                    // If the constant is not null, the pattern tells us the expression is not null.
-                    // If there is no constant, we don't know.
-                    switch (((BoundConstantPattern)pattern).ConstantValue?.IsNull)
-                    {
-                        case true:
-                            whenTrue = NullableFlowState.MaybeNull;
-                            whenFalse = NullableFlowState.NotNull;
-                            break;
-                        case false:
-                            whenTrue = NullableFlowState.NotNull;
-                            whenFalse = NullableFlowState.MaybeNull;
-                            break;
-                    }
-                    break;
-                case BoundKind.DeclarationPattern:
-                    var declarationPattern = (BoundDeclarationPattern)pattern;
-                    if (declarationPattern.IsVar)
-                    {
-                        // The result type and state of the expression carry into the variable declared by var pattern
-                        Symbol variable = declarationPattern.Variable;
-                        // No variable declared for discard (`i is var _`)
-                        if ((object)variable != null)
-                        {
-                            var variableType = expressionResultType.ToTypeSymbolWithAnnotations();
-                            _variableTypes[variable] = variableType;
-                            TrackNullableStateForAssignment(expression, variableType, GetOrCreateSlot(variable), expressionResultType);
-                        }
-
-                        whenFalse = NullableFlowState.NotNull; // whenFalse is unreachable
-                    }
-                    else
-                    {
-                        whenTrue = NullableFlowState.NotNull; // the pattern tells us the expression is not null
-                    }
-                    break;
-                default:
-                    // https://github.com/dotnet/roslyn/issues/29909 : handle other kinds of patterns
-                    break;
-            }
-
-            Debug.Assert(!IsConditionalState);
-
-            // Create slot since EnsureCapacity should be
-            // called on all fields and that is simpler if state is limited to this.State.
-            int mainSlot = MakeSlot(expression);
-
-            base.VisitPattern(pattern);
-            Debug.Assert(IsConditionalState);
-
-            if (mainSlot > 0)
-            {
-                SetStateAndTrackForFinally(ref this.StateWhenTrue, mainSlot, whenTrue);
-                SetStateAndTrackForFinally(ref this.StateWhenFalse, mainSlot, whenFalse);
-            }
-
-            if (whenTrue.IsNotNull() || whenFalse.IsNotNull())
-            {
-                var slotBuilder = ArrayBuilder<int>.GetInstance();
-                GetSlotsToMarkAsNotNullable(expression, slotBuilder);
-
-                // Set all nested conditional slots. For example in a?.b?.c we'll set a, b, and c.
-                if (whenTrue.IsNotNull())
-                {
-                    MarkSlotsAsNotNull(slotBuilder, ref StateWhenTrue);
-                }
-                else if (whenFalse.IsNotNull())
-                {
-                    MarkSlotsAsNotNull(slotBuilder, ref StateWhenFalse);
-                }
-
-                slotBuilder.Free();
-            }
-        }
-
         protected override BoundNode VisitReturnStatementNoAdjust(BoundReturnStatement node)
         {
             Debug.Assert(!IsConditionalState);
@@ -1452,7 +1350,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             NullableFlowState resultState = NullableFlowState.NotNull;
             if ((object)type != null)
             {
-                slot = GetOrCreateObjectCreationPlaceholderSlot(node);
+                slot = GetOrCreatePlaceholderSlot(node);
                 if (slot > 0)
                 {
                     var constructor = (node as BoundObjectCreationExpression)?.Constructor;
@@ -1587,12 +1485,12 @@ namespace Microsoft.CodeAnalysis.CSharp
             ResultType = new TypeWithState(node.Type, NullableFlowState.NotNull);
         }
 
-        private int GetOrCreateObjectCreationPlaceholderSlot(BoundExpression node)
+        private int GetOrCreatePlaceholderSlot(BoundExpression node)
         {
-            ObjectCreationPlaceholderLocal placeholder;
+            ExpressionPlaceholderLocal placeholder;
             if (_placeholderLocalsOpt == null)
             {
-                _placeholderLocalsOpt = PooledDictionary<BoundExpression, ObjectCreationPlaceholderLocal>.GetInstance();
+                _placeholderLocalsOpt = PooledDictionary<BoundExpression, ExpressionPlaceholderLocal>.GetInstance();
                 placeholder = null;
             }
             else
@@ -1602,7 +1500,7 @@ namespace Microsoft.CodeAnalysis.CSharp
 
             if (placeholder is null)
             {
-                placeholder = new ObjectCreationPlaceholderLocal(_symbol, node);
+                placeholder = new ExpressionPlaceholderLocal(_symbol, node);
                 _placeholderLocalsOpt.Add(node, placeholder);
             }
 
@@ -1625,7 +1523,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             if (argumentsWithAnnotations.All(argType => argType.HasType))
             {
                 anonymousType = AnonymousTypeManager.ConstructAnonymousTypeSymbol(anonymousType, argumentsWithAnnotations);
-                int receiverSlot = GetOrCreateObjectCreationPlaceholderSlot(node);
+                int receiverSlot = GetOrCreatePlaceholderSlot(node);
                 for (int i = 0; i < arguments.Length; i++)
                 {
                     var argument = arguments[i];
@@ -2118,7 +2016,12 @@ namespace Microsoft.CodeAnalysis.CSharp
         {
             var expressionWithoutConversion = RemoveConversion(expression, includeExplicitConversions: true).expression;
             var slot = MakeSlot(expressionWithoutConversion);
-            if (slot > 0 && PossiblyNullableType(expressionWithoutConversion.Type))
+            LearnFromNullTest(slot, expressionWithoutConversion.Type, ref state);
+        }
+
+        private void LearnFromNullTest(int slot, TypeSymbol expressionType, ref LocalState state)
+        {
+            if (slot > 0 && PossiblyNullableType(expressionType))
             {
                 SetStateAndTrackForFinally(ref state, slot, NullableFlowState.MaybeNull);
             }
@@ -2586,7 +2489,7 @@ namespace Microsoft.CodeAnalysis.CSharp
 
                 var type = receiverType.Type;
                 var method = node.Method;
-                if (!method.IsStatic && 
+                if (!method.IsStatic &&
                     type?.IsNullableType() == true &&
                     method.ContainingType.IsReferenceType)
                 {
@@ -3691,7 +3594,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             }
             else
             {
-                int slot = GetOrCreateObjectCreationPlaceholderSlot(node);
+                int slot = GetOrCreatePlaceholderSlot(node);
                 if (slot > 0)
                 {
                     this.State[slot] = NullableFlowState.NotNull;
@@ -3779,7 +3682,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             int valueSlot = MakeSlot(operand);
             if (valueSlot > 0)
             {
-                int containingSlot = GetOrCreateObjectCreationPlaceholderSlot(node);
+                int containingSlot = GetOrCreatePlaceholderSlot(node);
                 Debug.Assert(containingSlot > 0);
                 TrackNullableStateOfNullableValue(containingSlot, convertedType, operand, underlyingType.ToTypeWithState(), valueSlot);
             }
@@ -5269,7 +5172,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             TypeSymbol type = node.Type;
             if (EmptyStructTypeCache.IsTrackableStructType(type))
             {
-                int slot = GetOrCreateObjectCreationPlaceholderSlot(node);
+                int slot = GetOrCreatePlaceholderSlot(node);
                 if (slot > 0)
                 {
                     this.State[slot] = NullableFlowState.NotNull;

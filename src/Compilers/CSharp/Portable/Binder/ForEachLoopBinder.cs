@@ -219,7 +219,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                 }
             }
 
-            TypeSymbol iterationVariableType;
+            TypeSymbolWithAnnotations iterationVariableType;
             BoundTypeExpression boundIterationVariableType;
             bool hasNameConflicts = false;
             BoundForEachDeconstructStep deconstructStep = null;
@@ -251,8 +251,8 @@ namespace Microsoft.CodeAnalysis.CSharp
                             Debug.Assert(declType.HasType);
                         }
 
-                        iterationVariableType = declType.TypeSymbol;
-                        boundIterationVariableType = new BoundTypeExpression(typeSyntax, alias, iterationVariableType);
+                        iterationVariableType = declType;
+                        boundIterationVariableType = new BoundTypeExpression(typeSyntax, alias, declType);
 
                         SourceLocalSymbol local = this.IterationVariable;
                         local.SetType(declType);
@@ -309,12 +309,12 @@ namespace Microsoft.CodeAnalysis.CSharp
                 case SyntaxKind.ForEachVariableStatement:
                     {
                         var node = (ForEachVariableStatementSyntax)_syntax;
-                        iterationVariableType = inferredType.TypeSymbol ?? CreateErrorType("var");
+                        iterationVariableType = inferredType.HasType ? inferredType : TypeSymbolWithAnnotations.Create(CreateErrorType("var"));
 
                         var variables = node.Variable;
                         if (variables.IsDeconstructionLeft())
                         {
-                            var valuePlaceholder = new BoundDeconstructValuePlaceholder(_syntax.Expression, collectionEscape, iterationVariableType).MakeCompilerGenerated();
+                            var valuePlaceholder = new BoundDeconstructValuePlaceholder(_syntax.Expression, collectionEscape, iterationVariableType.TypeSymbol).MakeCompilerGenerated();
                             DeclarationExpressionSyntax declaration = null;
                             ExpressionSyntax expression = null;
                             BoundDeconstructionAssignmentOperator deconstruction = BindDeconstruction(
@@ -404,7 +404,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             // but it turns out that these are equivalent (when both are available).
 
             HashSet<DiagnosticInfo> useSiteDiagnostics = null;
-            Conversion elementConversion = this.Conversions.ClassifyConversionFromType(inferredType.TypeSymbol, iterationVariableType, ref useSiteDiagnostics, forCast: true);
+            Conversion elementConversion = this.Conversions.ClassifyConversionFromType(inferredType.TypeSymbol, iterationVariableType.TypeSymbol, ref useSiteDiagnostics, forCast: true);
 
             if (!elementConversion.IsValid)
             {
@@ -415,7 +415,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                 }
                 else
                 {
-                    SymbolDistinguisher distinguisher = new SymbolDistinguisher(this.Compilation, inferredType.TypeSymbol, iterationVariableType);
+                    SymbolDistinguisher distinguisher = new SymbolDistinguisher(this.Compilation, inferredType.TypeSymbol, iterationVariableType.TypeSymbol);
                     diagnostics.Add(ErrorCode.ERR_NoExplicitConv, foreachKeyword.GetLocation(), distinguisher.First, distinguisher.Second);
                 }
                 hasErrors = true;

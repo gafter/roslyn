@@ -246,7 +246,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                         // Note that this tests for non-null as a side-effect. We depend on that to sometimes avoid the null check.
                         return _factory.Is(input, d.Type);
 
-                    case BoundDagNullTest d:
+                    case BoundDagExplicitNullTest d:
                         return _localRewriter.MakeNullCheck(d.Syntax, input, input.Type.IsNullableType() ? BinaryOperatorKind.NullableNullEqual : BinaryOperatorKind.Equal);
 
                     case BoundDagValueTest d:

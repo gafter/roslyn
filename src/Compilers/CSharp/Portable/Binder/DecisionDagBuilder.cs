@@ -24,7 +24,7 @@ namespace Microsoft.CodeAnalysis.CSharp
     /// <see cref="BoundWhenDecisionDagNode"/> represents the test performed by evaluating the expression of the
     /// when-clause of a switch case; and <see cref="BoundLeafDecisionDagNode"/> represents a leaf node when we
     /// have finally determined exactly which case matches. Each test processes a single input, and there are
-    /// four kinds:<see cref="BoundDagNullTest"/> tests a value for null; <see cref="BoundDagNonNullTest"/>
+    /// four kinds:<see cref="BoundDagExplicitNullTest"/> tests a value for null; <see cref="BoundDagNonNullTest"/>
     /// tests that a value is not null; <see cref="BoundDagTypeTest"/> checks if the value is of a given type;
     /// and <see cref="BoundDagValueTest"/> checks if the value is equal to a given constant. Of the evaluations,
     /// there are <see cref="BoundDagDeconstructEvaluation"/> which represents an invocation of a type's
@@ -408,7 +408,7 @@ namespace Microsoft.CodeAnalysis.CSharp
         {
             if (constant.ConstantValue == ConstantValue.Null)
             {
-                tests.Add(new BoundDagNullTest(constant.Syntax, input));
+                tests.Add(new BoundDagExplicitNullTest(constant.Syntax, input));
             }
             else
             {
@@ -858,7 +858,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                             // !(v != null) --> !(v == K)
                             falseTestPermitsTrueOther = false;
                             break;
-                        case BoundDagNullTest v2:
+                        case BoundDagExplicitNullTest v2:
                             // v != null --> !(v == null)
                             trueTestPermitsTrueOther = false;
                             // !(v != null) --> v == null
@@ -914,7 +914,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                             break;
                         case BoundDagValueTest v2:
                             break;
-                        case BoundDagNullTest v2:
+                        case BoundDagExplicitNullTest v2:
                             // v is T --> !(v == null)
                             trueTestPermitsTrueOther = false;
                             break;
@@ -929,7 +929,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                             break;
                         case BoundDagTypeTest t2:
                             break;
-                        case BoundDagNullTest v2:
+                        case BoundDagExplicitNullTest v2:
                             // v == K --> !(v == null)
                             trueTestPermitsTrueOther = false;
                             break;
@@ -959,7 +959,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                             break;
                     }
                     break;
-                case BoundDagNullTest v1:
+                case BoundDagExplicitNullTest v1:
                     switch (other)
                     {
                         case BoundDagNonNullTest n2:
@@ -972,7 +972,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                             // v == null --> !(v is T)
                             trueTestPermitsTrueOther = false;
                             break;
-                        case BoundDagNullTest v2:
+                        case BoundDagExplicitNullTest v2:
                             // v == null --> v == null
                             trueTestImpliesTrueOther = true;
                             // !(v == null) --> !(v == null)
@@ -1264,7 +1264,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                     case BoundKind.DagValueTest:
                         return ((BoundDagValueTest)x).Value == ((BoundDagValueTest)y).Value;
 
-                    case BoundKind.DagNullTest:
+                    case BoundKind.DagExplicitNullTest:
                     case BoundKind.DagNonNullTest:
                         return true;
 

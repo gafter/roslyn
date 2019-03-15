@@ -424,18 +424,44 @@ namespace Microsoft.CodeAnalysis.CSharp
 
     internal sealed partial class BoundTypeExpression
     {
-        public BoundTypeExpression(SyntaxNode syntax, AliasSymbol aliasOpt, TypeSymbol type, bool hasErrors = false)
+        public BoundTypeExpression(SyntaxNode syntax, AliasSymbol aliasOpt, bool inferredType, BoundTypeExpression boundContainingTypeOpt, TypeSymbolWithAnnotations typeWithAnnotations, bool hasErrors = false)
+            : this(syntax, aliasOpt, inferredType, boundContainingTypeOpt, typeWithAnnotations, typeWithAnnotations.TypeSymbol, hasErrors)
+        {
+            Debug.Assert((object)typeWithAnnotations.TypeSymbol != null, "Field 'type' cannot be null");
+        }
+
+        public BoundTypeExpression(SyntaxNode syntax, AliasSymbol aliasOpt, TypeSymbolWithAnnotations type, bool hasErrors = false)
             : this(syntax, aliasOpt, false, null, type, hasErrors)
         {
         }
 
-        public BoundTypeExpression(SyntaxNode syntax, AliasSymbol aliasOpt, TypeSymbol type)
+        public BoundTypeExpression(SyntaxNode syntax, AliasSymbol aliasOpt, TypeSymbolWithAnnotations type)
             : this(syntax, aliasOpt, false, null, type)
         {
         }
 
-        public BoundTypeExpression(SyntaxNode syntax, AliasSymbol aliasOpt, bool inferredType, TypeSymbol type, bool hasErrors = false)
+        public BoundTypeExpression(SyntaxNode syntax, AliasSymbol aliasOpt, bool inferredType, TypeSymbolWithAnnotations type, bool hasErrors = false)
             : this(syntax, aliasOpt, inferredType, null, type, hasErrors)
+        {
+        }
+
+        public BoundTypeExpression(SyntaxNode syntax, AliasSymbol aliasOpt, bool inferredType, BoundTypeExpression boundContainingTypeOpt, TypeSymbol type, bool hasErrors = false)
+            : this(syntax, aliasOpt, inferredType, boundContainingTypeOpt, TypeSymbolWithAnnotations.Create(type), hasErrors)
+        {
+        }
+
+        public BoundTypeExpression(SyntaxNode syntax, AliasSymbol aliasOpt, TypeSymbol type, bool hasErrors = false)
+            : this(syntax, aliasOpt, TypeSymbolWithAnnotations.Create(type), hasErrors)
+        {
+        }
+
+        public BoundTypeExpression(SyntaxNode syntax, AliasSymbol aliasOpt, TypeSymbol type)
+            : this(syntax, aliasOpt, TypeSymbolWithAnnotations.Create(type))
+        {
+        }
+
+        public BoundTypeExpression(SyntaxNode syntax, AliasSymbol aliasOpt, bool inferredType, TypeSymbol type, bool hasErrors = false)
+            : this(syntax, aliasOpt, inferredType, TypeSymbolWithAnnotations.Create(type), hasErrors)
         {
         }
     }
