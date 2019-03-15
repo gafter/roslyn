@@ -121,7 +121,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             BoundPattern pattern,
             LabelSymbol whenTrueLabel)
         {
-            var rootIdentifier = new BoundDagTemp(inputExpression.Syntax, inputExpression.Type, source: null, index: 0);
+            var rootIdentifier = BoundDagTemp.ForOriginalInput(inputExpression);
             return MakeDecisionDag(syntax, ImmutableArray.Create(MakeTestsForPattern(index: 1, pattern.Syntax, rootIdentifier, pattern, whenClause: null, whenTrueLabel)));
         }
 
@@ -130,7 +130,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             BoundExpression switchGoverningExpression,
             ImmutableArray<BoundSwitchSection> switchSections)
         {
-            var rootIdentifier = new BoundDagTemp(switchGoverningExpression.Syntax, switchGoverningExpression.Type, source: null, index: 0);
+            var rootIdentifier = BoundDagTemp.ForOriginalInput(switchGoverningExpression);
             int i = 0;
             var builder = ArrayBuilder<RemainingTestsForCase>.GetInstance(switchSections.Length);
             foreach (BoundSwitchSection section in switchSections)
@@ -155,7 +155,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             BoundExpression switchExpressionInput,
             ImmutableArray<BoundSwitchExpressionArm> switchArms)
         {
-            var rootIdentifier = new BoundDagTemp(switchExpressionInput.Syntax, switchExpressionInput.Type, source: null, index: 0);
+            var rootIdentifier = BoundDagTemp.ForOriginalInput(switchExpressionInput);
             int i = 0;
             var builder = ArrayBuilder<RemainingTestsForCase>.GetInstance(switchArms.Length);
             foreach (BoundSwitchExpressionArm arm in switchArms)
@@ -311,18 +311,18 @@ namespace Microsoft.CodeAnalysis.CSharp
             tests.Add(new BoundDagTypeTest(syntax, iTupleType, input));
             var valueAsITupleEvaluation = new BoundDagTypeEvaluation(syntax, iTupleType, input);
             tests.Add(valueAsITupleEvaluation);
-            var valueAsITuple = new BoundDagTemp(syntax, iTupleType, valueAsITupleEvaluation, 0);
+            var valueAsITuple = new BoundDagTemp(syntax, iTupleType, valueAsITupleEvaluation);
 
             var lengthEvaluation = new BoundDagPropertyEvaluation(syntax, getLengthProperty, valueAsITuple);
             tests.Add(lengthEvaluation);
-            var lengthTemp = new BoundDagTemp(syntax, this._compilation.GetSpecialType(SpecialType.System_Int32), lengthEvaluation, 0);
+            var lengthTemp = new BoundDagTemp(syntax, this._compilation.GetSpecialType(SpecialType.System_Int32), lengthEvaluation);
             tests.Add(new BoundDagValueTest(syntax, ConstantValue.Create(patternLength), lengthTemp));
 
             for (int i = 0; i < patternLength; i++)
             {
                 var indexEvaluation = new BoundDagIndexEvaluation(syntax, getItemProperty, i, valueAsITuple);
                 tests.Add(indexEvaluation);
-                var indexTemp = new BoundDagTemp(syntax, objectType, indexEvaluation, 0);
+                var indexTemp = new BoundDagTemp(syntax, objectType, indexEvaluation);
                 MakeTestsAndBindings(indexTemp, pattern.Subpatterns[i].Pattern, tests, bindings);
             }
         }
@@ -393,7 +393,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                 }
 
                 var evaluation = new BoundDagTypeEvaluation(syntax, type, input);
-                input = new BoundDagTemp(syntax, type, evaluation, index: 0);
+                input = new BoundDagTemp(syntax, type, evaluation);
                 tests.Add(evaluation);
             }
 
@@ -479,7 +479,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                         FieldSymbol field = elements[i];
                         var evaluation = new BoundDagFieldEvaluation(syntax, field, input); // fetch the ItemN field
                         tests.Add(evaluation);
-                        var output = new BoundDagTemp(syntax, field.Type.TypeSymbol, evaluation, index: 0);
+                        var output = new BoundDagTemp(syntax, field.Type.TypeSymbol, evaluation);
                         MakeTestsAndBindings(output, pattern, tests, bindings);
                     }
                 }
@@ -516,7 +516,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                     }
 
                     tests.Add(evaluation);
-                    var output = new BoundDagTemp(pattern.Syntax, symbol.GetTypeOrReturnType().TypeSymbol, evaluation, index: 0);
+                    var output = new BoundDagTemp(pattern.Syntax, symbol.GetTypeOrReturnType().TypeSymbol, evaluation);
                     MakeTestsAndBindings(output, pattern, tests, bindings);
                 }
             }
@@ -620,9 +620,20 @@ namespace Microsoft.CodeAnalysis.CSharp
                             // An evaluation is considered to always succeed, so there is no false branch
                             break;
                         case BoundDagTest d:
-                            SplitCases(state.Cases, d, out ImmutableArray<RemainingTestsForCase> whenTrueDecisions, out ImmutableArray<RemainingTestsForCase> whenFalseDecisions);
+                            bool foundExplicitNullTest = false;
+                            SplitCases(
+                                state.Cases, d,
+                                out ImmutableArray<RemainingTestsForCase> whenTrueDecisions,
+                                out ImmutableArray<RemainingTestsForCase> whenFalseDecisions,
+                                ref foundExplicitNullTest);
                             state.TrueBranch = uniqifyState(whenTrueDecisions);
                             state.FalseBranch = uniqifyState(whenFalseDecisions);
+                            if (foundExplicitNullTest && d is BoundDagNonNullTest t)
+                            {
+                                // Turn an "implicit" non-null test into an explicit null test to preserve its explicitness
+                                state.SelectedTest = new BoundDagExplicitNullTest(t.Syntax, t.Input, t.HasErrors);
+                                (state.TrueBranch, state.FalseBranch) = (state.FalseBranch, state.TrueBranch);
+                            }
                             break;
                         case var n:
                             throw ExceptionUtilities.UnexpectedValue(n.Kind);
@@ -721,13 +732,14 @@ namespace Microsoft.CodeAnalysis.CSharp
             ImmutableArray<RemainingTestsForCase> cases,
             BoundDagTest d,
             out ImmutableArray<RemainingTestsForCase> whenTrue,
-            out ImmutableArray<RemainingTestsForCase> whenFalse)
+            out ImmutableArray<RemainingTestsForCase> whenFalse,
+            ref bool foundExplicitNullTest)
         {
             var whenTrueBuilder = ArrayBuilder<RemainingTestsForCase>.GetInstance();
             var whenFalseBuilder = ArrayBuilder<RemainingTestsForCase>.GetInstance();
             foreach (RemainingTestsForCase c in cases)
             {
-                FilterCase(c, d, whenTrueBuilder, whenFalseBuilder);
+                FilterCase(c, d, whenTrueBuilder, whenFalseBuilder, ref foundExplicitNullTest);
             }
 
             whenTrue = whenTrueBuilder.ToImmutableAndFree();
@@ -738,7 +750,8 @@ namespace Microsoft.CodeAnalysis.CSharp
             RemainingTestsForCase testsForCase,
             BoundDagTest test,
             ArrayBuilder<RemainingTestsForCase> whenTrueBuilder,
-            ArrayBuilder<RemainingTestsForCase> whenFalseBuilder)
+            ArrayBuilder<RemainingTestsForCase> whenFalseBuilder,
+            ref bool foundExplicitNullTest)
         {
             var trueBuilder = ArrayBuilder<BoundDagTest>.GetInstance();
             var falseBuilder = ArrayBuilder<BoundDagTest>.GetInstance();
@@ -751,7 +764,8 @@ namespace Microsoft.CodeAnalysis.CSharp
                     trueTestPermitsTrueOther: out bool trueDecisionPermitsTrueOther,
                     falseTestPermitsTrueOther: out bool falseDecisionPermitsTrueOther,
                     trueTestImpliesTrueOther: out bool trueDecisionImpliesTrueOther,
-                    falseTestImpliesTrueOther: out bool falseDecisionImpliesTrueOther);
+                    falseTestImpliesTrueOther: out bool falseDecisionImpliesTrueOther,
+                    foundExplicitNullTest: ref foundExplicitNullTest);
                 if (trueDecisionPermitsTrueOther)
                 {
                     if (!trueDecisionImpliesTrueOther)
@@ -827,7 +841,8 @@ namespace Microsoft.CodeAnalysis.CSharp
             out bool trueTestPermitsTrueOther,
             out bool falseTestPermitsTrueOther,
             out bool trueTestImpliesTrueOther,
-            out bool falseTestImpliesTrueOther)
+            out bool falseTestImpliesTrueOther,
+            ref bool foundExplicitNullTest)
         {
             // innocent until proven guilty
             trueTestPermitsTrueOther = true;
@@ -859,6 +874,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                             falseTestPermitsTrueOther = false;
                             break;
                         case BoundDagExplicitNullTest v2:
+                            foundExplicitNullTest = true;
                             // v != null --> !(v == null)
                             trueTestPermitsTrueOther = false;
                             // !(v != null) --> v == null
@@ -915,6 +931,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                         case BoundDagValueTest v2:
                             break;
                         case BoundDagExplicitNullTest v2:
+                            foundExplicitNullTest = true;
                             // v is T --> !(v == null)
                             trueTestPermitsTrueOther = false;
                             break;
@@ -930,6 +947,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                         case BoundDagTypeTest t2:
                             break;
                         case BoundDagExplicitNullTest v2:
+                            foundExplicitNullTest = true;
                             // v == K --> !(v == null)
                             trueTestPermitsTrueOther = false;
                             break;
@@ -960,6 +978,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                     }
                     break;
                 case BoundDagExplicitNullTest v1:
+                    foundExplicitNullTest = true;
                     switch (other)
                     {
                         case BoundDagNonNullTest n2:
@@ -973,6 +992,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                             trueTestPermitsTrueOther = false;
                             break;
                         case BoundDagExplicitNullTest v2:
+                            foundExplicitNullTest = true;
                             // v == null --> v == null
                             trueTestImpliesTrueOther = true;
                             // !(v == null) --> !(v == null)
@@ -1067,7 +1087,7 @@ namespace Microsoft.CodeAnalysis.CSharp
 
                 string tempName(BoundDagTemp t)
                 {
-                    return $"t{tempIdentifier(t.Source)}{(t.Index != 0 ? $".{t.Index.ToString()}" : "")}";
+                    return $"t{tempIdentifier(t.Source)}";
                 }
 
                 var resultBuilder = PooledStringBuilder.GetInstance();

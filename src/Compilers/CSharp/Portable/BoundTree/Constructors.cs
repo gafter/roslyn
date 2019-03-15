@@ -595,4 +595,14 @@ namespace Microsoft.CodeAnalysis.CSharp
         {
         }
     }
+
+    internal partial class BoundDagTemp
+    {
+        public BoundDagTemp(SyntaxNode syntax, TypeSymbol type, BoundDagEvaluation source)
+            : this(syntax, type, source, index: 0, hasErrors: false)
+        {
+        }
+
+        public static BoundDagTemp ForOriginalInput(BoundExpression expr) => new BoundDagTemp(expr.Syntax, expr.Type, source: null);
+    }
 }

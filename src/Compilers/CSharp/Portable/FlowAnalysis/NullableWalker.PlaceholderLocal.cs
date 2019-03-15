@@ -1,6 +1,7 @@
 ﻿// Copyright (c) Microsoft.  All Rights Reserved.  Licensed under the Apache License, Version 2.0.  See License.txt in the project root for license information.
 
 using System.Collections.Immutable;
+using System.Diagnostics;
 using Microsoft.CodeAnalysis.CSharp.Symbols;
 using Roslyn.Utilities;
 
@@ -13,17 +14,18 @@ namespace Microsoft.CodeAnalysis.CSharp
         /// <see cref="BoundObjectCreationExpression"/>, or the input expression of a pattern-matching operation.
         /// It is used to track the state of an expression, such as members being initialized.
         /// </summary>
-        private sealed class ExpressionPlaceholderLocal : LocalSymbol
+        private sealed class PlaceholderLocal : LocalSymbol
         {
             private readonly Symbol _containingSymbol;
             private readonly TypeSymbolWithAnnotations _type;
-            private readonly BoundExpression _originalExpression;
+            private readonly object _identifier;
 
-            public ExpressionPlaceholderLocal(Symbol containingSymbol, BoundExpression originalExpression)
+            public PlaceholderLocal(Symbol containingSymbol, object identifier, TypeSymbolWithAnnotations type)
             {
+                Debug.Assert(identifier != null);
                 _containingSymbol = containingSymbol;
-                _type = TypeSymbolWithAnnotations.Create(originalExpression.Type, NullableAnnotation.NotAnnotated);
-                _originalExpression = originalExpression;
+                _type = type;
+                _identifier = identifier;
             }
 
             public override bool Equals(object obj)
@@ -33,12 +35,12 @@ namespace Microsoft.CodeAnalysis.CSharp
                     return true;
                 }
 
-                var other = obj as ExpressionPlaceholderLocal;
+                var other = obj as PlaceholderLocal;
 
-                return (object)other != null && (object)_originalExpression == other._originalExpression;
+                return (object)other != null && _identifier.Equals(other._identifier);
             }
 
-            public override int GetHashCode() => _originalExpression.GetHashCode();
+            public override int GetHashCode() => _identifier.GetHashCode();
             internal override SyntaxNode ScopeDesignatorOpt => null;
             public override Symbol ContainingSymbol => _containingSymbol;
             public override ImmutableArray<SyntaxReference> DeclaringSyntaxReferences => ImmutableArray<SyntaxReference>.Empty;

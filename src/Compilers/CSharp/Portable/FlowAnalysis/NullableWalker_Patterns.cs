@@ -26,8 +26,6 @@ namespace Microsoft.CodeAnalysis.CSharp
             ref LocalState stateToUpdate)
         {
             int slot = MakeSlot(expression);
-            if (slot <= 0)
-                slot = GetOrCreatePlaceholderSlot(expression);
             LearnFromPattern(slot, expressionType, pattern, ref stateToUpdate);
         }
 
@@ -81,11 +79,6 @@ namespace Microsoft.CodeAnalysis.CSharp
                                     LearnFromPattern(GetOrCreateSlot(element, inputSlot), element.Type.TypeSymbol, item.Pattern, ref stateToUpdate);
                                 }
                             }
-                            else
-                            {
-                                // PROTOTYPE(ngafter): Implement this case
-                                throw new NotImplementedException();
-                            }
                         }
 
                         // for property part
@@ -109,22 +102,22 @@ namespace Microsoft.CodeAnalysis.CSharp
         {
             // first, learn from any null tests in the patterns
             int slot = MakeSlot(node.Expression);
-            if (slot <= 0)
-                slot = GetOrCreatePlaceholderSlot(node.Expression);
-
-            var originalInputType = node.Expression.Type;
-            foreach (var section in node.SwitchSections)
+            if (slot > 0)
             {
-                foreach (var label in section.SwitchLabels)
+                var originalInputType = node.Expression.Type;
+                foreach (var section in node.SwitchSections)
                 {
-                    LearnFromPattern(slot, originalInputType, label.Pattern, ref this.State);
+                    foreach (var label in section.SwitchLabels)
+                    {
+                        LearnFromPattern(slot, originalInputType, label.Pattern, ref this.State);
+                    }
                 }
             }
 
             // visit switch header
             var expressionState = VisitRvalueWithState(node.Expression);
             LocalState initialState = this.State.Clone();
-            var labelStateMap = LearnFromDecisionDag(node.DecisionDag, node.Expression, expressionState, ref initialState);
+            var labelStateMap = LearnFromDecisionDag(node.Syntax, node.DecisionDag, node.Expression, expressionState, ref initialState);
 
             foreach (var section in node.SwitchSections)
             {
@@ -142,6 +135,7 @@ namespace Microsoft.CodeAnalysis.CSharp
 
         private PooledDictionary<LabelSymbol, (LocalState state, bool believedReachable)>
             LearnFromDecisionDag(
+            SyntaxNode node,
             BoundDecisionDag decisionDag,
             BoundExpression expression,
             TypeWithState expressionType,
@@ -151,8 +145,11 @@ namespace Microsoft.CodeAnalysis.CSharp
             nodeStateMap.Add(decisionDag.RootNode, (state: initialState.Clone(), believedReachable: true));
 
             var tempMap = PooledDictionary<BoundDagTemp, (int slot, TypeWithState type)>.GetInstance();
-            var rootTemp = new BoundDagTemp(expression.Syntax, expression.Type, source: null, index: 0);
-            int originalInputSlot = MakeSlot(expression);
+            var rootTemp = BoundDagTemp.ForOriginalInput(expression);
+
+            // We create a fresh slot to track the switch expression, as it is copied at the start of the switch.
+            // We use the syntax to identify the root slot to ensure we don't share the slots between possibly nested switches.
+            int originalInputSlot = makeDagTempSlot(expressionType.ToTypeSymbolWithAnnotations(), rootTemp);
             Debug.Assert(originalInputSlot > 0);
             tempMap.Add(rootTemp, (originalInputSlot, expressionType));
 
@@ -171,6 +168,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                         {
                             var evaluation = p.Evaluation;
                             (int inputSlot, TypeWithState inputType) = tempMap.TryGetValue(evaluation.Input, out var slotAndType) ? slotAndType : throw ExceptionUtilities.Unreachable;
+                            Debug.Assert(inputSlot > 0);
                             if (inputSlot > 0)
                                 inputType = new TypeWithState(inputType.Type, this.State[inputSlot]);
 
@@ -180,18 +178,20 @@ namespace Microsoft.CodeAnalysis.CSharp
                                 case BoundDagDeconstructEvaluation e:
                                     {
                                         var method = e.DeconstructMethod;
-                                        int outputSlot = -1;
-                                        for (int i = 0; i < method.ParameterCount; i++)
+                                        int extensionExtra = method.IsStatic ? 1 : 0;
+                                        for (int i = 0; i < method.ParameterCount - extensionExtra; i++)
                                         {
-                                            var parameterType = method.Parameters[i].Type;
-                                            var output = new BoundDagTemp(e.Syntax, method.Parameters[i].Type.TypeSymbol, e, i);
+                                            var parameterType = method.Parameters[i + extensionExtra].Type;
+                                            var output = new BoundDagTemp(e.Syntax, parameterType.TypeSymbol, e, i);
+                                            int outputSlot = makeDagTempSlot(parameterType, output);
+                                            Debug.Assert(outputSlot > 0);
                                             addToTempMap(output, outputSlot, parameterType.ToTypeWithState());
                                         }
                                         break;
                                     }
                                 case BoundDagTypeEvaluation e:
                                     {
-                                        var output = new BoundDagTemp(e.Syntax, e.Type, e, index: 0);
+                                        var output = new BoundDagTemp(e.Syntax, e.Type, e);
                                         int outputSlot = inputSlot;
                                         var outputType = new TypeWithState(e.Type, inputType.State);
                                         addToTempMap(output, outputSlot, outputType);
@@ -202,9 +202,10 @@ namespace Microsoft.CodeAnalysis.CSharp
                                         // PROTOTYPE(ngafter): Need to create placeholder slot for dag temps
                                         Debug.Assert(inputSlot > 0);
                                         int outputSlot = GetOrCreateSlot(e.Field, inputSlot);
+                                        Debug.Assert(outputSlot > 0);
                                         // PROTOTYPE(ngafter): ensure we initialize the state from the field when creating a slot
                                         var type = e.Field.Type.TypeSymbol;
-                                        var output = new BoundDagTemp(e.Syntax, type, e, 0);
+                                        var output = new BoundDagTemp(e.Syntax, type, e);
                                         addToTempMap(output, outputSlot, new TypeWithState(type, this.State[outputSlot]));
                                         break;
                                     }
@@ -212,18 +213,23 @@ namespace Microsoft.CodeAnalysis.CSharp
                                     {
                                         // PROTOTYPE(ngafter): Need to create placeholder slot for dag temps
                                         Debug.Assert(inputSlot > 0);
-                                        int outputSlot = GetOrCreateSlot(e.Property, inputSlot);
                                         // PROTOTYPE(ngafter): ensure we initialize the state from the property when creating a slot
                                         var type = e.Property.Type.TypeSymbol;
-                                        var output = new BoundDagTemp(e.Syntax, type, e, 0);
+                                        var output = new BoundDagTemp(e.Syntax, type, e);
+                                        int outputSlot = GetOrCreateSlot(e.Property, inputSlot);
+                                        Debug.Assert(outputSlot > 0);
                                         addToTempMap(output, outputSlot, new TypeWithState(type, this.State[outputSlot]));
                                         break;
                                     }
                                 case BoundDagIndexEvaluation e:
                                     {
+                                        var type = e.Property.Type;
+                                        var output = new BoundDagTemp(e.Syntax, type.TypeSymbol, e);
+                                        int outputSlot = makeDagTempSlot(type, output);
+                                        Debug.Assert(outputSlot > 0);
+                                        addToTempMap(output, outputSlot, type.ToTypeWithState());
+                                        break;
                                     }
-                                    // PROTOTYPE(ngafter): Implement this case
-                                    throw new NotImplementedException();
                                 default:
                                     throw ExceptionUtilities.UnexpectedValue(p.Evaluation.Kind);
                             }
@@ -233,7 +239,10 @@ namespace Microsoft.CodeAnalysis.CSharp
                     case BoundTestDecisionDagNode p:
                         {
                             var test = p.Test;
-                            (int inputSlot, TypeWithState inputType) = tempMap.TryGetValue(test.Input, out var slotAndType) ? slotAndType : throw ExceptionUtilities.Unreachable;
+                            bool foundTemp = tempMap.TryGetValue(test.Input, out var slotAndType);
+                            Debug.Assert(foundTemp);
+
+                            (int inputSlot, TypeWithState inputType) = slotAndType;
                             if (inputSlot > 0)
                             {
                                 inputType = new TypeWithState(inputType.Type, this.State[inputSlot]);
@@ -352,6 +361,8 @@ namespace Microsoft.CodeAnalysis.CSharp
 
             void addToTempMap(BoundDagTemp output, int slot, TypeWithState state)
             {
+                // We need to track all dag temps, so there should be a slot
+                Debug.Assert(slot > 0);
                 if (tempMap.TryGetValue(output, out var outputSlotAndType))
                 {
                     Debug.Assert(outputSlotAndType.slot == slot);
@@ -374,20 +385,29 @@ namespace Microsoft.CodeAnalysis.CSharp
 
                 nodeStateMap[node] = (state, believedReachable);
             }
+
+            int makeDagTempSlot(TypeSymbolWithAnnotations type, BoundDagTemp temp)
+            {
+                object slotKey = (node, temp);
+                return GetOrCreatePlaceholderSlot(slotKey, type);
+            }
         }
 
         public override BoundNode VisitSwitchExpression(BoundSwitchExpression node)
         {
             // first, learn from any null tests in the patterns
             int slot = MakeSlot(node.Expression);
-            var originalInputType = node.Expression.Type;
-            foreach (var arm in node.SwitchArms)
+            if (slot > 0)
             {
-                LearnFromPattern(slot, originalInputType, arm.Pattern, ref this.State);
+                var originalInputType = node.Expression.Type;
+                foreach (var arm in node.SwitchArms)
+                {
+                    LearnFromPattern(slot, originalInputType, arm.Pattern, ref this.State);
+                }
             }
 
             var expressionState = VisitRvalueWithState(node.Expression);
-            var labelStateMap = LearnFromDecisionDag(node.DecisionDag, node.Expression, expressionState, ref this.State);
+            var labelStateMap = LearnFromDecisionDag(node.Syntax, node.DecisionDag, node.Expression, expressionState, ref this.State);
             var endState = UnreachableState();
 
             if (!node.ReportedNotExhaustive && node.DefaultLabel != null &&
@@ -419,7 +439,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             Debug.Assert(!IsConditionalState);
             var expressionState = VisitRvalueWithState(node.Expression);
             LearnFromPattern(node.Expression, expressionState.Type, node.Pattern, ref this.State);
-            var labelStateMap = LearnFromDecisionDag(node.DecisionDag, node.Expression, expressionState, ref this.State);
+            var labelStateMap = LearnFromDecisionDag(node.Syntax, node.DecisionDag, node.Expression, expressionState, ref this.State);
             // PROTOTYPE(ngafter): simplify this code once code coverage has been confirmed
             //var trueState = labelStateMap.TryGetValue(node.WhenTrueLabel, out var s1) ? s1.state : UnreachableState();
             //var falseState = labelStateMap.TryGetValue(node.WhenFalseLabel, out var s2) ? s2.state : UnreachableState();
