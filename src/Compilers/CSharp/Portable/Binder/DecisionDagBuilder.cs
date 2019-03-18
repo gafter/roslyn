@@ -516,7 +516,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                     }
 
                     tests.Add(evaluation);
-                    var output = new BoundDagTemp(pattern.Syntax, symbol.GetTypeOrReturnType(), evaluation);
+                    var output = new BoundDagTemp(pattern.Syntax, symbol.GetTypeOrReturnType().Type, evaluation);
                     MakeTestsAndBindings(output, pattern, tests, bindings);
                 }
             }

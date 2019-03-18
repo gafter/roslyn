@@ -405,18 +405,18 @@ namespace Microsoft.CodeAnalysis.CSharp
                         if ((InConstructorInitializer || InFieldInitializer) && ContainingMemberOrLambda.ContainingSymbol.Kind == SymbolKind.NamedType)
                             CheckFeatureAvailability(designation, MessageID.IDS_FeatureExpressionVariablesInQueriesAndInitializers, diagnostics);
 
-                        localSymbol.SetTypeWithAnnotations(TypeWithAnnotations.Create(declType));
+                        localSymbol.SetTypeWithAnnotations(declType);
                         localSymbol.SetValEscape(GetValEscape(declType.Type, inputValEscape));
 
                         // Check for variable declaration errors.
                         hasErrors |= localSymbol.ScopeBinder.ValidateDeclarationNameConflictsInScope(localSymbol, diagnostics);
 
                         if (!hasErrors)
-                            hasErrors = CheckRestrictedTypeInAsync(this.ContainingMemberOrLambda, declType.TypeSymbol, diagnostics, typeSyntax ?? (SyntaxNode)designation);
+                            hasErrors = CheckRestrictedTypeInAsync(this.ContainingMemberOrLambda, declType.Type, diagnostics, typeSyntax ?? (SyntaxNode)designation);
 
                         variableSymbol = localSymbol;
                         variableAccess = new BoundLocal(
-                            syntax: designation, localSymbol: localSymbol, constantValueOpt: null, type: declType.TypeSymbol);
+                            syntax: designation, localSymbol: localSymbol, constantValueOpt: null, type: declType.Type);
                         return;
                     }
                     else
@@ -425,7 +425,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                         Debug.Assert(designation.SyntaxTree.Options.Kind != SourceCodeKind.Regular);
                         GlobalExpressionVariable expressionVariableField = LookupDeclaredField(singleVariableDesignation);
                         DiagnosticBag tempDiagnostics = DiagnosticBag.GetInstance();
-                        expressionVariableField.SetType(declType, tempDiagnostics);
+                        expressionVariableField.SetTypeWithAnnotations(declType, tempDiagnostics);
                         tempDiagnostics.Free();
                         BoundExpression receiver = SynthesizeReceiver(designation, expressionVariableField, diagnostics);
 
@@ -470,7 +470,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             {
                 boundDeclType = null;
                 // remove the nullable part of the input's type; e.g. a nullable int becomes an int in a recursive pattern
-                return new TypeWithState(inputType.StrippedType(), NullableFlowState.MaybeNull).ToTypeSymbolWithAnnotations();
+                return new TypeWithState(inputType.StrippedType(), NullableFlowState.MaybeNull).ToTypeWithAnnotations();
             }
         }
 
@@ -495,7 +495,7 @@ namespace Microsoft.CodeAnalysis.CSharp
 
             TypeSyntax typeSyntax = node.Type;
             TypeWithAnnotations declTypeWithAnnotations = BindRecursivePatternType(typeSyntax, inputType, diagnostics, ref hasErrors, out BoundTypeExpression boundDeclType);
-            TypeSymbol declType = declTypeWithAnnotations.TypeSymbol;
+            TypeSymbol declType = declTypeWithAnnotations.Type;
             inputValEscape = GetValEscape(declType, inputValEscape);
 
             MethodSymbol deconstructMethod = null;
@@ -841,7 +841,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                     }
                 case SyntaxKind.SingleVariableDesignation:
                     {
-                        var declType = new TypeWithState(inputType, NullableFlowState.MaybeNull).ToTypeSymbolWithAnnotations();
+                        var declType = new TypeWithState(inputType, NullableFlowState.MaybeNull).ToTypeWithAnnotations();
                         BindPatternDesignation(
                             designation: node, declType: declType, inputValEscape: inputValEscape, typeSyntax: null, diagnostics: diagnostics, hasErrors: ref hasErrors,
                             variableSymbol: out Symbol variableSymbol, variableAccess: out BoundExpression variableAccess);

@@ -76,7 +76,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                                 {
                                     BoundSubpattern item = rp.Deconstruction[i];
                                     FieldSymbol element = elements[i];
-                                    LearnFromPattern(GetOrCreateSlot(element, inputSlot), element.Type.TypeSymbol, item.Pattern, ref stateToUpdate);
+                                    LearnFromPattern(GetOrCreateSlot(element, inputSlot), element.Type, item.Pattern, ref stateToUpdate);
                                 }
                             }
                         }
@@ -90,7 +90,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                                 Symbol symbol = item.Symbol;
                                 if (symbol is null)
                                     continue;
-                                LearnFromPattern(GetOrCreateSlot(symbol, inputSlot), symbol.GetTypeOrReturnType().TypeSymbol, item.Pattern, ref stateToUpdate);
+                                LearnFromPattern(GetOrCreateSlot(symbol, inputSlot), symbol.GetTypeOrReturnType().Type, item.Pattern, ref stateToUpdate);
                             }
                         }
                     }
@@ -181,8 +181,8 @@ namespace Microsoft.CodeAnalysis.CSharp
                                         int extensionExtra = method.IsStatic ? 1 : 0;
                                         for (int i = 0; i < method.ParameterCount - extensionExtra; i++)
                                         {
-                                            var parameterType = method.Parameters[i + extensionExtra].Type;
-                                            var output = new BoundDagTemp(e.Syntax, parameterType.TypeSymbol, e, i);
+                                            var parameterType = method.Parameters[i + extensionExtra].TypeWithAnnotations;
+                                            var output = new BoundDagTemp(e.Syntax, parameterType.Type, e, i);
                                             int outputSlot = makeDagTempSlot(parameterType, output);
                                             Debug.Assert(outputSlot > 0);
                                             addToTempMap(output, outputSlot, parameterType.ToTypeWithState());
@@ -204,7 +204,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                                         int outputSlot = GetOrCreateSlot(e.Field, inputSlot);
                                         Debug.Assert(outputSlot > 0);
                                         // PROTOTYPE(ngafter): ensure we initialize the state from the field when creating a slot
-                                        var type = e.Field.Type.TypeSymbol;
+                                        var type = e.Field.Type;
                                         var output = new BoundDagTemp(e.Syntax, type, e);
                                         addToTempMap(output, outputSlot, new TypeWithState(type, this.State[outputSlot]));
                                         break;
@@ -214,7 +214,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                                         // PROTOTYPE(ngafter): Need to create placeholder slot for dag temps
                                         Debug.Assert(inputSlot > 0);
                                         // PROTOTYPE(ngafter): ensure we initialize the state from the property when creating a slot
-                                        var type = e.Property.Type.TypeSymbol;
+                                        var type = e.Property.Type;
                                         var output = new BoundDagTemp(e.Syntax, type, e);
                                         int outputSlot = GetOrCreateSlot(e.Property, inputSlot);
                                         Debug.Assert(outputSlot > 0);
@@ -223,8 +223,8 @@ namespace Microsoft.CodeAnalysis.CSharp
                                     }
                                 case BoundDagIndexEvaluation e:
                                     {
-                                        var type = e.Property.Type;
-                                        var output = new BoundDagTemp(e.Syntax, type.TypeSymbol, e);
+                                        var type = e.Property.TypeWithAnnotations;
+                                        var output = new BoundDagTemp(e.Syntax, type.Type, e);
                                         int outputSlot = makeDagTempSlot(type, output);
                                         Debug.Assert(outputSlot > 0);
                                         addToTempMap(output, outputSlot, type.ToTypeWithState());
@@ -320,7 +320,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                                 if (_variableTypes.TryGetValue(local, out var existingType))
                                 {
                                     // merge inferred nullable annotation from different branches of the decision tree
-                                    _variableTypes[local] = TypeWithAnnotations.Create(existingType.TypeSymbol, existingType.NullableAnnotation.Join(inferredType.NullableAnnotation));
+                                    _variableTypes[local] = TypeWithAnnotations.Create(existingType.Type, existingType.NullableAnnotation.Join(inferredType.NullableAnnotation));
                                 }
                                 else
                                 {

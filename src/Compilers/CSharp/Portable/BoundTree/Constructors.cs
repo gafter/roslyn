@@ -425,9 +425,9 @@ namespace Microsoft.CodeAnalysis.CSharp
     internal sealed partial class BoundTypeExpression
     {
         public BoundTypeExpression(SyntaxNode syntax, AliasSymbol aliasOpt, bool inferredType, BoundTypeExpression boundContainingTypeOpt, TypeWithAnnotations typeWithAnnotations, bool hasErrors = false)
-            : this(syntax, aliasOpt, inferredType, boundContainingTypeOpt, typeWithAnnotations, typeWithAnnotations.TypeSymbol, hasErrors)
+            : this(syntax, aliasOpt, inferredType, boundContainingTypeOpt, typeWithAnnotations, typeWithAnnotations.Type, hasErrors)
         {
-            Debug.Assert((object)typeWithAnnotations.TypeSymbol != null, "Field 'type' cannot be null");
+            Debug.Assert((object)typeWithAnnotations.Type != null, "Field 'type' cannot be null");
         }
 
         public BoundTypeExpression(SyntaxNode syntax, AliasSymbol aliasOpt, TypeWithAnnotations type, bool hasErrors = false)

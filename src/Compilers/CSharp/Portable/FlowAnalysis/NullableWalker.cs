@@ -2042,15 +2042,16 @@ namespace Microsoft.CodeAnalysis.CSharp
         {
             var expressionWithoutConversion = RemoveConversion(expression, includeExplicitConversions: true).expression;
             var slot = MakeSlot(expressionWithoutConversion);
-            LearnFromNullTest(slot, expressionWithoutConversion.Type, ref state);
+            return LearnFromNullTest(slot, expressionWithoutConversion.Type, ref state);
         }
 
-        private void LearnFromNullTest(int slot, TypeSymbol expressionType, ref LocalState state)
+        private int LearnFromNullTest(int slot, TypeSymbol expressionType, ref LocalState state)
         {
             if (slot > 0 && PossiblyNullableType(expressionType))
             {
                 SetStateAndTrackForFinally(ref state, slot, NullableFlowState.MaybeNull);
             }
+
             return slot;
         }
 
