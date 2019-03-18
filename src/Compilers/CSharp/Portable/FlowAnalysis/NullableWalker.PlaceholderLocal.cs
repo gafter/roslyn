@@ -17,10 +17,10 @@ namespace Microsoft.CodeAnalysis.CSharp
         private sealed class PlaceholderLocal : LocalSymbol
         {
             private readonly Symbol _containingSymbol;
-            private readonly TypeSymbolWithAnnotations _type;
+            private readonly TypeWithAnnotations _type;
             private readonly object _identifier;
 
-            public PlaceholderLocal(Symbol containingSymbol, object identifier, TypeSymbolWithAnnotations type)
+            public PlaceholderLocal(Symbol containingSymbol, object identifier, TypeWithAnnotations type)
             {
                 Debug.Assert(identifier != null);
                 _containingSymbol = containingSymbol;
@@ -45,7 +45,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             public override Symbol ContainingSymbol => _containingSymbol;
             public override ImmutableArray<SyntaxReference> DeclaringSyntaxReferences => ImmutableArray<SyntaxReference>.Empty;
             public override ImmutableArray<Location> Locations => ImmutableArray<Location>.Empty;
-            public override TypeSymbolWithAnnotations Type => _type;
+            public override TypeWithAnnotations TypeWithAnnotations => _type;
             internal override LocalDeclarationKind DeclarationKind => LocalDeclarationKind.None;
             internal override SyntaxToken IdentifierToken => throw ExceptionUtilities.Unreachable;
             internal override bool IsCompilerGenerated => true;

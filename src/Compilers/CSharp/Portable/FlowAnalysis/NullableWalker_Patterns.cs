@@ -55,7 +55,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                     if (dp.Variable != null && dp.DeclaredType is null)
                     {
                         // we permit var-declared pattern variables to be assigned null.
-                        _variableTypes[dp.Variable] = new TypeWithState(originalInputType, NullableFlowState.MaybeNull).ToTypeSymbolWithAnnotations();
+                        _variableTypes[dp.Variable] = new TypeWithState(originalInputType, NullableFlowState.MaybeNull).ToTypeWithAnnotations();
                     }
                     break;
                 case BoundDiscardPattern _:
@@ -149,7 +149,7 @@ namespace Microsoft.CodeAnalysis.CSharp
 
             // We create a fresh slot to track the switch expression, as it is copied at the start of the switch.
             // We use the syntax to identify the root slot to ensure we don't share the slots between possibly nested switches.
-            int originalInputSlot = makeDagTempSlot(expressionType.ToTypeSymbolWithAnnotations(), rootTemp);
+            int originalInputSlot = makeDagTempSlot(expressionType.ToTypeWithAnnotations(), rootTemp);
             Debug.Assert(originalInputSlot > 0);
             tempMap.Add(rootTemp, (originalInputSlot, expressionType));
 
@@ -316,11 +316,11 @@ namespace Microsoft.CodeAnalysis.CSharp
                             Debug.Assert(foundTemp);
                             if (variableAccess is BoundLocal { LocalSymbol: SourceLocalSymbol { IsVar: true } local })
                             {
-                                var inferredType = tempType.type.ToTypeSymbolWithAnnotations();
+                                var inferredType = tempType.type.ToTypeWithAnnotations();
                                 if (_variableTypes.TryGetValue(local, out var existingType))
                                 {
                                     // merge inferred nullable annotation from different branches of the decision tree
-                                    _variableTypes[local] = TypeSymbolWithAnnotations.Create(existingType.TypeSymbol, existingType.NullableAnnotation.Join(inferredType.NullableAnnotation));
+                                    _variableTypes[local] = TypeWithAnnotations.Create(existingType.TypeSymbol, existingType.NullableAnnotation.Join(inferredType.NullableAnnotation));
                                 }
                                 else
                                 {
@@ -386,7 +386,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                 nodeStateMap[node] = (state, believedReachable);
             }
 
-            int makeDagTempSlot(TypeSymbolWithAnnotations type, BoundDagTemp temp)
+            int makeDagTempSlot(TypeWithAnnotations type, BoundDagTemp temp)
             {
                 object slotKey = (node, temp);
                 return GetOrCreatePlaceholderSlot(slotKey, type);
@@ -430,7 +430,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             SetState(endState);
 
             // PROTOTYPE(ngafter): re-infer the result type of the switch from the values
-            this.ResultType = TypeSymbolWithAnnotations.Create(node.Type).ToTypeWithState();
+            this.ResultType = TypeWithAnnotations.Create(node.Type).ToTypeWithState();
             return null;
         }
 

@@ -120,9 +120,9 @@ namespace Microsoft.CodeAnalysis.CSharp
                     case BoundDagFieldEvaluation f:
                         {
                             FieldSymbol field = f.Field;
-                            var outputTemp = new BoundDagTemp(f.Syntax, field.Type.TypeSymbol, f);
+                            var outputTemp = new BoundDagTemp(f.Syntax, field.Type, f);
                             BoundExpression output = _tempAllocator.GetTemp(outputTemp);
-                            BoundExpression access = _localRewriter.MakeFieldAccess(f.Syntax, input, field, null, LookupResultKind.Viable, field.Type.TypeSymbol);
+                            BoundExpression access = _localRewriter.MakeFieldAccess(f.Syntax, input, field, null, LookupResultKind.Viable, field.Type);
                             access.WasCompilerGenerated = true;
                             return _factory.AssignmentExpression(output, access);
                         }
@@ -130,7 +130,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                     case BoundDagPropertyEvaluation p:
                         {
                             PropertySymbol property = p.Property;
-                            var outputTemp = new BoundDagTemp(p.Syntax, property.Type.TypeSymbol, p);
+                            var outputTemp = new BoundDagTemp(p.Syntax, property.Type, p);
                             BoundExpression output = _tempAllocator.GetTemp(outputTemp);
                             return _factory.AssignmentExpression(output, _factory.Property(input, property));
                         }
@@ -166,7 +166,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                             {
                                 ParameterSymbol parameter = method.Parameters[i];
                                 Debug.Assert(parameter.RefKind == RefKind.Out);
-                                var outputTemp = new BoundDagTemp(d.Syntax, parameter.Type.TypeSymbol, d, i - extensionExtra);
+                                var outputTemp = new BoundDagTemp(d.Syntax, parameter.Type, d, i - extensionExtra);
                                 addArg(RefKind.Out, _tempAllocator.GetTemp(outputTemp));
                             }
 
@@ -217,7 +217,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                             Debug.Assert(e.Property.ContainingSymbol.Equals(input.Type));
                             Debug.Assert(e.Property.GetMethod.ParameterCount == 1);
                             Debug.Assert(e.Property.GetMethod.Parameters[0].Type.SpecialType == SpecialType.System_Int32);
-                            TypeSymbol type = e.Property.GetMethod.ReturnType.TypeSymbol;
+                            TypeSymbol type = e.Property.GetMethod.ReturnType;
                             var outputTemp = new BoundDagTemp(e.Syntax, type, e);
                             BoundExpression output = _tempAllocator.GetTemp(outputTemp);
                             return _factory.AssignmentExpression(output, _factory.Call(input, e.Property.GetMethod, _factory.Literal(e.Index)));
@@ -513,7 +513,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                                 if (!tupleElementEvaluated[i])
                                 {
                                     // Store the value in the right temp
-                                    var temp = new BoundDagTemp(eval.Syntax, field.Type.TypeSymbol, eval);
+                                    var temp = new BoundDagTemp(eval.Syntax, field.Type, eval);
                                     BoundExpression expr = loweredInput.Arguments[i];
                                     storeToTemp(temp, expr);
                                     tupleElementEvaluated[i] = true;

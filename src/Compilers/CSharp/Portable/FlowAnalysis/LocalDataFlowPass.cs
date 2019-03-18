@@ -103,7 +103,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             // Since analysis may proceed in multiple passes, it is possible the slot is already assigned.
             if (!_variableSlot.TryGetValue(identifier, out slot))
             {
-                var variableType = symbol.GetTypeOrReturnType().TypeSymbol;
+                var variableType = symbol.GetTypeOrReturnType().Type;
                 if (_emptyStructTypeCache.IsEmptyStructType(variableType))
                 {
                     return -1;
@@ -174,7 +174,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                         }
                     }
 
-                    containingType = restField.Type.TypeSymbol.TupleUnderlyingTypeOrSelf();
+                    containingType = restField.Type.TupleUnderlyingTypeOrSelf();
                 }
             }
 
