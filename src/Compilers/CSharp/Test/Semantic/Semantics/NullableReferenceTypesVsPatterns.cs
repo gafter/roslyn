@@ -719,7 +719,7 @@ class C
             y1.ToString();
             y1?.ToString();
         }
-        x1.ToString();
+        x1.ToString(); // 1 (because of x1?. above)
     }
     static void F2(object? x2)
     {
@@ -730,14 +730,16 @@ class C
             y2.ToString();
             y2?.ToString();
         }
-        x2.ToString(); // 1
+        x2.ToString(); // 2
     }
 }";
-            // https://github.com/dotnet/roslyn/issues/30952: `is` declaration does not set not nullable for declared local.
             var comp = CreateCompilation(source, options: WithNonNullTypesTrue());
             comp.VerifyDiagnostics(
+                // (12,9): warning CS8602: Possible dereference of a null reference.
+                //         x1.ToString(); // 1 (because of x1?. above)
+                Diagnostic(ErrorCode.WRN_NullReferenceReceiver, "x1").WithLocation(12, 9),
                 // (23,9): warning CS8602: Possible dereference of a null reference.
-                //         x2.ToString(); // 1
+                //         x2.ToString(); // 2
                 Diagnostic(ErrorCode.WRN_NullReferenceReceiver, "x2").WithLocation(23, 9));
         }
 
