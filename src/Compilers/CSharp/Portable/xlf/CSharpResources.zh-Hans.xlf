@@ -357,7 +357,6 @@
         <target state="translated">文件名“{0}”为空、包含无效字符、未使用绝对路径指定驱动器或太长</target>
         <note />
       </trans-unit>
-      <trans-unit id="IDS_CSCHelp">
       <trans-unit id="IDS_Disposable">
         <source>disposable</source>
         <target state="translated">可处置的</target>
