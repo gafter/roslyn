@@ -509,6 +509,7 @@ class C
 
         [Fact]
         [WorkItem(29909, "https://github.com/dotnet/roslyn/issues/29909")]
+        [WorkItem(23944, "https://github.com/dotnet/roslyn/issues/23944")]
         public void PatternSwitch()
         {
             var source =
