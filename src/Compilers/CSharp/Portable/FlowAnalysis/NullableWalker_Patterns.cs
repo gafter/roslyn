@@ -126,17 +126,18 @@ namespace Microsoft.CodeAnalysis.CSharp
             TypeWithState expressionType,
             ref LocalState initialState)
         {
-            var nodeStateMap = PooledDictionary<BoundDecisionDagNode, (LocalState state, bool believedReachable)>.GetInstance();
-            nodeStateMap.Add(decisionDag.RootNode, (state: initialState.Clone(), believedReachable: true));
-
-            var tempMap = PooledDictionary<BoundDagTemp, (int slot, TypeWithState type)>.GetInstance();
+            var tempMap = PooledDictionary<BoundDagTemp, (int slot, TypeSymbol type)>.GetInstance();
             var rootTemp = BoundDagTemp.ForOriginalInput(expression);
 
             // We create a fresh slot to track the switch expression, as it is copied at the start of the switch.
             // We use the syntax to identify the root slot to ensure we don't share the slots between possibly nested switches.
             int originalInputSlot = makeDagTempSlot(expressionType.ToTypeWithAnnotations(), rootTemp);
             Debug.Assert(originalInputSlot > 0);
-            tempMap.Add(rootTemp, (originalInputSlot, expressionType));
+            tempMap.Add(rootTemp, (originalInputSlot, expressionType.Type));
+            initialState[originalInputSlot] = expressionType.State;
+
+            var nodeStateMap = PooledDictionary<BoundDecisionDagNode, (LocalState state, bool believedReachable)>.GetInstance();
+            nodeStateMap.Add(decisionDag.RootNode, (state: initialState.Clone(), believedReachable: true));
 
             var labelStateMap = PooledDictionary<LabelSymbol, (LocalState state, bool believedReachable)>.GetInstance();
 
@@ -152,10 +153,9 @@ namespace Microsoft.CodeAnalysis.CSharp
                     case BoundEvaluationDecisionDagNode p:
                         {
                             var evaluation = p.Evaluation;
-                            (int inputSlot, TypeWithState inputType) = tempMap.TryGetValue(evaluation.Input, out var slotAndType) ? slotAndType : throw ExceptionUtilities.Unreachable;
+                            (int inputSlot, TypeSymbol inputType) = tempMap.TryGetValue(evaluation.Input, out var slotAndType) ? slotAndType : throw ExceptionUtilities.Unreachable;
                             Debug.Assert(inputSlot > 0);
-                            if (inputSlot > 0)
-                                inputType = new TypeWithState(inputType.Type, this.State[inputSlot]);
+                            var inputState = this.State[inputSlot];
 
                             switch (evaluation)
                             {
@@ -170,7 +170,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                                             var output = new BoundDagTemp(e.Syntax, parameterType.Type, e, i);
                                             int outputSlot = makeDagTempSlot(parameterType, output);
                                             Debug.Assert(outputSlot > 0);
-                                            addToTempMap(output, outputSlot, parameterType.ToTypeWithState());
+                                            addToTempMap(output, outputSlot, parameterType.Type);
                                         }
                                         break;
                                     }
@@ -178,30 +178,30 @@ namespace Microsoft.CodeAnalysis.CSharp
                                     {
                                         var output = new BoundDagTemp(e.Syntax, e.Type, e);
                                         int outputSlot = inputSlot;
-                                        var outputType = new TypeWithState(e.Type, inputType.State);
-                                        addToTempMap(output, outputSlot, outputType);
+                                        var outputType = new TypeWithState(e.Type, inputState);
+                                        addToTempMap(output, outputSlot, outputType.Type);
                                         break;
                                     }
                                 case BoundDagFieldEvaluation e:
                                     {
                                         Debug.Assert(inputSlot > 0);
-                                        var field = (FieldSymbol)AsMemberOfType(inputType.Type, e.Field);
+                                        var field = (FieldSymbol)AsMemberOfType(inputType, e.Field);
                                         int outputSlot = GetOrCreateSlot(field, inputSlot);
                                         Debug.Assert(outputSlot > 0);
                                         var type = field.Type;
                                         var output = new BoundDagTemp(e.Syntax, type, e);
-                                        addToTempMap(output, outputSlot, new TypeWithState(type, this.State[outputSlot]));
+                                        addToTempMap(output, outputSlot, type);
                                         break;
                                     }
                                 case BoundDagPropertyEvaluation e:
                                     {
                                         Debug.Assert(inputSlot > 0);
-                                        var property = (PropertySymbol)AsMemberOfType(inputType.Type, e.Property);
+                                        var property = (PropertySymbol)AsMemberOfType(inputType, e.Property);
                                         var type = property.Type;
                                         var output = new BoundDagTemp(e.Syntax, type, e);
                                         int outputSlot = GetOrCreateSlot(property, inputSlot);
                                         Debug.Assert(outputSlot > 0);
-                                        addToTempMap(output, outputSlot, new TypeWithState(type, this.State[outputSlot]));
+                                        addToTempMap(output, outputSlot, type);
                                         break;
                                     }
                                 case BoundDagIndexEvaluation e:
@@ -210,7 +210,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                                         var output = new BoundDagTemp(e.Syntax, type.Type, e);
                                         int outputSlot = makeDagTempSlot(type, output);
                                         Debug.Assert(outputSlot > 0);
-                                        addToTempMap(output, outputSlot, type.ToTypeWithState());
+                                        addToTempMap(output, outputSlot, type.Type);
                                         break;
                                     }
                                 default:
@@ -225,11 +225,8 @@ namespace Microsoft.CodeAnalysis.CSharp
                             bool foundTemp = tempMap.TryGetValue(test.Input, out var slotAndType);
                             Debug.Assert(foundTemp);
 
-                            (int inputSlot, TypeWithState inputType) = slotAndType;
-                            if (inputSlot > 0)
-                            {
-                                inputType = new TypeWithState(inputType.Type, this.State[inputSlot]);
-                            }
+                            (int inputSlot, TypeSymbol inputType) = slotAndType;
+                            var inputState = this.State[inputSlot];
                             Split();
                             switch (test)
                             {
@@ -251,7 +248,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                                             LearnFromNonNullTest(expression, ref this.StateWhenTrue);
                                     }
                                     gotoNode(p.WhenTrue, this.StateWhenTrue, nodeBelievedReachable);
-                                    gotoNode(p.WhenFalse, this.StateWhenFalse, nodeBelievedReachable & inputType.MayBeNull);
+                                    gotoNode(p.WhenFalse, this.StateWhenFalse, nodeBelievedReachable & inputState.MayBeNull());
                                     break;
                                 case BoundDagExplicitNullTest t:
                                     if (inputSlot > 0)
@@ -290,11 +287,13 @@ namespace Microsoft.CodeAnalysis.CSharp
                         {
                             var variableAccess = binding.VariableAccess;
                             var tempSource = binding.TempContainingValue;
-                            var foundTemp = tempMap.TryGetValue(tempSource, out var tempType);
+                            var foundTemp = tempMap.TryGetValue(tempSource, out var tempSlotAndType);
                             Debug.Assert(foundTemp);
+                            var (tempSlot, tempType) = tempSlotAndType;
+                            var tempState = this.State[tempSlot];
                             if (variableAccess is BoundLocal { LocalSymbol: SourceLocalSymbol { IsVar: true } local })
                             {
-                                var inferredType = tempType.type.ToTypeWithAnnotations();
+                                var inferredType = new TypeWithState(tempType, tempState).ToTypeWithAnnotations();
                                 if (_variableTypes.TryGetValue(local, out var existingType))
                                 {
                                     // merge inferred nullable annotation from different branches of the decision tree
@@ -306,7 +305,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                                 }
 
                                 int localSlot = GetOrCreateSlot(local);
-                                this.State[localSlot] = tempType.type.State;
+                                this.State[localSlot] = tempState;
                             }
                             else
                             {
@@ -337,19 +336,19 @@ namespace Microsoft.CodeAnalysis.CSharp
             nodeStateMap.Free();
             return labelStateMap;
 
-            void addToTempMap(BoundDagTemp output, int slot, TypeWithState state)
+            void addToTempMap(BoundDagTemp output, int slot, TypeSymbol type)
             {
                 // We need to track all dag temps, so there should be a slot
                 Debug.Assert(slot > 0);
                 if (tempMap.TryGetValue(output, out var outputSlotAndType))
                 {
+                    // The dag temp has already been allocated on another branch of the dag
                     Debug.Assert(outputSlotAndType.slot == slot);
-                    Debug.Assert(outputSlotAndType.type.Type.Equals(state.Type, TypeCompareKind.AllIgnoreOptions));
-                    // PROTOTYPE(ngafter): merge the nullability from the map with the new computed nullability
+                    Debug.Assert(outputSlotAndType.type.Equals(type, TypeCompareKind.AllIgnoreOptions));
                 }
                 else
                 {
-                    tempMap.Add(output, (slot, state));
+                    tempMap.Add(output, (slot, type));
                 }
             }
 

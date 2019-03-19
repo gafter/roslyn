@@ -1115,7 +1115,7 @@ class Program
                 Diagnostic(ErrorCode.WRN_NullReferenceReceiver, "o").WithLocation(15, 27));
         }
 
-        [Fact][
+        [Fact]
         [WorkItem(30597, "https://github.com/dotnet/roslyn/issues/30597")]
         [WorkItem(32414, "https://github.com/dotnet/roslyn/issues/32414")]
         public void NotExhaustiveForNull_01()
