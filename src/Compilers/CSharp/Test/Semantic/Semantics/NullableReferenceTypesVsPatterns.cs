@@ -1244,5 +1244,25 @@ public class C
             var comp = CreateCompilation(source);
             comp.VerifyDiagnostics();
         }
+
+        [Fact, WorkItem(33499, "https://github.com/dotnet/roslyn/issues/33499")]
+        public void PatternVariablesAreNotOblivious_33499()
+        {
+            var source = @"
+#nullable enable
+class Test
+{
+    static void M(object o)
+    {
+        if (o is string s) { }
+        s = null;
+    }
+}";
+            var comp = CreateCompilation(source);
+            comp.VerifyDiagnostics(
+                // (8,13): warning CS8600: Converting null literal or possible null value to non-nullable type.
+                //         s = null;
+                Diagnostic(ErrorCode.WRN_ConvertingNullableToNonNullable, "null").WithLocation(8, 13));
+        }
     }
 }
