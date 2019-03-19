@@ -1207,5 +1207,41 @@ class Program
                 //         _ = o switch // 3 not exhaustive
                 Diagnostic(ErrorCode.WRN_SwitchExpressionNotExhaustiveForNull, "switch").WithLocation(63, 15));
         }
+
+        [Fact, WorkItem(31881, "https://github.com/dotnet/roslyn/issues/31881")]
+        public void NullableVsPattern_31881()
+        {
+            var source = @"
+using System;
+#nullable enable
+
+public class C
+{
+    public object? AProperty { get; set; }
+    public void M(C? input, int i)
+    {
+        if (input?.AProperty is string str)
+        {
+            Console.WriteLine(str.ToString());
+
+            switch (i)
+            {
+                case 1:
+                    Console.WriteLine(input?.AProperty.ToString());
+                    break;
+                case 2:
+                    Console.WriteLine(input.AProperty.ToString());
+                    break;
+                case 3:
+                    Console.WriteLine(input.ToString());
+                    break;
+            }
+        }
+    }
+}
+";
+            var comp = CreateCompilation(source);
+            comp.VerifyDiagnostics();
+        }
     }
 }
