@@ -157,11 +157,11 @@ namespace Microsoft.CodeAnalysis.CSharp
                             if (inputSlot > 0)
                                 inputType = new TypeWithState(inputType.Type, this.State[inputSlot]);
 
-                            //BoundDagTemp output;
                             switch (evaluation)
                             {
                                 case BoundDagDeconstructEvaluation e:
                                     {
+                                        // PROTOTYPE(ngafter): should recompute the deconstruct method based on recomputed input type?
                                         var method = e.DeconstructMethod;
                                         int extensionExtra = method.IsStatic ? 1 : 0;
                                         for (int i = 0; i < method.ParameterCount - extensionExtra; i++)
@@ -184,31 +184,29 @@ namespace Microsoft.CodeAnalysis.CSharp
                                     }
                                 case BoundDagFieldEvaluation e:
                                     {
-                                        // PROTOTYPE(ngafter): Need to create placeholder slot for dag temps
                                         Debug.Assert(inputSlot > 0);
-                                        int outputSlot = GetOrCreateSlot(e.Field, inputSlot);
+                                        var field = (FieldSymbol)AsMemberOfType(inputType.Type, e.Field);
+                                        int outputSlot = GetOrCreateSlot(field, inputSlot);
                                         Debug.Assert(outputSlot > 0);
-                                        // PROTOTYPE(ngafter): ensure we initialize the state from the field when creating a slot
-                                        var type = e.Field.Type;
+                                        var type = field.Type;
                                         var output = new BoundDagTemp(e.Syntax, type, e);
                                         addToTempMap(output, outputSlot, new TypeWithState(type, this.State[outputSlot]));
                                         break;
                                     }
                                 case BoundDagPropertyEvaluation e:
                                     {
-                                        // PROTOTYPE(ngafter): Need to create placeholder slot for dag temps
                                         Debug.Assert(inputSlot > 0);
-                                        // PROTOTYPE(ngafter): ensure we initialize the state from the property when creating a slot
-                                        var type = e.Property.Type;
+                                        var property = (PropertySymbol)AsMemberOfType(inputType.Type, e.Property);
+                                        var type = property.Type;
                                         var output = new BoundDagTemp(e.Syntax, type, e);
-                                        int outputSlot = GetOrCreateSlot(e.Property, inputSlot);
+                                        int outputSlot = GetOrCreateSlot(property, inputSlot);
                                         Debug.Assert(outputSlot > 0);
                                         addToTempMap(output, outputSlot, new TypeWithState(type, this.State[outputSlot]));
                                         break;
                                     }
                                 case BoundDagIndexEvaluation e:
                                     {
-                                        var type = e.Property.TypeWithAnnotations;
+                                        var type = TypeWithAnnotations.Create(e.Property.Type, NullableAnnotation.Annotated);
                                         var output = new BoundDagTemp(e.Syntax, type.Type, e);
                                         int outputSlot = makeDagTempSlot(type, output);
                                         Debug.Assert(outputSlot > 0);

@@ -1114,7 +1114,7 @@ class Program
                 Diagnostic(ErrorCode.WRN_NullReferenceReceiver, "o").WithLocation(15, 27));
         }
 
-        [Fact]
+        [Fact, WorkItem(30597, "https://github.com/dotnet/roslyn/issues/30597")]
         public void NotExhaustiveForNull_01()
         {
             var source = @"
@@ -1263,6 +1263,33 @@ class Test
                 // (8,13): warning CS8600: Converting null literal or possible null value to non-nullable type.
                 //         s = null;
                 Diagnostic(ErrorCode.WRN_ConvertingNullableToNonNullable, "null").WithLocation(8, 13));
+        }
+
+        [Fact, WorkItem(30597, "https://github.com/dotnet/roslyn/issues/30597")]
+        public void NotExhaustiveForNull_02()
+        {
+            var source = @"
+#nullable enable
+class Test
+{
+    int M1(string s1, string s2)
+    {
+        return (s1, s2) switch {
+            (string x, string y) => x.Length + y.Length
+            };
+    }
+    int M2(string? s1, string? s2)
+    {
+        return (s1, s2) switch { // 1
+            (string x, string y) => x.Length + y.Length
+            };
+    }
+}";
+            var comp = CreateCompilation(source);
+            comp.VerifyDiagnostics(
+                // (13,25): warning CS8655: The switch expression does not handle some null inputs (it is not exhaustive).
+                //         return (s1, s2) switch { // 1
+                Diagnostic(ErrorCode.WRN_SwitchExpressionNotExhaustiveForNull, "switch").WithLocation(13, 25));
         }
     }
 }
