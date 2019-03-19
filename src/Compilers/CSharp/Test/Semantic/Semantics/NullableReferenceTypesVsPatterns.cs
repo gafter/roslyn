@@ -507,8 +507,7 @@ class C
                 );
         }
 
-        // https://github.com/dotnet/roslyn/issues/29909: Should only warn on F(x) in `case null`.
-        [Fact(Skip = "https://github.com/dotnet/roslyn/issues/29909")]
+        [Fact]
         [WorkItem(29909, "https://github.com/dotnet/roslyn/issues/29909")]
         public void PatternSwitch()
         {
