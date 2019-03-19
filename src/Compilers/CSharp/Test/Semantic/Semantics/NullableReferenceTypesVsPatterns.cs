@@ -1114,7 +1114,9 @@ class Program
                 Diagnostic(ErrorCode.WRN_NullReferenceReceiver, "o").WithLocation(15, 27));
         }
 
-        [Fact, WorkItem(30597, "https://github.com/dotnet/roslyn/issues/30597")]
+        [Fact][
+        [WorkItem(30597, "https://github.com/dotnet/roslyn/issues/30597")]
+        [WorkItem(32414, "https://github.com/dotnet/roslyn/issues/32414")]
         public void NotExhaustiveForNull_01()
         {
             var source = @"
@@ -1265,7 +1267,9 @@ class Test
                 Diagnostic(ErrorCode.WRN_ConvertingNullableToNonNullable, "null").WithLocation(8, 13));
         }
 
-        [Fact, WorkItem(30597, "https://github.com/dotnet/roslyn/issues/30597")]
+        [Fact]
+        [WorkItem(30597, "https://github.com/dotnet/roslyn/issues/30597")]
+        [WorkItem(32414, "https://github.com/dotnet/roslyn/issues/32414")]
         public void NotExhaustiveForNull_02()
         {
             var source = @"
