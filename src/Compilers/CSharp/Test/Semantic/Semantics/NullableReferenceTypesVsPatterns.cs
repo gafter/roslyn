@@ -547,19 +547,18 @@ class C
         [Fact]
         public void IsDeclarationPattern_01()
         {
-            // https://github.com/dotnet/roslyn/issues/30952: `is` declaration does not set not nullable for declared local.
             var source =
 @"class Program
 {
-    //static void F1(object x1)
-    //{
-    //    if (x1 is string y1)
-    //    {
-    //        x1/*T:object!*/.ToString();
-    //        y1/*T:string!*/.ToString();
-    //    }
-    //    x1/*T:object!*/.ToString();
-    //}
+    static void F1(object x1)
+    {
+        if (x1 is string y1)
+        {
+            x1/*T:object!*/.ToString();
+            y1/*T:string!*/.ToString();
+        }
+        x1/*T:object!*/.ToString();
+    }
     static void F2(object? x2)
     {
         if (x2 is string y2)
@@ -743,6 +742,7 @@ class C
         }
 
         [Fact]
+        [WorkItem(30952, "https://github.com/dotnet/roslyn/issues/30952")]
         public void IsDeclarationPattern_NeverNull_02()
         {
             var source =
@@ -754,10 +754,10 @@ class C
     {
         if (t1 is U u1)
         {
-            t1?.ToString(); // 1
-            u1?.ToString(); // 2
+            t1.ToString();
+            u1.ToString();
         }
-        t1?.ToString(); // 3
+        t1.ToString();
     }
     static void F2<T, U>(T t2)
         where T : class?
@@ -765,16 +765,17 @@ class C
     {
         if (t2 is U u2)
         {
-            t2?.ToString(); // 4
-            u2?.ToString(); // 5
+            t2.ToString();
+            u2.ToString();
         }
-        t2?.ToString();
+        t2.ToString(); // 1
     }
 }";
-            // https://github.com/dotnet/roslyn/issues/30952: `is` declaration does not set not nullable for declared local.
             var comp = CreateCompilation(source, options: WithNonNullTypesTrue());
             comp.VerifyDiagnostics(
-                );
+                // (23,9): warning CS8602: Possible dereference of a null reference.
+                //         t2.ToString(); // 2
+                Diagnostic(ErrorCode.WRN_NullReferenceReceiver, "t2").WithLocation(23, 9));
         }
 
         [Fact]

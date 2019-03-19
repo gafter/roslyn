@@ -68858,7 +68858,6 @@ class Outer
     ref T M2<T>(T x) => throw null!;
 }
 ";
-            // https://github.com/dotnet/roslyn/issues/30952 - Expect WRN_NullReferenceAssignment for [M2(y0) = z0;]
             CreateCompilation(source, options: WithNonNullTypesTrue()).VerifyDiagnostics();
         }
 
