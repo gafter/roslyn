@@ -19,13 +19,13 @@ namespace Microsoft.CodeAnalysis.CSharp
         /// Learn something about the input from a test of a given expression against a given pattern.  The given
         /// state is updated to note that any slots that are tested against `null` may be null.
         /// </summary>
-        private void LearnFromPattern(
+        /// <returns>true if there is a top-level explicit null check</returns>
+        private bool LearnFromAnyNullPatterns(
             BoundExpression expression,
-            TypeSymbol expressionType,
             BoundPattern pattern)
         {
             int slot = MakeSlot(expression);
-            LearnFromAnyNullPatterns(slot, expressionType, pattern);
+            return LearnFromAnyNullPatterns(slot, expression.Type, pattern);
         }
 
         /// <summary>
@@ -33,24 +33,29 @@ namespace Microsoft.CodeAnalysis.CSharp
         /// </summary>
         /// <param name="inputType">Tye type of the input expression (before nullable analysis).
         /// Used to determine which types can contain null.</param>
-        private void LearnFromAnyNullPatterns(
+        /// <returns>true if there is a top-level explicit null check</returns>
+        private bool LearnFromAnyNullPatterns(
             int inputSlot,
             TypeSymbol inputType,
             BoundPattern pattern)
         {
             if (inputSlot <= 0)
-                return;
+                return false;
 
             switch (pattern)
             {
                 case BoundConstantPattern cp:
-                    if (cp.Value.ConstantValue == ConstantValue.Null)
+                    bool isExplicitNullCheck = cp.Value.ConstantValue == ConstantValue.Null;
+                    if (isExplicitNullCheck)
+                    {
                         LearnFromNullTest(inputSlot, inputType, ref this.State);
-                    break;
+                        return true;
+                    }
+                    return false;
                 case BoundDeclarationPattern _:
                 case BoundDiscardPattern _:
                 case BoundITuplePattern _:
-                    break; // nothing to learn
+                    return false; // nothing to learn
                 case BoundRecursivePattern rp:
                     {
                         // for positional part: we only learn from tuples (not Deconstruct)
@@ -79,7 +84,9 @@ namespace Microsoft.CodeAnalysis.CSharp
                             }
                         }
                     }
-                    break;
+                    return false;
+                default:
+                    throw ExceptionUtilities.UnexpectedValue(pattern);
             }
         }
 
@@ -161,7 +168,9 @@ namespace Microsoft.CodeAnalysis.CSharp
                             {
                                 case BoundDagDeconstructEvaluation e:
                                     {
-                                        // PROTOTYPE(ngafter): should recompute the deconstruct method based on recomputed input type?
+                                        // https://github.com/dotnet/roslyn/issues/34232
+                                        // We may need to recompute the Deconstruct method for a deconstruction if
+                                        // the receiver type has changed (e.g. its nested nullability).
                                         var method = e.DeconstructMethod;
                                         int extensionExtra = method.IsStatic ? 1 : 0;
                                         for (int i = 0; i < method.ParameterCount - extensionExtra; i++)
@@ -374,16 +383,20 @@ namespace Microsoft.CodeAnalysis.CSharp
         {
             // first, learn from any null tests in the patterns
             int slot = MakeSlot(node.Expression);
+            var expressionState = VisitRvalueWithState(node.Expression);
             if (slot > 0)
             {
+                bool foundTopLevelNullCheck = false;
                 var originalInputType = node.Expression.Type;
                 foreach (var arm in node.SwitchArms)
                 {
-                    LearnFromAnyNullPatterns(slot, originalInputType, arm.Pattern);
+                    foundTopLevelNullCheck |= LearnFromAnyNullPatterns(slot, originalInputType, arm.Pattern);
                 }
+
+                if (foundTopLevelNullCheck)
+                    expressionState = new TypeWithState(expressionState.Type, NullableFlowState.MaybeNull);
             }
 
-            var expressionState = VisitRvalueWithState(node.Expression);
             var labelStateMap = LearnFromDecisionDag(node.Syntax, node.DecisionDag, node.Expression, expressionState, ref this.State);
             var endState = UnreachableState();
 
@@ -396,18 +409,17 @@ namespace Microsoft.CodeAnalysis.CSharp
 
             foreach (var arm in node.SwitchArms)
             {
-                LocalState stateForLabel = labelStateMap.TryGetValue(arm.Label, out var labelState) ? labelState.state : UnreachableState();
-                SetState(stateForLabel);
-                if (arm.Pattern.HasErrors)
-                    SetUnreachable();
-
+                SetState(!arm.Pattern.HasErrors && labelStateMap.TryGetValue(arm.Label, out var labelState) ? labelState.state : UnreachableState());
                 VisitRvalue(arm.Value);
                 Join(ref endState, ref this.State);
             }
 
             SetState(endState);
 
-            // PROTOTYPE(ngafter): re-infer the result type of the switch from the values
+            // https://github.com/dotnet/roslyn/issues/34233
+            // We need to recompute the result type and state of the switch expression based on
+            // the result type and state of all of the arms. This can be done in a way similar
+            // to how it is done for an implicit array creation expression.
             this.ResultType = TypeWithAnnotations.Create(node.Type).ToTypeWithState();
             return null;
         }
@@ -415,23 +427,11 @@ namespace Microsoft.CodeAnalysis.CSharp
         public override BoundNode VisitIsPatternExpression(BoundIsPatternExpression node)
         {
             Debug.Assert(!IsConditionalState);
+            LearnFromAnyNullPatterns(node.Expression, node.Pattern);
             var expressionState = VisitRvalueWithState(node.Expression);
-            LearnFromPattern(node.Expression, expressionState.Type, node.Pattern);
             var labelStateMap = LearnFromDecisionDag(node.Syntax, node.DecisionDag, node.Expression, expressionState, ref this.State);
-            // PROTOTYPE(ngafter): simplify this code once code coverage has been confirmed
-            //var trueState = labelStateMap.TryGetValue(node.WhenTrueLabel, out var s1) ? s1.state : UnreachableState();
-            //var falseState = labelStateMap.TryGetValue(node.WhenFalseLabel, out var s2) ? s2.state : UnreachableState();
-            LocalState trueState, falseState;
-            if (labelStateMap.TryGetValue(node.WhenTrueLabel, out var s1))
-                trueState = s1.state;
-            else
-                trueState = UnreachableState();
-
-            if (labelStateMap.TryGetValue(node.WhenFalseLabel, out var s2))
-                falseState = s2.state;
-            else
-                falseState = UnreachableState();
-
+            var trueState = labelStateMap.TryGetValue(node.WhenTrueLabel, out var s1) ? s1.state : UnreachableState();
+            var falseState = labelStateMap.TryGetValue(node.WhenFalseLabel, out var s2) ? s2.state : UnreachableState();
             labelStateMap.Free();
             SetConditionalState(trueState, falseState);
             SetNotNullResult(node);

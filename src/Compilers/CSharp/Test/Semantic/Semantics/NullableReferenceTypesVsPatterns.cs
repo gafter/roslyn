@@ -1296,5 +1296,25 @@ class Test
                 //         return (s1, s2) switch { // 1
                 Diagnostic(ErrorCode.WRN_SwitchExpressionNotExhaustiveForNull, "switch").WithLocation(13, 25));
         }
+
+        [Fact]
+        public void IsPatternAlwaysFalse()
+        {
+            var source = @"
+#nullable enable
+class Test
+{
+    void M1(ref object o)
+    {
+        if (2 is 3)
+            o = null;
+    }
+}";
+            var comp = CreateCompilation(source);
+            comp.VerifyDiagnostics(
+                // (7,13): warning CS8519: The given expression never matches the provided pattern.
+                //         if (2 is 3)
+                Diagnostic(ErrorCode.WRN_GivenExpressionNeverMatchesPattern, "2 is 3").WithLocation(7, 13));
+        }
     }
 }
