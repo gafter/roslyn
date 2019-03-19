@@ -22,23 +22,21 @@ namespace Microsoft.CodeAnalysis.CSharp
         private void LearnFromPattern(
             BoundExpression expression,
             TypeSymbol expressionType,
-            BoundPattern pattern,
-            ref LocalState stateToUpdate)
+            BoundPattern pattern)
         {
             int slot = MakeSlot(expression);
-            LearnFromPattern(slot, expressionType, pattern, ref stateToUpdate);
+            LearnFromAnyNullPatterns(slot, expressionType, pattern);
         }
 
         /// <summary>
         /// Learn from any constant null patterns appearing in the pattern.
         /// </summary>
-        /// <param name="originalInputType">Tye type of the input expression (before nullable analysis).
+        /// <param name="inputType">Tye type of the input expression (before nullable analysis).
         /// Used to determine which types can contain null.</param>
-        private void LearnFromPattern(
+        private void LearnFromAnyNullPatterns(
             int inputSlot,
-            TypeSymbol originalInputType,
-            BoundPattern pattern,
-            ref LocalState stateToUpdate)
+            TypeSymbol inputType,
+            BoundPattern pattern)
         {
             if (inputSlot <= 0)
                 return;
@@ -47,37 +45,23 @@ namespace Microsoft.CodeAnalysis.CSharp
             {
                 case BoundConstantPattern cp:
                     if (cp.Value.ConstantValue == ConstantValue.Null)
-                    {
-                        LearnFromNullTest(inputSlot, originalInputType, ref stateToUpdate);
-                    }
+                        LearnFromNullTest(inputSlot, inputType, ref this.State);
                     break;
-                case BoundDeclarationPattern dp:
-                    if (dp.Variable != null && dp.DeclaredType is null)
-                    {
-                        // we permit var-declared pattern variables to be assigned null.
-                        _variableTypes[dp.Variable] = new TypeWithState(originalInputType, NullableFlowState.MaybeNull).ToTypeWithAnnotations();
-                    }
-                    break;
+                case BoundDeclarationPattern _:
                 case BoundDiscardPattern _:
                 case BoundITuplePattern _:
                     break; // nothing to learn
                 case BoundRecursivePattern rp:
                     {
-                        if (!rp.ConvertedType.Equals(originalInputType, TypeCompareKind.AllIgnoreOptions))
-                            break;
-
-                        // for positional part: we only learn from tuples (not Deconstruct invocations or ITuple indexing)
-                        if (!rp.Deconstruction.IsDefault)
+                        // for positional part: we only learn from tuples (not Deconstruct)
+                        if (rp.DeconstructMethod is null && !rp.Deconstruction.IsDefault)
                         {
-                            if (rp.DeconstructMethod is null)
+                            var elements = inputType.TupleElements;
+                            for (int i = 0, n = Math.Min(rp.Deconstruction.Length, elements.IsDefault ? 0 : elements.Length); i < n; i++)
                             {
-                                var elements = originalInputType.TupleElements;
-                                for (int i = 0, n = Math.Min(rp.Deconstruction.Length, elements.IsDefault ? 0 : elements.Length); i < n; i++)
-                                {
-                                    BoundSubpattern item = rp.Deconstruction[i];
-                                    FieldSymbol element = elements[i];
-                                    LearnFromPattern(GetOrCreateSlot(element, inputSlot), element.Type, item.Pattern, ref stateToUpdate);
-                                }
+                                BoundSubpattern item = rp.Deconstruction[i];
+                                FieldSymbol element = elements[i];
+                                LearnFromAnyNullPatterns(GetOrCreateSlot(element, inputSlot), element.Type, item.Pattern);
                             }
                         }
 
@@ -88,9 +72,10 @@ namespace Microsoft.CodeAnalysis.CSharp
                             {
                                 BoundSubpattern item = rp.Properties[i];
                                 Symbol symbol = item.Symbol;
-                                if (symbol is null)
-                                    continue;
-                                LearnFromPattern(GetOrCreateSlot(symbol, inputSlot), symbol.GetTypeOrReturnType().Type, item.Pattern, ref stateToUpdate);
+                                if (symbol?.ContainingType.Equals(inputType, TypeCompareKind.AllIgnoreOptions) == true)
+                                {
+                                    LearnFromAnyNullPatterns(GetOrCreateSlot(symbol, inputSlot), symbol.GetTypeOrReturnType().Type, item.Pattern);
+                                }
                             }
                         }
                     }
@@ -109,7 +94,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                 {
                     foreach (var label in section.SwitchLabels)
                     {
-                        LearnFromPattern(slot, originalInputType, label.Pattern, ref this.State);
+                        LearnFromAnyNullPatterns(slot, originalInputType, label.Pattern);
                     }
                 }
             }
@@ -298,13 +283,8 @@ namespace Microsoft.CodeAnalysis.CSharp
                             break;
                         }
                     case BoundLeafDecisionDagNode d:
-                        bool labelBelievedReachable = nodeBelievedReachable;
-                        if (labelStateMap.TryGetValue(d.Label, out var existingLabelStateAndBelievedReachable))
-                        {
-                            Join(ref this.State, ref existingLabelStateAndBelievedReachable.state);
-                            labelBelievedReachable |= existingLabelStateAndBelievedReachable.believedReachable;
-                        }
-                        labelStateMap[d.Label] = (this.State, labelBelievedReachable);
+                        // We have one leaf decision dag node per reachable label
+                        labelStateMap.Add(d.Label, (this.State, nodeBelievedReachable));
                         break;
                     case BoundWhenDecisionDagNode w:
                         // bind the pattern variables, inferring their types as well
@@ -402,7 +382,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                 var originalInputType = node.Expression.Type;
                 foreach (var arm in node.SwitchArms)
                 {
-                    LearnFromPattern(slot, originalInputType, arm.Pattern, ref this.State);
+                    LearnFromAnyNullPatterns(slot, originalInputType, arm.Pattern);
                 }
             }
 
@@ -413,7 +393,8 @@ namespace Microsoft.CodeAnalysis.CSharp
             if (!node.ReportedNotExhaustive && node.DefaultLabel != null &&
                 labelStateMap.TryGetValue(node.DefaultLabel, out var defaultLabelState) && defaultLabelState.believedReachable)
             {
-                this.ReportSafetyDiagnostic(ErrorCode.WRN_SwitchExpressionNotExhaustiveForNull, node.Syntax);
+                SetState(defaultLabelState.state);
+                ReportSafetyDiagnostic(ErrorCode.WRN_SwitchExpressionNotExhaustiveForNull, ((SwitchExpressionSyntax)node.Syntax).SwitchKeyword.GetLocation());
             }
 
             foreach (var arm in node.SwitchArms)
@@ -438,7 +419,7 @@ namespace Microsoft.CodeAnalysis.CSharp
         {
             Debug.Assert(!IsConditionalState);
             var expressionState = VisitRvalueWithState(node.Expression);
-            LearnFromPattern(node.Expression, expressionState.Type, node.Pattern, ref this.State);
+            LearnFromPattern(node.Expression, expressionState.Type, node.Pattern);
             var labelStateMap = LearnFromDecisionDag(node.Syntax, node.DecisionDag, node.Expression, expressionState, ref this.State);
             // PROTOTYPE(ngafter): simplify this code once code coverage has been confirmed
             //var trueState = labelStateMap.TryGetValue(node.WhenTrueLabel, out var s1) ? s1.state : UnreachableState();

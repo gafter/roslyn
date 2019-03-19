@@ -1004,5 +1004,209 @@ class B : A
             var comp = CreateCompilation(source);
             comp.VerifyDiagnostics();
         }
+
+        [Fact]
+        public void RecursivePatternNullInferenceWithDowncast_01()
+        {
+            var source = @"
+#nullable enable
+class Base
+{
+    public object Value = """";
+}
+class Derived : Base
+{
+    public new object Value = """";
+}
+class Program
+{
+    void M(Base? b)
+    {
+        if (b is Derived { Value: null })
+            b.Value.ToString();
+    }
+}";
+            var comp = CreateCompilation(source);
+            comp.VerifyDiagnostics();
+        }
+
+        [Fact]
+        public void RecursivePatternNullInferenceWithDowncast_02()
+        {
+            var source = @"
+#nullable enable
+class Base
+{
+    public object Value = """";
+}
+class Derived : Base
+{
+}
+class Program
+{
+    void M(Base? b)
+    {
+        if (b is Derived { Value: null })
+            b.Value.ToString(); // 1
+    }
+}";
+            var comp = CreateCompilation(source);
+            comp.VerifyDiagnostics(
+                // (15,13): warning CS8602: Possible dereference of a null reference.
+                //             b.Value.ToString();
+                Diagnostic(ErrorCode.WRN_NullReferenceReceiver, "b.Value").WithLocation(15, 13));
+        }
+
+        [Fact]
+        public void TuplePatternNullInference_01()
+        {
+            var source = @"
+#nullable enable
+class Program
+{
+    void M((object, object) t)
+    {
+        if (t is (1, null))
+        {
+        }
+        else
+        {
+            t.Item2.ToString(); // 1
+        }
+    }
+}";
+            var comp = CreateCompilation(source);
+            comp.VerifyDiagnostics(
+                // (12,13): warning CS8602: Possible dereference of a null reference.
+                //             t.Item2.ToString(); // 1
+                Diagnostic(ErrorCode.WRN_NullReferenceReceiver, "t.Item2").WithLocation(12, 13));
+        }
+
+        [Fact]
+        public void MultiplePathsThroughDecisionDag_01()
+        {
+            var source = @"
+#nullable enable
+class Program
+{
+    bool M(object? o, bool cond = true)
+    {
+        o = 1;
+        switch (o)
+        {
+            case null:
+                throw null!;
+            case """" when M(o = null):
+                break;
+            default:
+                if (cond) o.ToString(); // warning
+                break;
+        }
+
+        return cond;
+    }
+}
+";
+            var comp = CreateCompilation(source);
+            comp.VerifyDiagnostics(
+                // (16,27): warning CS8602: Possible dereference of a null reference.
+                //                 if (cond) o.ToString(); // warning
+                Diagnostic(ErrorCode.WRN_NullReferenceReceiver, "o").WithLocation(15, 27));
+        }
+
+        [Fact]
+        public void NotExhaustiveForNull_01()
+        {
+            var source = @"
+#nullable enable
+class Program
+{
+    void M1(object o)
+    {
+        var t = (o, o);
+        _ = t switch // 1 not exhaustive
+        {
+            (null, 2) => 1,
+            ({}, {}) => 2,
+        };
+    }
+    void M2(object o)
+    {
+        var t = (o, o);
+        _ = t switch
+        {
+            (1, 2) => 1,
+            ({}, {}) => 2,
+        };
+    }
+    void M3(object o)
+    {
+        var t = (o, o);
+        _ = t switch
+        {
+            (null, 2) => 1,
+            ({}, {}) => 2,
+            (null, {}) => 3,
+        };
+    }
+    void M4(object o)
+    {
+        var t = (o, o);
+        _ = t switch // 2 not exhaustive
+        {
+            { Item1: null, Item2: 2 } => 1,
+            { Item1: {}, Item2: {} } => 2,
+        };
+    }
+    void M5(object o)
+    {
+        var t = (o, o);
+        _ = t switch
+        {
+            { Item1: 1, Item2: 2 } => 1,
+            { Item1: {}, Item2: {} } => 2,
+        };
+    }
+    void M6(object o)
+    {
+        var t = (o, o);
+        _ = t switch
+        {
+            { Item1: null, Item2: 2 } => 1,
+            { Item1: {}, Item2: {} } => 2,
+            { Item1: null, Item2: {} } => 3,
+        };
+    }
+    void M7(object o, bool b)
+    {
+        _ = o switch // 3 not exhaustive
+        {
+            null when b => 1,
+            {} => 2,
+        };
+    }
+    void M8(object o, bool b)
+    {
+        _ = o switch
+        {
+            null when b => 1,
+            {} => 2,
+            null => 3,
+        };
+    }
+}
+";
+            var comp = CreateCompilation(source);
+            comp.VerifyDiagnostics(
+                // (8,15): warning CS8655: The switch expression does not handle some null inputs (it is not exhaustive).
+                //         _ = t switch // 1 not exhaustive
+                Diagnostic(ErrorCode.WRN_SwitchExpressionNotExhaustiveForNull, "switch").WithLocation(8, 15),
+                // (36,15): warning CS8655: The switch expression does not handle some null inputs (it is not exhaustive).
+                //         _ = t switch // 2 not exhaustive
+                Diagnostic(ErrorCode.WRN_SwitchExpressionNotExhaustiveForNull, "switch").WithLocation(36, 15),
+                // (63,15): warning CS8655: The switch expression does not handle some null inputs (it is not exhaustive).
+                //         _ = o switch // 3 not exhaustive
+                Diagnostic(ErrorCode.WRN_SwitchExpressionNotExhaustiveForNull, "switch").WithLocation(63, 15));
+        }
     }
 }
