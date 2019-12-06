@@ -1593,5 +1593,99 @@ public static class C {
                 Diagnostic(ErrorCode.ERR_BadRetType, "M").WithArguments("C.M(int)", "void").WithLocation(5, 55)
                 );
         }
+
+        [Fact, WorkItem(40149, "https://github.com/dotnet/roslyn/issues/40149")]
+        public void ArrayTypePatternInSwitchCase_01()
+        {
+            var source = @"
+class C {
+    static void Main()
+    {
+        A[] a = new A[10];
+        switch (a)
+        {
+            case A[]:
+                break;
+        }
+        if (a is A[]) { }
+        if ((a, a) is (A[], A[])) { }
+    }
+}
+class A { }
+";
+            CreateCompilation(source, parseOptions: TestOptions.ExperimentalParseOptions).VerifyDiagnostics();
+        }
+
+        [Fact, WorkItem(40149, "https://github.com/dotnet/roslyn/issues/40149")]
+        public void ArrayTypePatternInSwitchCase_02()
+        {
+            var source = @"
+class C {
+    static void Main()
+    {
+        A[] a = new A[10];
+        switch (a)
+        {
+            case (A[]):
+                break;
+        }
+        if (a is (A[])) { }
+        if ((a, a) is ((A[]), (A[]))) { }
+    }
+}
+class A { }
+";
+            CreateCompilation(source, parseOptions: TestOptions.ExperimentalParseOptions).VerifyDiagnostics();
+            //// (8,23): error CS1525: Invalid expression term ':'
+            ////             case (A[]):
+            //Diagnostic(ErrorCode.ERR_InvalidExprTerm, ":").WithArguments(":").WithLocation(8, 23)
+        }
+
+        [Fact, WorkItem(40149, "https://github.com/dotnet/roslyn/issues/40149")]
+        public void GenericTypePatternInSwitchCase_02()
+        {
+            var source = @"
+class C {
+    static void Main()
+    {
+        A<T> a = new A<T>[10];
+        switch (a)
+        {
+            case (A<T>):
+                break;
+        }
+        if (a is (A<T>)) { }
+        if ((a, a) is ((A<T>), (A<T>))) { }
+    }
+}
+class A<T> { }
+class T { }
+";
+            CreateCompilation(source, parseOptions: TestOptions.ExperimentalParseOptions).VerifyDiagnostics();
+            //// (8,23): error CS1525: Invalid expression term ':'
+            ////             case (A[]):
+            //Diagnostic(ErrorCode.ERR_InvalidExprTerm, ":").WithArguments(":").WithLocation(8, 23)
+        }
+
+        [Fact, WorkItem(40149, "https://github.com/dotnet/roslyn/issues/40149")]
+        public void ParenthesizedPrimitiveTypePatternInSwitchCase_01()
+        {
+            var source = @"
+class C {
+    static void Main()
+    {
+        int a = 3;
+        switch (a)
+        {
+            case (int):
+                break;
+        }
+        if (a is (int)) { }
+        if ((a, a) is ((int), (int))) { }
+    }
+}
+";
+            CreateCompilation(source, parseOptions: TestOptions.ExperimentalParseOptions).VerifyDiagnostics();
+        }
     }
 }
