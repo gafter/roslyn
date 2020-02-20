@@ -380,14 +380,10 @@ namespace Microsoft.CodeAnalysis.CSharp.UnitTests
             Assert.True(em.IsEmpty);
             var q = t.Intersect(t);
             Assert.Same(t, q);
-            Assert.Same(t.Factory, ForBool);
             IValueSet b = t;
-            Assert.Same(b.Factory, ForBool);
             Assert.Same(b.Intersect(b), b);
             Assert.Same(b.Union(b), b);
             IValueSetFactory bf = ForBool;
-            Assert.Same(ForBool.All, bf.All);
-            Assert.Same(ForBool.None, bf.None);
         }
 
         [Fact]
@@ -402,28 +398,14 @@ namespace Microsoft.CodeAnalysis.CSharp.UnitTests
         {
             var s1 = ForString.Related(Equal, "a");
             var s2 = ForString.Related(Equal, "b");
-            Assert.Equal(ForString.None, s1.Intersect(s2));
-            Assert.Equal(ForString.All, s1.Complement().Union(s2.Complement()));
+            Assert.True(s1.Intersect(s2).IsEmpty);
+            Assert.True(s1.Complement().Union(s2.Complement()).Complement().IsEmpty);
             Assert.Equal(s1.Union(s2).Complement(), s1.Complement().Intersect(s2.Complement()));
             IValueSet b = s1;
-            Assert.Same(s1.Factory, ForString);
-            Assert.Same(b.Factory, ForString);
             Assert.Same(b.Intersect(b), b);
             Assert.Same(b.Union(b), b);
             IValueSetFactory bf = ForString;
-            Assert.Same(ForString.All, bf.All);
-            Assert.Same(ForString.None, bf.None);
-            Assert.True(ForString.None.All(Equal, "a"));
             Assert.False(s1.Union(s2).All(Equal, "a"));
-        }
-
-        [Fact]
-        public void TestFloat_Cov_01()
-        {
-            var s1 = ForFloat.Related(LessThan, 3.14f);
-            IValueSet b = s1;
-            Assert.Same(s1.Factory, b.Factory);
-            Assert.Same(s1.Factory, ForFloat);
         }
 
         [Fact]
@@ -431,8 +413,6 @@ namespace Microsoft.CodeAnalysis.CSharp.UnitTests
         {
             var s1 = ForDouble.Related(LessThan, 3.14d);
             IValueSet b = s1;
-            Assert.Same(s1.Factory, b.Factory);
-            Assert.Same(s1.Factory, ForDouble);
             Assert.Same(s1, s1.Intersect(s1));
             Assert.Same(s1, s1.Union(s1));
             var s2 = ForDouble.Related(GreaterThan, 31.4d);
@@ -440,8 +420,6 @@ namespace Microsoft.CodeAnalysis.CSharp.UnitTests
             Assert.Equal("NaN,[3.1400000000000001..31.399999999999999]", s3.ToString());
             var s4 = b.Union(s2).Complement();
             Assert.Equal(s3, s4);
-            Assert.Same(b.Factory.All, ForDouble.All);
-            Assert.Same(b.Factory.None, ForDouble.None);
         }
 
         [Fact]
@@ -478,10 +456,6 @@ namespace Microsoft.CodeAnalysis.CSharp.UnitTests
             Assert.False(s2.All(GreaterThan, 10));
             Assert.False(s2.All(GreaterThanOrEqual, 10));
             Assert.False(s2.All(Equal, 10));
-
-            IValueSet b = s1;
-            Assert.Same(s1.Factory, b.Factory);
-            Assert.Same(s1.Factory.None, b.Factory.None);
         }
 
         [Fact]
@@ -564,14 +538,15 @@ namespace Microsoft.CodeAnalysis.CSharp.UnitTests
             // produce a uniformly random subset of 13 letters of the alphabet.
             IValueSet<string> randomStringSet()
             {
-                IValueSet<string> result = ForString.None;
+                IValueSet<string> result = null;
                 int need = K;
                 for (char c = 'a'; c <= 'z'; c++)
                 {
                     int cand = 'z' - c + 1;
                     if (Random.NextDouble() < (1.0 * need / cand))
                     {
-                        result = result.Union(ForString.Related(Equal, c.ToString()));
+                        var added = ForString.Related(Equal, c.ToString());
+                        result = result?.Union(added) ?? added;
                         need--;
                     }
                 }
@@ -610,14 +585,15 @@ namespace Microsoft.CodeAnalysis.CSharp.UnitTests
             // produce a uniformly random subset of 13 letters of the alphabet.
             IValueSet<char> randomCharSet()
             {
-                IValueSet<char> result = ForChar.None;
+                IValueSet<char> result = null;
                 int need = K;
                 for (char c = 'a'; c <= 'z'; c++)
                 {
                     int cand = 'z' - c + 1;
                     if (Random.NextDouble() < (1.0 * need / cand))
                     {
-                        result = result.Union(ForChar.Related(Equal, c));
+                        var added = ForChar.Related(Equal, c);
+                        result = result?.Union(added) ?? added;
                         need--;
                     }
                 }

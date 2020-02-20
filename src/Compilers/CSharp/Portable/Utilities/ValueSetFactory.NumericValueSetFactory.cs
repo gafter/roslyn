@@ -18,23 +18,13 @@ namespace Microsoft.CodeAnalysis.CSharp
         /// parameterized by a type class
         /// <see cref="NumericTC{T}"/> that provides the primitives for that type.
         /// </summary>
-        private class NumericValueSetFactory<T, TTC> : IValueSetFactory<T> where TTC : struct, NumericTC<T>
+        private sealed class NumericValueSetFactory<T, TTC> : IValueSetFactory<T> where TTC : struct, NumericTC<T>
         {
             public static readonly NumericValueSetFactory<T, TTC> Instance = new NumericValueSetFactory<T, TTC>();
 
             private static readonly IValueSet<T> _all = new NumericValueSet<T, TTC>(Interval.Included.Instance);
 
-            private static readonly IValueSet<T> _none = new NumericValueSet<T, TTC>(Interval.Excluded.Instance);
-
             private NumericValueSetFactory() { }
-
-            public IValueSet<T> All => _all;
-
-            IValueSet IValueSetFactory.All => _all;
-
-            public IValueSet<T> None => _none;
-
-            IValueSet IValueSetFactory.None => _none;
 
             public IValueSet<T> Related(BinaryOperatorKind relation, T value)
             {

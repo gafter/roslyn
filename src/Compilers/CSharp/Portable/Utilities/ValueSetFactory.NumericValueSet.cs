@@ -4,6 +4,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 
 #nullable enable
@@ -20,32 +21,27 @@ namespace Microsoft.CodeAnalysis.CSharp
         /// When used for floating-point values, only numeric values are represented (i.e. values between
         /// MinValue and MaxValue, inclusive).
         /// </summary>
-        private class NumericValueSet<T, TTC> : IValueSet<T> where TTC : struct, NumericTC<T>
+        private sealed class NumericValueSet<T, TTC> : IValueSet<T> where TTC : struct, NumericTC<T>
         {
+            private readonly Interval _rootInterval;
 
-            private Interval rootInterval;
+            internal NumericValueSet(Interval rootInterval) => this._rootInterval = rootInterval;
 
-            internal NumericValueSet(Interval rootInterval) => this.rootInterval = rootInterval;
-
-            IValueSetFactory IValueSet.Factory => NumericValueSetFactory<T, TTC>.Instance;
-
-            bool IValueSet.IsEmpty => rootInterval is Interval.Excluded;
-
-            IValueSetFactory<T> IValueSet<T>.Factory => NumericValueSetFactory<T, TTC>.Instance;
+            bool IValueSet.IsEmpty => _rootInterval is Interval.Excluded;
 
             public bool Any(BinaryOperatorKind relation, T value)
             {
                 TTC tc = default;
-                return AnyInterval(rootInterval, relation, value, tc.MinValue, tc.MaxValue);
+                return AnyInterval(_rootInterval, relation, value, tc.MinValue, tc.MaxValue);
             }
 
             bool IValueSet.Any(BinaryOperatorKind relation, ConstantValue value) => value.IsBad || Any(relation, default(TTC).FromConstantValue(value));
+
             /// <summary>
             /// Compute the result of <see cref="IValueSet{T}.Any"/> for a given interval.
             /// </summary>
             /// <param name="minValue">the interval's minimum value, inclusive</param>
             /// <param name="maxValue">the interval's maximum value, inclusive</param>
-
             private static bool AnyInterval(Interval interval, BinaryOperatorKind relation, T value, T minValue, T maxValue)
             {
                 TTC tc = default;
@@ -67,7 +63,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                             case Equal:
                                 return tc.Related(LessThanOrEqual, minValue, value) && tc.Related(GreaterThanOrEqual, maxValue, value);
                             default:
-                                throw new ArgumentException("relation");
+                                throw new ArgumentException(nameof(relation));
                         }
                     case Interval.Mixed mixed:
                         switch (relation)
@@ -97,23 +93,23 @@ namespace Microsoft.CodeAnalysis.CSharp
                                     AnyInterval(mixed.Right, relation, value, rightMin, maxValue);
                         };
                     default:
-                        throw new ArgumentException("interval");
+                        throw new ArgumentException(nameof(interval));
                 };
             }
 
             public bool All(BinaryOperatorKind relation, T value)
             {
                 TTC tc = default;
-                return AllInterval(rootInterval, relation, value, tc.MinValue, tc.MaxValue);
+                return AllInterval(_rootInterval, relation, value, tc.MinValue, tc.MaxValue);
             }
 
             bool IValueSet.All(BinaryOperatorKind relation, ConstantValue value) => !value.IsBad && All(relation, default(TTC).FromConstantValue(value));
+
             /// <summary>
             /// Compute the result of <see cref="IValueSet{T}.All"/> for a given interval.
             /// </summary>
             /// <param name="minValue">the interval's minimum value, inclusive</param>
             /// <param name="maxValue">the interval's maximum value, inclusive</param>
-
             private static bool AllInterval(Interval interval, BinaryOperatorKind relation, T value, T minValue, T maxValue)
             {
                 TTC tc = default;
@@ -135,7 +131,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                             case Equal:
                                 return tc.Related(Equal, minValue, value) && tc.Related(Equal, maxValue, value);
                             default:
-                                throw new ArgumentException("relation");
+                                throw new ArgumentException(nameof(relation));
                         }
                     case Interval.Mixed mixed:
                         switch (relation)
@@ -163,11 +159,11 @@ namespace Microsoft.CodeAnalysis.CSharp
                                     AllInterval(mixed.Right, relation, value, rightMin, maxValue);
                         }
                     default:
-                        throw new ArgumentException("interval");
+                        throw new ArgumentException(nameof(interval));
                 };
             }
 
-            public IValueSet<T> Complement() => new NumericValueSet<T, TTC>(ComplementInterval(rootInterval));
+            public IValueSet<T> Complement() => new NumericValueSet<T, TTC>(ComplementInterval(_rootInterval));
 
             IValueSet IValueSet.Complement() => this.Complement();
 
@@ -182,17 +178,17 @@ namespace Microsoft.CodeAnalysis.CSharp
                     case Interval.Mixed(var left, var right):
                         return Interval.Mixed.Create(ComplementInterval(left), ComplementInterval(right));
                     default:
-                        throw new ArgumentException("interval");
+                        throw new ArgumentException(nameof(interval));
                 }
             }
 
             public IValueSet<T> Intersect(IValueSet<T> o)
             {
                 var other = ((NumericValueSet<T, TTC>)o);
-                var newInterval = IntersectInterval(rootInterval, other.rootInterval);
-                if (newInterval == rootInterval)
+                var newInterval = IntersectInterval(_rootInterval, other._rootInterval);
+                if (newInterval == _rootInterval)
                     return this;
-                if (newInterval == other.rootInterval)
+                if (newInterval == other._rootInterval)
                     return other;
                 return new NumericValueSet<T, TTC>(newInterval);
             }
@@ -234,10 +230,10 @@ namespace Microsoft.CodeAnalysis.CSharp
             public IValueSet<T> Union(IValueSet<T> o)
             {
                 var other = ((NumericValueSet<T, TTC>)o);
-                var newInterval = UnionInterval(rootInterval, other.rootInterval);
-                if (newInterval == rootInterval)
+                var newInterval = UnionInterval(_rootInterval, other._rootInterval);
+                if (newInterval == _rootInterval)
                     return this;
-                if (newInterval == other.rootInterval)
+                if (newInterval == other._rootInterval)
                     return other;
                 return new NumericValueSet<T, TTC>(newInterval);
             }
@@ -303,7 +299,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             public override string ToString()
             {
                 TTC tc = default;
-                var intervalSequence = asIntervalSequence(rootInterval, tc.MinValue, tc.MaxValue);
+                var intervalSequence = asIntervalSequence(_rootInterval, tc.MinValue, tc.MaxValue);
                 intervalSequence = compressIntervalSequence(intervalSequence);
                 return string.Join(",", intervalSequence.Select(p => $"[{tc.ToString(p.min)}..{tc.ToString(p.max)}]"));
 
@@ -357,9 +353,9 @@ namespace Microsoft.CodeAnalysis.CSharp
                 }
             }
 
-            public override bool Equals(object obj) => obj is NumericValueSet<T, TTC> other && this.rootInterval.Equals(other.rootInterval);
+            public override bool Equals(object obj) => obj is NumericValueSet<T, TTC> other && this._rootInterval.Equals(other._rootInterval);
 
-            public override int GetHashCode() => this.rootInterval.GetHashCode();
+            public override int GetHashCode() => this._rootInterval.GetHashCode();
         }
     }
 }

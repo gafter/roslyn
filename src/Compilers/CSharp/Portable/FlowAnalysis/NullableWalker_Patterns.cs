@@ -401,7 +401,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                                     gotoNode(p.WhenTrue, this.StateWhenTrue, nodeBelievedReachable);
                                     gotoNode(p.WhenFalse, this.StateWhenFalse, nodeBelievedReachable & inputState.MayBeNull());
                                     break;
-                                case BoundDagExplicitNullTest t:
+                                case BoundDagExplicitNullTest _:
                                     if (inputSlot > 0)
                                     {
                                         LearnFromNullTest(inputSlot, inputType, ref this.StateWhenTrue, markDependentSlotsNotNull: true);
@@ -419,7 +419,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                                     gotoNode(p.WhenTrue, this.StateWhenTrue, nodeBelievedReachable);
                                     gotoNode(p.WhenFalse, this.StateWhenFalse, nodeBelievedReachable);
                                     break;
-                                case BoundDagRelationalTest t:
+                                case BoundDagRelationalTest _:
                                     if (inputSlot > 0)
                                     {
                                         learnFromNonNullTest(inputSlot, ref this.StateWhenTrue);

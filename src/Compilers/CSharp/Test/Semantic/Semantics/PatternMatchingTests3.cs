@@ -2566,5 +2566,61 @@ class C
                 Diagnostic(ErrorCode.ERR_SwitchArmSubsumed, "_").WithLocation(12, 9)
                 );
         }
+
+        [Fact]
+        public void Relational_09()
+        {
+            var source = @"
+class C
+{
+    public int M(uint c) => c switch
+    {
+        | 3 => 3,
+        || 4 => 4,
+        & 5 => 5,
+        && 6 => 6,
+        _ => 7
+    };
+}";
+            var compilation = CreateCompilation(source, parseOptions: TestOptions.Regular.WithLanguageVersion(LanguageVersion.Preview));
+            compilation.VerifyDiagnostics(
+                // (5,6): error CS1525: Invalid expression term '|'
+                //     {
+                Diagnostic(ErrorCode.ERR_InvalidExprTerm, "").WithArguments("|").WithLocation(5, 6),
+                // (6,18): error CS1525: Invalid expression term '||'
+                //         | 3 => 3,
+                Diagnostic(ErrorCode.ERR_InvalidExprTerm, "").WithArguments("||").WithLocation(6, 18),
+                // (8,11): error CS0211: Cannot take the address of the given expression
+                //         & 5 => 5,
+                Diagnostic(ErrorCode.ERR_InvalidAddrOp, "5").WithLocation(8, 11),
+                // (8,18): error CS1525: Invalid expression term '&&'
+                //         & 5 => 5,
+                Diagnostic(ErrorCode.ERR_InvalidExprTerm, "").WithArguments("&&").WithLocation(8, 18)
+                );
+        }
+
+        [Fact]
+        public void Relational_10()
+        {
+            var source = @"
+class C
+{
+    public int M(uint c) => c switch
+    {
+        == 0 => 1,
+        != 2 => 2,
+        _ => 7
+    };
+}";
+            var compilation = CreateCompilation(source, parseOptions: TestOptions.Regular.WithLanguageVersion(LanguageVersion.Preview));
+            compilation.VerifyDiagnostics(
+                // (6,9): error CS1525: Invalid expression term '=='
+                //         == 0 => 1,
+                Diagnostic(ErrorCode.ERR_InvalidExprTerm, "==").WithArguments("==").WithLocation(6, 9),
+                // (7,9): error CS1525: Invalid expression term '!='
+                //         != 2 => 2,
+                Diagnostic(ErrorCode.ERR_InvalidExprTerm, "!=").WithArguments("!=").WithLocation(7, 9)
+                );
+        }
     }
 }

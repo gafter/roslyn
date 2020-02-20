@@ -51,7 +51,7 @@ namespace Microsoft.CodeAnalysis.CSharp
 
             (double leftMax, double rightMin) NumericTC<double>.Partition(double min, double max)
             {
-                Debug.Assert(min != max);
+                Debug.Assert(min < max);
 
                 if (min == double.MinValue && max == double.MaxValue)
                     return (-ULongAsDouble(1), 0.0); // skip negative zero

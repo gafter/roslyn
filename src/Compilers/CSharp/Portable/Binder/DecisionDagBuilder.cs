@@ -298,7 +298,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             var getItemProperty = (PropertySymbol)pattern.GetItemMethod.AssociatedSymbol;
             var iTupleType = getLengthProperty.ContainingType;
             RoslynDebug.Assert(iTupleType.Name == "ITuple");
-            var tests = ArrayBuilder<Tests>.GetInstance(4 + patternLength);
+            var tests = ArrayBuilder<Tests>.GetInstance(4 + patternLength * 2);
 
             tests.Add(new Tests.One(new BoundDagTypeTest(syntax, iTupleType, input)));
             var valueAsITupleEvaluation = new BoundDagTypeEvaluation(syntax, iTupleType, input);
