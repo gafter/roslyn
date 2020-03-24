@@ -84,6 +84,7 @@ namespace Microsoft.CodeAnalysis.CSharp
         SequencePointWithSpan,
         SaveSequencePoint,
         RestorePreviousSequencePoint,
+        StepThroughSequencePoint,
         Block,
         Scope,
         StateMachineScope,
@@ -2631,6 +2632,37 @@ namespace Microsoft.CodeAnalysis.CSharp
             if (identifier != this.Identifier)
             {
                 var result = new BoundRestorePreviousSequencePoint(this.Syntax, identifier, this.HasErrors);
+                result.CopyAttributes(this);
+                return result;
+            }
+            return this;
+        }
+    }
+
+    internal sealed partial class BoundStepThroughSequencePoint : BoundStatement
+    {
+        public BoundStepThroughSequencePoint(SyntaxNode syntax, TextSpan span, bool hasErrors)
+            : base(BoundKind.StepThroughSequencePoint, syntax, hasErrors)
+        {
+            this.Span = span;
+        }
+
+        public BoundStepThroughSequencePoint(SyntaxNode syntax, TextSpan span)
+            : base(BoundKind.StepThroughSequencePoint, syntax)
+        {
+            this.Span = span;
+        }
+
+
+        public TextSpan Span { get; }
+        [DebuggerStepThrough]
+        public override BoundNode? Accept(BoundTreeVisitor visitor) => visitor.VisitStepThroughSequencePoint(this);
+
+        public BoundStepThroughSequencePoint Update(TextSpan span)
+        {
+            if (span != this.Span)
+            {
+                var result = new BoundStepThroughSequencePoint(this.Syntax, span, this.HasErrors);
                 result.CopyAttributes(this);
                 return result;
             }
@@ -7799,6 +7831,8 @@ namespace Microsoft.CodeAnalysis.CSharp
                     return VisitSaveSequencePoint((BoundSaveSequencePoint)node, arg);
                 case BoundKind.RestorePreviousSequencePoint: 
                     return VisitRestorePreviousSequencePoint((BoundRestorePreviousSequencePoint)node, arg);
+                case BoundKind.StepThroughSequencePoint: 
+                    return VisitStepThroughSequencePoint((BoundStepThroughSequencePoint)node, arg);
                 case BoundKind.Block: 
                     return VisitBlock((BoundBlock)node, arg);
                 case BoundKind.Scope: 
@@ -8132,6 +8166,7 @@ namespace Microsoft.CodeAnalysis.CSharp
         public virtual R VisitSequencePointWithSpan(BoundSequencePointWithSpan node, A arg) => this.DefaultVisit(node, arg);
         public virtual R VisitSaveSequencePoint(BoundSaveSequencePoint node, A arg) => this.DefaultVisit(node, arg);
         public virtual R VisitRestorePreviousSequencePoint(BoundRestorePreviousSequencePoint node, A arg) => this.DefaultVisit(node, arg);
+        public virtual R VisitStepThroughSequencePoint(BoundStepThroughSequencePoint node, A arg) => this.DefaultVisit(node, arg);
         public virtual R VisitBlock(BoundBlock node, A arg) => this.DefaultVisit(node, arg);
         public virtual R VisitScope(BoundScope node, A arg) => this.DefaultVisit(node, arg);
         public virtual R VisitStateMachineScope(BoundStateMachineScope node, A arg) => this.DefaultVisit(node, arg);
@@ -8330,6 +8365,7 @@ namespace Microsoft.CodeAnalysis.CSharp
         public virtual BoundNode? VisitSequencePointWithSpan(BoundSequencePointWithSpan node) => this.DefaultVisit(node);
         public virtual BoundNode? VisitSaveSequencePoint(BoundSaveSequencePoint node) => this.DefaultVisit(node);
         public virtual BoundNode? VisitRestorePreviousSequencePoint(BoundRestorePreviousSequencePoint node) => this.DefaultVisit(node);
+        public virtual BoundNode? VisitStepThroughSequencePoint(BoundStepThroughSequencePoint node) => this.DefaultVisit(node);
         public virtual BoundNode? VisitBlock(BoundBlock node) => this.DefaultVisit(node);
         public virtual BoundNode? VisitScope(BoundScope node) => this.DefaultVisit(node);
         public virtual BoundNode? VisitStateMachineScope(BoundStateMachineScope node) => this.DefaultVisit(node);
@@ -8714,6 +8750,7 @@ namespace Microsoft.CodeAnalysis.CSharp
         }
         public override BoundNode? VisitSaveSequencePoint(BoundSaveSequencePoint node) => null;
         public override BoundNode? VisitRestorePreviousSequencePoint(BoundRestorePreviousSequencePoint node) => null;
+        public override BoundNode? VisitStepThroughSequencePoint(BoundStepThroughSequencePoint node) => null;
         public override BoundNode? VisitBlock(BoundBlock node)
         {
             this.VisitList(node.Statements);
@@ -9707,6 +9744,7 @@ namespace Microsoft.CodeAnalysis.CSharp
         }
         public override BoundNode? VisitSaveSequencePoint(BoundSaveSequencePoint node) => node;
         public override BoundNode? VisitRestorePreviousSequencePoint(BoundRestorePreviousSequencePoint node) => node;
+        public override BoundNode? VisitStepThroughSequencePoint(BoundStepThroughSequencePoint node) => node;
         public override BoundNode? VisitBlock(BoundBlock node)
         {
             ImmutableArray<BoundStatement> statements = this.VisitList(node.Statements);
@@ -13331,6 +13369,12 @@ namespace Microsoft.CodeAnalysis.CSharp
         public override TreeDumperNode VisitRestorePreviousSequencePoint(BoundRestorePreviousSequencePoint node, object? arg) => new TreeDumperNode("restorePreviousSequencePoint", null, new TreeDumperNode[]
         {
             new TreeDumperNode("identifier", node.Identifier, null),
+            new TreeDumperNode("hasErrors", node.HasErrors, null)
+        }
+        );
+        public override TreeDumperNode VisitStepThroughSequencePoint(BoundStepThroughSequencePoint node, object? arg) => new TreeDumperNode("stepThroughSequencePoint", null, new TreeDumperNode[]
+        {
+            new TreeDumperNode("span", node.Span, null),
             new TreeDumperNode("hasErrors", node.HasErrors, null)
         }
         );

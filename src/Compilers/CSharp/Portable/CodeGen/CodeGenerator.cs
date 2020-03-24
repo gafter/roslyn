@@ -444,9 +444,19 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeGen
             if (_savedSequencePoints is null || !_savedSequencePoints.TryGetValue(node.Identifier, out var span))
                 return;
 
+            EmitStepThroughSequencePoint(node.Syntax.SyntaxTree, span);
+        }
+
+        private void EmitStepThroughSequencePoint(BoundStepThroughSequencePoint node)
+        {
+            EmitStepThroughSequencePoint(node.Syntax.SyntaxTree, node.Span);
+        }
+
+        private void EmitStepThroughSequencePoint(SyntaxTree syntaxTree, TextSpan span)
+        {
             var label = new object();
             _builder.EmitBranch(ILOpCode.Br, label);
-            EmitSequencePoint(node.Syntax.SyntaxTree, span);
+            EmitSequencePoint(syntaxTree, span);
             _builder.EmitOpCode(ILOpCode.Nop);
             EmitHiddenSequencePoint();
             _builder.MarkLabel(label);

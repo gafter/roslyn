@@ -70,7 +70,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                     var spanStart = syntax.SwitchKeyword.Span.Start;
                     var spanEnd = syntax.Span.End;
                     var spanForSwitchBody = new TextSpan(spanStart, spanEnd - spanStart);
-                    result.Add(new BoundSequencePointWithSpan(node.Syntax, statementOpt: null, span: spanForSwitchBody));
+                    result.Add(new BoundStepThroughSequencePoint(node.Syntax, span: spanForSwitchBody));
                     result.Add(new BoundSaveSequencePoint(syntax, restorePointForSwitchBody));
                 }
                 result.Add(_factory.Block(loweredDag));

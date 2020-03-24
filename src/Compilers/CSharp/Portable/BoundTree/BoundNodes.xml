@@ -799,6 +799,14 @@
     <Field Name="Identifier" Type="object"/>
   </Node>
 
+  <!--
+    This is used to set the debugger's idea of what the enclosing statement
+    is without causing the debugger to stop here when single stepping.
+    -->
+  <Node Name="BoundStepThroughSequencePoint" Base="BoundStatement">
+    <Field Name="Span" Type="TextSpan"/>
+  </Node>
+
   <!--  
   BoundBlock contains 
     a) Statements - actions performed within the scope of the block
