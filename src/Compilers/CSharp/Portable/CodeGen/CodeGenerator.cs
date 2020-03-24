@@ -427,12 +427,6 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeGen
                 _savedSequencePoints.Add(statement.Identifier, span);
                 return;
             }
-
-            // failed to find a previous sequence point.  This can occur for example if
-            // a switch expression is the entire body of an expression-bodied method.
-            // In this case we do not need to save the sequence point because restoring
-            // it would occur after any generated code.
-            return;
         }
 
         private void EmitRestorePreviousSequencePoint(BoundRestorePreviousSequencePoint node)
@@ -455,19 +449,12 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeGen
                 return;
 
             var label = new object();
-            _builder.EmitBranch(ILOpCode.Br, label);
-
-            // Produce some unreachable code.
-            // PROTOTYPE(ngafter): This sequence is elided by the emitter.  All we need is a single
-            // no-op instruction, but we need to force the emitter to output it somehow.
-            var bogusLabel = new object();
-            _builder.MarkLabel(bogusLabel);
+            // The IL builder is eager to discard unreachable code, so
+            // we fool it by branching on a condition that is always true at runtime.
+            _builder.EmitConstantValue(ConstantValue.Create(true));
+            _builder.EmitBranch(ILOpCode.Brtrue, label);
             EmitSequencePoint(syntaxTree, span);
             _builder.EmitOpCode(ILOpCode.Nop);
-            _builder.EmitOpCode(ILOpCode.Nop);
-            _builder.EmitOpCode(ILOpCode.Nop);
-            _builder.EmitBranch(ILOpCode.Br, bogusLabel);
-
             _builder.MarkLabel(label);
             EmitHiddenSequencePoint();
         }

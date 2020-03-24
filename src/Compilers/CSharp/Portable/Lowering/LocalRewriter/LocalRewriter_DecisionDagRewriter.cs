@@ -268,7 +268,13 @@ namespace Microsoft.CodeAnalysis.CSharp
                 // the code to handle the decision dag. This is necessary so that jumps back from a `when` clause into
                 // the decision dag do not appear to jump back up to the enclosing construct.
                 if (GenerateSequencePoints)
+                {
+                    // Since there may have been no code to evaluate the input, add a no-op for any previous sequence point to bind to.
+                    if (result.Count == 0)
+                        result.Add(_factory.NoOp(NoOpStatementFlavor.Default));
+
                     result.Add(_factory.HiddenSequencePoint());
+                }
 
                 return decisionDag;
             }

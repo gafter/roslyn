@@ -125,9 +125,9 @@ namespace Microsoft.CodeAnalysis.CSharp
                     result.Add(_factory.Throw(thrownExpression));
                 }
 
+                result.Add(_factory.Label(afterSwitchExpression));
                 if (GenerateSequencePoints)
                     result.Add(new BoundRestorePreviousSequencePoint(node.Syntax, restorePointForEnclosingStatement));
-                result.Add(_factory.Label(afterSwitchExpression));
                 outerVariables.Add(resultTemp);
                 outerVariables.AddRange(_tempAllocator.AllTemps());
                 return _factory.SpillSequence(outerVariables.ToImmutableAndFree(), result.ToImmutableAndFree(), _factory.Local(resultTemp));

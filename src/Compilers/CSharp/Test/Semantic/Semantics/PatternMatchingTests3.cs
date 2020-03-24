@@ -3093,62 +3093,70 @@ class C
             compilation.VerifyDiagnostics(
                 );
             var compVerifier = CompileAndVerify(compilation, expectedOutput: expectedOutput);
-            compVerifier.VerifyIL("C.Grade",
-@"{
-  // Code size      110 (0x6e)
-  .maxstack  6
-  .locals init (char V_0)
-  IL_0000:  ldarg.0
-  IL_0001:  ldc.i4     0xea60
-  IL_0006:  ldc.i4.0
-  IL_0007:  ldc.i4.0
-  IL_0008:  ldc.i4.0
-  IL_0009:  ldc.i4.3
-  IL_000a:  newobj     ""decimal..ctor(int, int, int, bool, byte)""
-  IL_000f:  call       ""bool decimal.op_LessThanOrEqual(decimal, decimal)""
-  IL_0014:  brtrue.s   IL_0053
-  IL_0016:  ldarg.0
-  IL_0017:  ldc.i4     0x1b58
-  IL_001c:  ldc.i4.0
-  IL_001d:  ldc.i4.0
-  IL_001e:  ldc.i4.0
-  IL_001f:  ldc.i4.2
-  IL_0020:  newobj     ""decimal..ctor(int, int, int, bool, byte)""
-  IL_0025:  call       ""bool decimal.op_LessThanOrEqual(decimal, decimal)""
-  IL_002a:  brtrue.s   IL_0058
-  IL_002c:  ldarg.0
-  IL_002d:  ldc.i4     0x320
-  IL_0032:  ldc.i4.0
-  IL_0033:  ldc.i4.0
-  IL_0034:  ldc.i4.0
-  IL_0035:  ldc.i4.1
-  IL_0036:  newobj     ""decimal..ctor(int, int, int, bool, byte)""
-  IL_003b:  call       ""bool decimal.op_LessThanOrEqual(decimal, decimal)""
-  IL_0040:  brtrue.s   IL_005d
-  IL_0042:  ldarg.0
-  IL_0043:  ldc.i4.s   90
-  IL_0045:  newobj     ""decimal..ctor(int)""
-  IL_004a:  call       ""bool decimal.op_LessThanOrEqual(decimal, decimal)""
-  IL_004f:  brtrue.s   IL_0062
-  IL_0051:  br.s       IL_0067
-  IL_0053:  ldc.i4.s   70
-  IL_0055:  stloc.0
-  IL_0056:  br.s       IL_006c
-  IL_0058:  ldc.i4.s   68
-  IL_005a:  stloc.0
-  IL_005b:  br.s       IL_006c
-  IL_005d:  ldc.i4.s   67
-  IL_005f:  stloc.0
-  IL_0060:  br.s       IL_006c
-  IL_0062:  ldc.i4.s   66
-  IL_0064:  stloc.0
-  IL_0065:  br.s       IL_006c
-  IL_0067:  ldc.i4.s   65
-  IL_0069:  stloc.0
-  IL_006a:  br.s       IL_006c
-  IL_006c:  ldloc.0
-  IL_006d:  ret
-}");
+            compVerifier.VerifyIL("C.Grade", @"
+    {
+      // Code size      119 (0x77)
+      .maxstack  6
+      .locals init (char V_0)
+      IL_0000:  nop
+      IL_0001:  ldc.i4.1
+      IL_0002:  brtrue.s   IL_0005
+      IL_0004:  nop
+      IL_0005:  ldarg.0
+      IL_0006:  ldc.i4     0xea60
+      IL_000b:  ldc.i4.0
+      IL_000c:  ldc.i4.0
+      IL_000d:  ldc.i4.0
+      IL_000e:  ldc.i4.3
+      IL_000f:  newobj     ""decimal..ctor(int, int, int, bool, byte)""
+      IL_0014:  call       ""bool decimal.op_LessThanOrEqual(decimal, decimal)""
+      IL_0019:  brtrue.s   IL_0058
+      IL_001b:  ldarg.0
+      IL_001c:  ldc.i4     0x1b58
+      IL_0021:  ldc.i4.0
+      IL_0022:  ldc.i4.0
+      IL_0023:  ldc.i4.0
+      IL_0024:  ldc.i4.2
+      IL_0025:  newobj     ""decimal..ctor(int, int, int, bool, byte)""
+      IL_002a:  call       ""bool decimal.op_LessThanOrEqual(decimal, decimal)""
+      IL_002f:  brtrue.s   IL_005d
+      IL_0031:  ldarg.0
+      IL_0032:  ldc.i4     0x320
+      IL_0037:  ldc.i4.0
+      IL_0038:  ldc.i4.0
+      IL_0039:  ldc.i4.0
+      IL_003a:  ldc.i4.1
+      IL_003b:  newobj     ""decimal..ctor(int, int, int, bool, byte)""
+      IL_0040:  call       ""bool decimal.op_LessThanOrEqual(decimal, decimal)""
+      IL_0045:  brtrue.s   IL_0062
+      IL_0047:  ldarg.0
+      IL_0048:  ldc.i4.s   90
+      IL_004a:  newobj     ""decimal..ctor(int)""
+      IL_004f:  call       ""bool decimal.op_LessThanOrEqual(decimal, decimal)""
+      IL_0054:  brtrue.s   IL_0067
+      IL_0056:  br.s       IL_006c
+      IL_0058:  ldc.i4.s   70
+      IL_005a:  stloc.0
+      IL_005b:  br.s       IL_0071
+      IL_005d:  ldc.i4.s   68
+      IL_005f:  stloc.0
+      IL_0060:  br.s       IL_0071
+      IL_0062:  ldc.i4.s   67
+      IL_0064:  stloc.0
+      IL_0065:  br.s       IL_0071
+      IL_0067:  ldc.i4.s   66
+      IL_0069:  stloc.0
+      IL_006a:  br.s       IL_0071
+      IL_006c:  ldc.i4.s   65
+      IL_006e:  stloc.0
+      IL_006f:  br.s       IL_0071
+      IL_0071:  ldc.i4.1
+      IL_0072:  brtrue.s   IL_0075
+      IL_0074:  nop
+      IL_0075:  ldloc.0
+      IL_0076:  ret
+    }
+");
         }
 
         [Fact]
