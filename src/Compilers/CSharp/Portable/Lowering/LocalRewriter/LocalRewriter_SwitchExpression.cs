@@ -111,9 +111,9 @@ namespace Microsoft.CodeAnalysis.CSharp
                 _factory.Syntax = node.Syntax;
                 if (node.DefaultLabel != null)
                 {
+                    result.Add(_factory.Label(node.DefaultLabel));
                     if (GenerateSequencePoints)
                         result.Add(new BoundRestorePreviousSequencePoint(node.Syntax, restorePointForSwitchBody));
-                    result.Add(_factory.Label(node.DefaultLabel));
                     var objectType = _factory.SpecialType(SpecialType.System_Object);
                     var thrownExpression =
                         (implicitConversionExists(savedInputExpression, objectType) &&

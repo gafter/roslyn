@@ -438,9 +438,6 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeGen
         private void EmitRestorePreviousSequencePoint(BoundRestorePreviousSequencePoint node)
         {
             Debug.Assert(node.Syntax is { });
-            if (!_emitPdbSequencePoints)
-                return;
-
             if (_savedSequencePoints is null || !_savedSequencePoints.TryGetValue(node.Identifier, out var span))
                 return;
 
@@ -454,12 +451,25 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeGen
 
         private void EmitStepThroughSequencePoint(SyntaxTree syntaxTree, TextSpan span)
         {
+            if (!_emitPdbSequencePoints)
+                return;
+
             var label = new object();
             _builder.EmitBranch(ILOpCode.Br, label);
+
+            // Produce some unreachable code.
+            // PROTOTYPE(ngafter): This sequence is elided by the emitter.  All we need is a single
+            // no-op instruction, but we need to force the emitter to output it somehow.
+            var bogusLabel = new object();
+            _builder.MarkLabel(bogusLabel);
             EmitSequencePoint(syntaxTree, span);
             _builder.EmitOpCode(ILOpCode.Nop);
-            EmitHiddenSequencePoint();
+            _builder.EmitOpCode(ILOpCode.Nop);
+            _builder.EmitOpCode(ILOpCode.Nop);
+            _builder.EmitBranch(ILOpCode.Br, bogusLabel);
+
             _builder.MarkLabel(label);
+            EmitHiddenSequencePoint();
         }
 
         private void SetInitialDebugDocument()
