@@ -8,7 +8,9 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
 using Microsoft.CodeAnalysis.CSharp.Symbols;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.PooledObjects;
+using Microsoft.CodeAnalysis.Text;
 
 namespace Microsoft.CodeAnalysis.CSharp
 {
@@ -29,9 +31,10 @@ namespace Microsoft.CodeAnalysis.CSharp
             private SwitchExpressionLocalRewriter(BoundConvertedSwitchExpression node, LocalRewriter localRewriter)
                 : base(node.Syntax, localRewriter, node.SwitchArms.SelectAsArray(arm => arm.Syntax))
             {
+                GenerateSequencePoints = !node.WasCompilerGenerated && _localRewriter.Instrument;
             }
 
-            protected override bool IsSwitchStatement => false;
+            protected override bool GenerateSequencePoints { get; }
 
             public static BoundExpression Rewrite(LocalRewriter localRewriter, BoundConvertedSwitchExpression node)
             {
@@ -51,11 +54,25 @@ namespace Microsoft.CodeAnalysis.CSharp
                     node.DecisionDag, loweredSwitchGoverningExpression, result, out BoundExpression savedInputExpression);
                 Debug.Assert(savedInputExpression != null);
 
+                object restorePointForEnclosingStatement = new object();
+                object restorePointForSwitchBody = new object();
+
                 // lower the decision dag.
                 (ImmutableArray<BoundStatement> loweredDag, ImmutableDictionary<SyntaxNode, ImmutableArray<BoundStatement>> switchSections) =
                     LowerDecisionDag(decisionDag);
 
                 // then add the rest of the lowered dag that references that input
+                if (GenerateSequencePoints)
+                {
+                    var syntax = (SwitchExpressionSyntax)node.Syntax;
+                    result.Add(new BoundSaveSequencePoint(syntax, restorePointForEnclosingStatement));
+                    // While evaluating the state machine, we highlight the `switch {...}` part.
+                    var spanStart = syntax.SwitchKeyword.Span.Start;
+                    var spanEnd = syntax.Span.End;
+                    var spanForSwitchBody = new TextSpan(spanStart, spanEnd - spanStart);
+                    result.Add(new BoundSequencePointWithSpan(node.Syntax, statementOpt: null, span: spanForSwitchBody));
+                    result.Add(new BoundSaveSequencePoint(syntax, restorePointForSwitchBody));
+                }
                 result.Add(_factory.Block(loweredDag));
                 // A branch to the default label when no switch case matches is included in the
                 // decision tree, so the code in result is unreachable at this point.
@@ -69,7 +86,10 @@ namespace Microsoft.CodeAnalysis.CSharp
                     var sectionBuilder = ArrayBuilder<BoundStatement>.GetInstance();
                     sectionBuilder.AddRange(switchSections[arm.Syntax]);
                     sectionBuilder.Add(_factory.Label(arm.Label));
-                    sectionBuilder.Add(_factory.Assignment(_factory.Local(resultTemp), _localRewriter.VisitExpression(arm.Value)));
+                    var loweredValue = _localRewriter.VisitExpression(arm.Value);
+                    if (GenerateSequencePoints)
+                        loweredValue = new BoundSequencePointExpression(arm.Value.Syntax, loweredValue, loweredValue.Type);
+                    sectionBuilder.Add(_factory.Assignment(_factory.Local(resultTemp), loweredValue));
                     sectionBuilder.Add(_factory.Goto(afterSwitchExpression));
                     var statements = sectionBuilder.ToImmutableAndFree();
                     if (arm.Locals.IsEmpty)
@@ -91,6 +111,8 @@ namespace Microsoft.CodeAnalysis.CSharp
                 _factory.Syntax = node.Syntax;
                 if (node.DefaultLabel != null)
                 {
+                    if (GenerateSequencePoints)
+                        result.Add(new BoundRestorePreviousSequencePoint(node.Syntax, restorePointForSwitchBody));
                     result.Add(_factory.Label(node.DefaultLabel));
                     var objectType = _factory.SpecialType(SpecialType.System_Object);
                     var thrownExpression =
@@ -103,6 +125,8 @@ namespace Microsoft.CodeAnalysis.CSharp
                     result.Add(_factory.Throw(thrownExpression));
                 }
 
+                if (GenerateSequencePoints)
+                    result.Add(new BoundRestorePreviousSequencePoint(node.Syntax, restorePointForEnclosingStatement));
                 result.Add(_factory.Label(afterSwitchExpression));
                 outerVariables.Add(resultTemp);
                 outerVariables.AddRange(_tempAllocator.AllTemps());

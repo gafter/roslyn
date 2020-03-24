@@ -35,7 +35,7 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeGen
 
         // There are scenarios where rvalues need to be passed to ref/in parameters
         // in such cases the values must be spilled into temps and retained for the entirety of
-        // the most encompassing expression.       
+        // the most encompassing expression.
         private ArrayBuilder<LocalDefinition> _expressionTemps;
 
         // not 0 when in a protected region with a handler. 
@@ -56,6 +56,11 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeGen
         /// This is used to track the state of the epilogue.
         /// </summary>
         private IndirectReturnState _indirectReturnState;
+
+        /// <summary>
+        /// Used to implement <see cref="BoundSaveSequencePoint"/> and <see cref="BoundRestorePreviousSequencePoint"/>.
+        /// </summary>
+        private PooledDictionary<object, TextSpan> _savedSequencePoints;
 
         private enum IndirectReturnState : byte
         {
@@ -294,6 +299,7 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeGen
 
             Debug.Assert(!(_expressionTemps?.Count > 0), "leaking expression temps?");
             _expressionTemps?.Free();
+            _savedSequencePoints?.Free();
         }
 
         private void HandleReturn()
@@ -399,6 +405,51 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeGen
                 // otherwise this point could get associated with some random statement, possibly in a wrong scope
                 _builder.EmitOpCode(ILOpCode.Nop);
             }
+        }
+
+        private void EmitSaveSequencePoint(BoundSaveSequencePoint statement)
+        {
+            if (!_emitPdbSequencePoints)
+                return;
+
+            ArrayBuilder<RawSequencePoint> sequencePoints = _builder.SeqPointsOpt;
+            if (sequencePoints is null)
+                return;
+
+            for (int i = sequencePoints.Count - 1; i >= 0; i--)
+            {
+                var span = sequencePoints[i].Span;
+                if (span == RawSequencePoint.HiddenSequencePointSpan)
+                    continue;
+
+                // Found the previous non-hidden sequence point.  Save it.
+                _savedSequencePoints ??= PooledDictionary<object, TextSpan>.GetInstance();
+                _savedSequencePoints.Add(statement.Identifier, span);
+                return;
+            }
+
+            // failed to find a previous sequence point.  This can occur for example if
+            // a switch expression is the entire body of an expression-bodied method.
+            // In this case we do not need to save the sequence point because restoring
+            // it would occur after any generated code.
+            return;
+        }
+
+        private void EmitRestorePreviousSequencePoint(BoundRestorePreviousSequencePoint node)
+        {
+            Debug.Assert(node.Syntax is { });
+            if (!_emitPdbSequencePoints)
+                return;
+
+            if (_savedSequencePoints is null || !_savedSequencePoints.TryGetValue(node.Identifier, out var span))
+                return;
+
+            var label = new object();
+            _builder.EmitBranch(ILOpCode.Br, label);
+            EmitSequencePoint(node.Syntax.SyntaxTree, span);
+            _builder.EmitOpCode(ILOpCode.Nop);
+            EmitHiddenSequencePoint();
+            _builder.MarkLabel(label);
         }
 
         private void SetInitialDebugDocument()

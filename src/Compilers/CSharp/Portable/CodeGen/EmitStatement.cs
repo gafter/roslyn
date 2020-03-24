@@ -41,6 +41,14 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeGen
                     this.EmitSequencePointStatement((BoundSequencePointWithSpan)statement);
                     break;
 
+                case BoundKind.SaveSequencePoint:
+                    this.EmitSaveSequencePoint((BoundSaveSequencePoint)statement);
+                    break;
+
+                case BoundKind.RestorePreviousSequencePoint:
+                    this.EmitRestorePreviousSequencePoint((BoundRestorePreviousSequencePoint)statement);
+                    break;
+
                 case BoundKind.ExpressionStatement:
                     EmitExpression(((BoundExpressionStatement)statement).Expression, false);
                     break;
