@@ -8314,7 +8314,7 @@ class Program
      -IL_0000:  nop
      -IL_0001:  call       ""object Program.F()""
       IL_0006:  stloc.s    V_9
-     ~IL_0008:  ldc.i4.1
+      IL_0008:  ldc.i4.1
       IL_0009:  brtrue.s   IL_000c
      -IL_000b:  nop
      ~IL_000c:  ldloc.s    V_9
@@ -8516,7 +8516,6 @@ class Program
           <sequencePoints>
             <entry offset=""0x0"" startLine=""23"" startColumn=""5"" endLine=""23"" endColumn=""6"" document=""1"" />
             <entry offset=""0x1"" startLine=""24"" startColumn=""9"" endLine=""48"" endColumn=""11"" document=""1"" />
-            <entry offset=""0x8"" hidden=""true"" document=""1"" />
             <entry offset=""0xb"" startLine=""24"" startColumn=""21"" endLine=""48"" endColumn=""10"" document=""1"" />
             <entry offset=""0xc"" hidden=""true"" document=""1"" />
             <entry offset=""0x1d"" hidden=""true"" document=""1"" />
@@ -8907,7 +8906,7 @@ public class C
       IL_000c:  stloc.2
       IL_000d:  call       ""object C.F()""
       IL_0012:  stloc.s    V_4
-     ~IL_0014:  ldc.i4.1
+      IL_0014:  ldc.i4.1
       IL_0015:  brtrue.s   IL_0018
      -IL_0017:  nop
      ~IL_0018:  ldloc.s    V_4
@@ -8944,7 +8943,7 @@ public class C
       IL_007a:  stloc.s    V_8
       IL_007c:  call       ""object C.F()""
       IL_0081:  stloc.s    V_10
-     ~IL_0083:  ldc.i4.1
+      IL_0083:  ldc.i4.1
       IL_0084:  brtrue.s   IL_0087
      -IL_0086:  nop
      ~IL_0087:  ldloc.s    V_10
@@ -9001,7 +9000,7 @@ public class C
       IL_011b:  stloc.s    V_16
       IL_011d:  call       ""object C.F()""
       IL_0122:  stloc.s    V_15
-     ~IL_0124:  ldc.i4.1
+      IL_0124:  ldc.i4.1
       IL_0125:  brtrue.s   IL_0128
      -IL_0127:  nop
      ~IL_0128:  ldloc.s    V_15
@@ -9052,7 +9051,7 @@ public class C
      ~IL_019c:  ldloc.0
       IL_019d:  ldloc.3
       IL_019e:  stfld      ""int C.<>c__DisplayClass0_0.<t>5__2""
-     ~IL_01a3:  ldc.i4.1
+      IL_01a3:  ldc.i4.1
       IL_01a4:  brtrue.s   IL_01a7
      -IL_01a6:  nop
      ~IL_01a7:  br.s       IL_01a9
@@ -9127,14 +9126,12 @@ public class C
             <entry offset=""0x0"" startLine=""6"" startColumn=""5"" endLine=""6"" endColumn=""6"" document=""1"" />
             <entry offset=""0x1"" hidden=""true"" document=""1"" />
             <entry offset=""0x7"" hidden=""true"" document=""1"" />
-            <entry offset=""0x14"" hidden=""true"" document=""1"" />
             <entry offset=""0x17"" startLine=""7"" startColumn=""20"" endLine=""21"" endColumn=""10"" document=""1"" />
             <entry offset=""0x18"" hidden=""true"" document=""1"" />
             <entry offset=""0x2a"" hidden=""true"" document=""1"" />
             <entry offset=""0x57"" hidden=""true"" document=""1"" />
             <entry offset=""0x70"" hidden=""true"" document=""1"" />
             <entry offset=""0x75"" hidden=""true"" document=""1"" />
-            <entry offset=""0x83"" hidden=""true"" document=""1"" />
             <entry offset=""0x86"" startLine=""9"" startColumn=""22"" endLine=""13"" endColumn=""19"" document=""1"" />
             <entry offset=""0x87"" hidden=""true"" document=""1"" />
             <entry offset=""0x9d"" hidden=""true"" document=""1"" />
@@ -9147,7 +9144,6 @@ public class C
             <entry offset=""0x10d"" startLine=""7"" startColumn=""20"" endLine=""21"" endColumn=""10"" document=""1"" />
             <entry offset=""0x10e"" startLine=""9"" startColumn=""18"" endLine=""13"" endColumn=""19"" document=""1"" />
             <entry offset=""0x116"" hidden=""true"" document=""1"" />
-            <entry offset=""0x124"" hidden=""true"" document=""1"" />
             <entry offset=""0x127"" startLine=""14"" startColumn=""22"" endLine=""18"" endColumn=""19"" document=""1"" />
             <entry offset=""0x128"" hidden=""true"" document=""1"" />
             <entry offset=""0x13e"" hidden=""true"" document=""1"" />
@@ -9160,7 +9156,6 @@ public class C
             <entry offset=""0x194"" startLine=""20"" startColumn=""18"" endLine=""20"" endColumn=""19"" document=""1"" />
             <entry offset=""0x19b"" startLine=""7"" startColumn=""9"" endLine=""26"" endColumn=""11"" document=""1"" />
             <entry offset=""0x19c"" hidden=""true"" document=""1"" />
-            <entry offset=""0x1a3"" hidden=""true"" document=""1"" />
             <entry offset=""0x1a6"" startLine=""22"" startColumn=""9"" endLine=""26"" endColumn=""10"" document=""1"" />
             <entry offset=""0x1a7"" hidden=""true"" document=""1"" />
             <entry offset=""0x1a9"" startLine=""24"" startColumn=""19"" endLine=""24"" endColumn=""29"" document=""1"" />
@@ -10567,22 +10562,20 @@ class C
           </customDebugInfo>
           <sequencePoints>
             <entry offset=""0x0"" startLine=""1"" startColumn=""32"" endLine=""1"" endColumn=""99"" document=""1"" />
-            <entry offset=""0x8"" hidden=""true"" document=""1"" />
             <entry offset=""0xb"" startLine=""1"" startColumn=""45"" endLine=""1"" endColumn=""99"" document=""1"" />
             <entry offset=""0xc"" hidden=""true"" document=""1"" />
-            <entry offset=""0x12"" hidden=""true"" document=""1"" />
-            <entry offset=""0x15"" startLine=""1"" startColumn=""64"" endLine=""1"" endColumn=""89"" document=""1"" />
-            <entry offset=""0x16"" hidden=""true"" document=""1"" />
-            <entry offset=""0x1c"" startLine=""1"" startColumn=""78"" endLine=""1"" endColumn=""79"" document=""1"" />
-            <entry offset=""0x20"" startLine=""1"" startColumn=""86"" endLine=""1"" endColumn=""87"" document=""1"" />
-            <entry offset=""0x27"" startLine=""1"" startColumn=""45"" endLine=""1"" endColumn=""99"" document=""1"" />
-            <entry offset=""0x28"" startLine=""1"" startColumn=""62"" endLine=""1"" endColumn=""89"" document=""1"" />
-            <entry offset=""0x2c"" startLine=""1"" startColumn=""96"" endLine=""1"" endColumn=""97"" document=""1"" />
-            <entry offset=""0x33"" startLine=""1"" startColumn=""32"" endLine=""1"" endColumn=""99"" document=""1"" />
-            <entry offset=""0x34"" hidden=""true"" document=""1"" />
+            <entry offset=""0x14"" startLine=""1"" startColumn=""64"" endLine=""1"" endColumn=""89"" document=""1"" />
+            <entry offset=""0x15"" hidden=""true"" document=""1"" />
+            <entry offset=""0x1b"" startLine=""1"" startColumn=""78"" endLine=""1"" endColumn=""79"" document=""1"" />
+            <entry offset=""0x1f"" startLine=""1"" startColumn=""86"" endLine=""1"" endColumn=""87"" document=""1"" />
+            <entry offset=""0x26"" startLine=""1"" startColumn=""45"" endLine=""1"" endColumn=""99"" document=""1"" />
+            <entry offset=""0x27"" startLine=""1"" startColumn=""62"" endLine=""1"" endColumn=""89"" document=""1"" />
+            <entry offset=""0x2b"" startLine=""1"" startColumn=""96"" endLine=""1"" endColumn=""97"" document=""1"" />
+            <entry offset=""0x32"" startLine=""1"" startColumn=""32"" endLine=""1"" endColumn=""99"" document=""1"" />
+            <entry offset=""0x33"" hidden=""true"" document=""1"" />
           </sequencePoints>
-          <scope startOffset=""0x0"" endOffset=""0x3b"">
-            <local name=""x"" il_index=""0"" il_start=""0x0"" il_end=""0x3b"" attributes=""0"" />
+          <scope startOffset=""0x0"" endOffset=""0x3a"">
+            <local name=""x"" il_index=""0"" il_start=""0x0"" il_end=""0x3a"" attributes=""0"" />
           </scope>
         </method>
       </methods>

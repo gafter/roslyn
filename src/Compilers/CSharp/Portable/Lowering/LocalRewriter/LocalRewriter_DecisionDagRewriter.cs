@@ -264,18 +264,6 @@ namespace Microsoft.CodeAnalysis.CSharp
                     savedInputExpression = inputTemp;
                 }
 
-                // In a switch statement, there is a hidden sequence point after evaluating the input at the start of
-                // the code to handle the decision dag. This is necessary so that jumps back from a `when` clause into
-                // the decision dag do not appear to jump back up to the enclosing construct.
-                if (GenerateSequencePoints)
-                {
-                    // Since there may have been no code to evaluate the input, add a no-op for any previous sequence point to bind to.
-                    if (result.Count == 0)
-                        result.Add(_factory.NoOp(NoOpStatementFlavor.Default));
-
-                    result.Add(_factory.HiddenSequencePoint());
-                }
-
                 return decisionDag;
             }
 
@@ -553,7 +541,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                     BoundStatement conditionalGoto = _factory.ConditionalGoto(_localRewriter.VisitExpression(whenClause.WhenExpression), trueLabel, jumpIfTrue: true);
 
                     // Only add instrumentation (such as a sequence point) if the node is not compiler-generated.
-                    if (GenerateSequencePoints && !whenClause.WhenExpression.WasCompilerGenerated && _localRewriter.Instrument)
+                    if (GenerateSequencePoints && !whenClause.WhenExpression.WasCompilerGenerated)
                     {
                         conditionalGoto = _localRewriter._instrumenter.InstrumentSwitchWhenClauseConditionalGotoBody(whenClause.WhenExpression, conditionalGoto);
                     }

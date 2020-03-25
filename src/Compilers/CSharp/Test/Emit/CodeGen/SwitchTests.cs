@@ -9503,7 +9503,7 @@ class Program
             compVerifier = CompileAndVerify(compilation, expectedOutput: "Yep, all good!");
             compVerifier.VerifyIL("Program.Main", @"
     {
-      // Code size      130 (0x82)
+      // Code size      122 (0x7a)
       .maxstack  4
       .locals init (System.IO.StringReader V_0, //sr
                     string V_1, //a
@@ -9521,60 +9521,54 @@ class Program
         IL_0012:  ldloc.0
         IL_0013:  callvirt   ""string System.IO.TextReader.ReadLine()""
         IL_0018:  stloc.2
-        IL_0019:  ldc.i4.1
-        IL_001a:  brtrue.s   IL_001d
-        IL_001c:  nop
-        IL_001d:  ldloc.1
-        IL_001e:  ldstr      ""fiz""
-        IL_0023:  call       ""bool string.op_Equality(string, string)""
-        IL_0028:  brfalse.s  IL_003f
-        IL_002a:  ldloc.2
-        IL_002b:  ldstr      ""bar""
-        IL_0030:  call       ""bool string.op_Equality(string, string)""
-        IL_0035:  brfalse.s  IL_003f
-        IL_0037:  ldstr      ""Yep, all good!""
-        IL_003c:  stloc.3
-        IL_003d:  br.s       IL_006b
-        IL_003f:  ldc.i4.5
-        IL_0040:  newarr     ""string""
-        IL_0045:  dup
-        IL_0046:  ldc.i4.0
-        IL_0047:  ldstr      ""Wait, what? I got (""
+        IL_0019:  ldloc.1
+        IL_001a:  ldstr      ""fiz""
+        IL_001f:  call       ""bool string.op_Equality(string, string)""
+        IL_0024:  brfalse.s  IL_003b
+        IL_0026:  ldloc.2
+        IL_0027:  ldstr      ""bar""
+        IL_002c:  call       ""bool string.op_Equality(string, string)""
+        IL_0031:  brfalse.s  IL_003b
+        IL_0033:  ldstr      ""Yep, all good!""
+        IL_0038:  stloc.3
+        IL_0039:  br.s       IL_0067
+        IL_003b:  ldc.i4.5
+        IL_003c:  newarr     ""string""
+        IL_0041:  dup
+        IL_0042:  ldc.i4.0
+        IL_0043:  ldstr      ""Wait, what? I got (""
+        IL_0048:  stelem.ref
+        IL_0049:  dup
+        IL_004a:  ldc.i4.1
+        IL_004b:  ldloc.1
         IL_004c:  stelem.ref
         IL_004d:  dup
-        IL_004e:  ldc.i4.1
-        IL_004f:  ldloc.1
-        IL_0050:  stelem.ref
-        IL_0051:  dup
-        IL_0052:  ldc.i4.2
-        IL_0053:  ldstr      "", ""
+        IL_004e:  ldc.i4.2
+        IL_004f:  ldstr      "", ""
+        IL_0054:  stelem.ref
+        IL_0055:  dup
+        IL_0056:  ldc.i4.3
+        IL_0057:  ldloc.2
         IL_0058:  stelem.ref
         IL_0059:  dup
-        IL_005a:  ldc.i4.3
-        IL_005b:  ldloc.2
-        IL_005c:  stelem.ref
-        IL_005d:  dup
-        IL_005e:  ldc.i4.4
-        IL_005f:  ldstr      "")!""
-        IL_0064:  stelem.ref
-        IL_0065:  call       ""string string.Concat(params string[])""
-        IL_006a:  stloc.3
-        IL_006b:  ldc.i4.1
-        IL_006c:  brtrue.s   IL_006f
-        IL_006e:  nop
-        IL_006f:  ldloc.3
-        IL_0070:  call       ""void System.Console.WriteLine(string)""
-        IL_0075:  leave.s    IL_0081
+        IL_005a:  ldc.i4.4
+        IL_005b:  ldstr      "")!""
+        IL_0060:  stelem.ref
+        IL_0061:  call       ""string string.Concat(params string[])""
+        IL_0066:  stloc.3
+        IL_0067:  ldloc.3
+        IL_0068:  call       ""void System.Console.WriteLine(string)""
+        IL_006d:  leave.s    IL_0079
       }
       finally
       {
-        IL_0077:  ldloc.0
-        IL_0078:  brfalse.s  IL_0080
-        IL_007a:  ldloc.0
-        IL_007b:  callvirt   ""void System.IDisposable.Dispose()""
-        IL_0080:  endfinally
+        IL_006f:  ldloc.0
+        IL_0070:  brfalse.s  IL_0078
+        IL_0072:  ldloc.0
+        IL_0073:  callvirt   ""void System.IDisposable.Dispose()""
+        IL_0078:  endfinally
       }
-      IL_0081:  ret
+      IL_0079:  ret
     }
 ");
         }
@@ -9616,73 +9610,7 @@ class Program
             var compVerifier = CompileAndVerify(compilation, expectedOutput: "123333456");
             compVerifier.VerifyIL("Program.M2", @"
     {
-      // Code size       77 (0x4d)
-      .maxstack  2
-      .locals init (int V_0)
-      IL_0000:  nop
-      IL_0001:  ldc.i4.1
-      IL_0002:  brtrue.s   IL_0005
-      IL_0004:  nop
-      IL_0005:  ldarg.0
-      IL_0006:  ldc.i4.1
-      IL_0007:  bne.un.s   IL_0025
-      IL_0009:  ldarg.1
-      IL_000a:  ldc.i4.1
-      IL_000b:  beq.s      IL_0015
-      IL_000d:  br.s       IL_000f
-      IL_000f:  ldarg.1
-      IL_0010:  ldc.i4.2
-      IL_0011:  beq.s      IL_001b
-      IL_0013:  br.s       IL_001f
-      IL_0015:  ldarg.2
-      IL_0016:  ldc.i4.6
-      IL_0017:  beq.s      IL_002f
-      IL_0019:  br.s       IL_001f
-      IL_001b:  ldarg.2
-      IL_001c:  ldc.i4.6
-      IL_001d:  beq.s      IL_0033
-      IL_001f:  ldarg.2
-      IL_0020:  ldc.i4.3
-      IL_0021:  beq.s      IL_0037
-      IL_0023:  br.s       IL_003b
-      IL_0025:  ldarg.2
-      IL_0026:  ldc.i4.3
-      IL_0027:  beq.s      IL_0037
-      IL_0029:  ldarg.1
-      IL_002a:  ldc.i4.1
-      IL_002b:  beq.s      IL_003f
-      IL_002d:  br.s       IL_0043
-      IL_002f:  ldc.i4.1
-      IL_0030:  stloc.0
-      IL_0031:  br.s       IL_0047
-      IL_0033:  ldc.i4.2
-      IL_0034:  stloc.0
-      IL_0035:  br.s       IL_0047
-      IL_0037:  ldc.i4.3
-      IL_0038:  stloc.0
-      IL_0039:  br.s       IL_0047
-      IL_003b:  ldc.i4.4
-      IL_003c:  stloc.0
-      IL_003d:  br.s       IL_0047
-      IL_003f:  ldc.i4.5
-      IL_0040:  stloc.0
-      IL_0041:  br.s       IL_0047
-      IL_0043:  ldc.i4.6
-      IL_0044:  stloc.0
-      IL_0045:  br.s       IL_0047
-      IL_0047:  ldc.i4.1
-      IL_0048:  brtrue.s   IL_004b
-      IL_004a:  nop
-      IL_004b:  ldloc.0
-      IL_004c:  ret
-    }
-");
-            compilation = CreateCompilation(source, options: TestOptions.ReleaseExe, parseOptions: TestOptions.RegularPreview)
-                .VerifyDiagnostics();
-            compVerifier = CompileAndVerify(compilation, expectedOutput: "123333456");
-            compVerifier.VerifyIL("Program.M2", @"
-    {
-      // Code size       72 (0x48)
+      // Code size       76 (0x4c)
       .maxstack  2
       .locals init (int V_0)
       IL_0000:  ldc.i4.1
@@ -9690,54 +9618,113 @@ class Program
       IL_0003:  nop
       IL_0004:  ldarg.0
       IL_0005:  ldc.i4.1
-      IL_0006:  bne.un.s   IL_0022
+      IL_0006:  bne.un.s   IL_0024
       IL_0008:  ldarg.1
       IL_0009:  ldc.i4.1
-      IL_000a:  beq.s      IL_0012
-      IL_000c:  ldarg.1
-      IL_000d:  ldc.i4.2
-      IL_000e:  beq.s      IL_0018
-      IL_0010:  br.s       IL_001c
-      IL_0012:  ldarg.2
-      IL_0013:  ldc.i4.6
-      IL_0014:  beq.s      IL_002c
-      IL_0016:  br.s       IL_001c
+      IL_000a:  beq.s      IL_0014
+      IL_000c:  br.s       IL_000e
+      IL_000e:  ldarg.1
+      IL_000f:  ldc.i4.2
+      IL_0010:  beq.s      IL_001a
+      IL_0012:  br.s       IL_001e
+      IL_0014:  ldarg.2
+      IL_0015:  ldc.i4.6
+      IL_0016:  beq.s      IL_002e
+      IL_0018:  br.s       IL_001e
+      IL_001a:  ldarg.2
+      IL_001b:  ldc.i4.6
+      IL_001c:  beq.s      IL_0032
+      IL_001e:  ldarg.2
+      IL_001f:  ldc.i4.3
+      IL_0020:  beq.s      IL_0036
+      IL_0022:  br.s       IL_003a
+      IL_0024:  ldarg.2
+      IL_0025:  ldc.i4.3
+      IL_0026:  beq.s      IL_0036
+      IL_0028:  ldarg.1
+      IL_0029:  ldc.i4.1
+      IL_002a:  beq.s      IL_003e
+      IL_002c:  br.s       IL_0042
+      IL_002e:  ldc.i4.1
+      IL_002f:  stloc.0
+      IL_0030:  br.s       IL_0046
+      IL_0032:  ldc.i4.2
+      IL_0033:  stloc.0
+      IL_0034:  br.s       IL_0046
+      IL_0036:  ldc.i4.3
+      IL_0037:  stloc.0
+      IL_0038:  br.s       IL_0046
+      IL_003a:  ldc.i4.4
+      IL_003b:  stloc.0
+      IL_003c:  br.s       IL_0046
+      IL_003e:  ldc.i4.5
+      IL_003f:  stloc.0
+      IL_0040:  br.s       IL_0046
+      IL_0042:  ldc.i4.6
+      IL_0043:  stloc.0
+      IL_0044:  br.s       IL_0046
+      IL_0046:  ldc.i4.1
+      IL_0047:  brtrue.s   IL_004a
+      IL_0049:  nop
+      IL_004a:  ldloc.0
+      IL_004b:  ret
+    }
+");
+            compilation = CreateCompilation(source, options: TestOptions.ReleaseExe, parseOptions: TestOptions.RegularPreview)
+                .VerifyDiagnostics();
+            compVerifier = CompileAndVerify(compilation, expectedOutput: "123333456");
+            compVerifier.VerifyIL("Program.M2", @"
+    {
+      // Code size       64 (0x40)
+      .maxstack  2
+      .locals init (int V_0)
+      IL_0000:  ldarg.0
+      IL_0001:  ldc.i4.1
+      IL_0002:  bne.un.s   IL_001e
+      IL_0004:  ldarg.1
+      IL_0005:  ldc.i4.1
+      IL_0006:  beq.s      IL_000e
+      IL_0008:  ldarg.1
+      IL_0009:  ldc.i4.2
+      IL_000a:  beq.s      IL_0014
+      IL_000c:  br.s       IL_0018
+      IL_000e:  ldarg.2
+      IL_000f:  ldc.i4.6
+      IL_0010:  beq.s      IL_0028
+      IL_0012:  br.s       IL_0018
+      IL_0014:  ldarg.2
+      IL_0015:  ldc.i4.6
+      IL_0016:  beq.s      IL_002c
       IL_0018:  ldarg.2
-      IL_0019:  ldc.i4.6
+      IL_0019:  ldc.i4.3
       IL_001a:  beq.s      IL_0030
-      IL_001c:  ldarg.2
-      IL_001d:  ldc.i4.3
-      IL_001e:  beq.s      IL_0034
-      IL_0020:  br.s       IL_0038
-      IL_0022:  ldarg.2
-      IL_0023:  ldc.i4.3
-      IL_0024:  beq.s      IL_0034
-      IL_0026:  ldarg.1
-      IL_0027:  ldc.i4.1
-      IL_0028:  beq.s      IL_003c
-      IL_002a:  br.s       IL_0040
-      IL_002c:  ldc.i4.1
+      IL_001c:  br.s       IL_0034
+      IL_001e:  ldarg.2
+      IL_001f:  ldc.i4.3
+      IL_0020:  beq.s      IL_0030
+      IL_0022:  ldarg.1
+      IL_0023:  ldc.i4.1
+      IL_0024:  beq.s      IL_0038
+      IL_0026:  br.s       IL_003c
+      IL_0028:  ldc.i4.1
+      IL_0029:  stloc.0
+      IL_002a:  br.s       IL_003e
+      IL_002c:  ldc.i4.2
       IL_002d:  stloc.0
-      IL_002e:  br.s       IL_0042
-      IL_0030:  ldc.i4.2
+      IL_002e:  br.s       IL_003e
+      IL_0030:  ldc.i4.3
       IL_0031:  stloc.0
-      IL_0032:  br.s       IL_0042
-      IL_0034:  ldc.i4.3
+      IL_0032:  br.s       IL_003e
+      IL_0034:  ldc.i4.4
       IL_0035:  stloc.0
-      IL_0036:  br.s       IL_0042
-      IL_0038:  ldc.i4.4
+      IL_0036:  br.s       IL_003e
+      IL_0038:  ldc.i4.5
       IL_0039:  stloc.0
-      IL_003a:  br.s       IL_0042
-      IL_003c:  ldc.i4.5
+      IL_003a:  br.s       IL_003e
+      IL_003c:  ldc.i4.6
       IL_003d:  stloc.0
-      IL_003e:  br.s       IL_0042
-      IL_0040:  ldc.i4.6
-      IL_0041:  stloc.0
-      IL_0042:  ldc.i4.1
-      IL_0043:  brtrue.s   IL_0046
-      IL_0045:  nop
-      IL_0046:  ldloc.0
-      IL_0047:  ret
+      IL_003e:  ldloc.0
+      IL_003f:  ret
     }
 ");
         }

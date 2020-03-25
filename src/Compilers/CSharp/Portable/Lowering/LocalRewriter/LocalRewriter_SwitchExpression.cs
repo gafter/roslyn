@@ -31,7 +31,10 @@ namespace Microsoft.CodeAnalysis.CSharp
             private SwitchExpressionLocalRewriter(BoundConvertedSwitchExpression node, LocalRewriter localRewriter)
                 : base(node.Syntax, localRewriter, node.SwitchArms.SelectAsArray(arm => arm.Syntax))
             {
-                GenerateSequencePoints = !node.WasCompilerGenerated && _localRewriter.Instrument;
+                GenerateSequencePoints =
+                    !node.WasCompilerGenerated &&
+                    localRewriter.Instrument &&
+                    localRewriter._compilation.Options.OptimizationLevel != OptimizationLevel.Release;
             }
 
             protected override bool GenerateSequencePoints { get; }

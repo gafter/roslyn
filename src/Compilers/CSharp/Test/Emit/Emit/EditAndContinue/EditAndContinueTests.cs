@@ -10355,35 +10355,34 @@ public class Program
 
             var v0 = CompileAndVerify(compilation0);
             v0.VerifyIL("Program.G(int)", @"
-{
-  // Code size       34 (0x22)
-  .maxstack  1
-  .locals init (int V_0,
-                object V_1)
-  IL_0000:  nop
-  IL_0001:  nop
-  IL_0002:  ldc.i4.1
-  IL_0003:  brtrue.s   IL_0006
-  IL_0005:  nop
-  IL_0006:  ldarg.0
-  IL_0007:  brfalse.s  IL_000b
-  IL_0009:  br.s       IL_000f
-  IL_000b:  ldc.i4.0
-  IL_000c:  stloc.0
-  IL_000d:  br.s       IL_0013
-  IL_000f:  ldc.i4.1
-  IL_0010:  stloc.0
-  IL_0011:  br.s       IL_0013
-  IL_0013:  ldc.i4.1
-  IL_0014:  brtrue.s   IL_0017
-  IL_0016:  nop
-  IL_0017:  ldloc.0
-  IL_0018:  box        ""int""
-  IL_001d:  stloc.1
-  IL_001e:  br.s       IL_0020
-  IL_0020:  ldloc.1
-  IL_0021:  ret
-}
+    {
+      // Code size       33 (0x21)
+      .maxstack  1
+      .locals init (int V_0,
+                    object V_1)
+      IL_0000:  nop
+      IL_0001:  ldc.i4.1
+      IL_0002:  brtrue.s   IL_0005
+      IL_0004:  nop
+      IL_0005:  ldarg.0
+      IL_0006:  brfalse.s  IL_000a
+      IL_0008:  br.s       IL_000e
+      IL_000a:  ldc.i4.0
+      IL_000b:  stloc.0
+      IL_000c:  br.s       IL_0012
+      IL_000e:  ldc.i4.1
+      IL_000f:  stloc.0
+      IL_0010:  br.s       IL_0012
+      IL_0012:  ldc.i4.1
+      IL_0013:  brtrue.s   IL_0016
+      IL_0015:  nop
+      IL_0016:  ldloc.0
+      IL_0017:  box        ""int""
+      IL_001c:  stloc.1
+      IL_001d:  br.s       IL_001f
+      IL_001f:  ldloc.1
+      IL_0020:  ret
+    }
 ");
             v0.VerifyIL("Program.N(out int)", @"
 {
@@ -10464,7 +10463,7 @@ public class Program
 
             diff2.VerifyIL("Program.G(int)", @"
     {
-      // Code size       39 (0x27)
+      // Code size       38 (0x26)
       .maxstack  1
       .locals init ([int] V_0,
                     [object] V_1,
@@ -10476,28 +10475,27 @@ public class Program
                     int V_7,
                     object V_8)
       IL_0000:  nop
-      IL_0001:  nop
-      IL_0002:  ldc.i4.1
-      IL_0003:  brtrue.s   IL_0006
-      IL_0005:  nop
-      IL_0006:  ldarg.0
-      IL_0007:  brfalse.s  IL_000b
-      IL_0009:  br.s       IL_0010
-      IL_000b:  ldc.i4.0
-      IL_000c:  stloc.s    V_7
-      IL_000e:  br.s       IL_0015
-      IL_0010:  ldc.i4.1
-      IL_0011:  stloc.s    V_7
-      IL_0013:  br.s       IL_0015
-      IL_0015:  ldc.i4.1
-      IL_0016:  brtrue.s   IL_0019
-      IL_0018:  nop
-      IL_0019:  ldloc.s    V_7
-      IL_001b:  box        ""int""
-      IL_0020:  stloc.s    V_8
-      IL_0022:  br.s       IL_0024
-      IL_0024:  ldloc.s    V_8
-      IL_0026:  ret
+      IL_0001:  ldc.i4.1
+      IL_0002:  brtrue.s   IL_0005
+      IL_0004:  nop
+      IL_0005:  ldarg.0
+      IL_0006:  brfalse.s  IL_000a
+      IL_0008:  br.s       IL_000f
+      IL_000a:  ldc.i4.0
+      IL_000b:  stloc.s    V_7
+      IL_000d:  br.s       IL_0014
+      IL_000f:  ldc.i4.1
+      IL_0010:  stloc.s    V_7
+      IL_0012:  br.s       IL_0014
+      IL_0014:  ldc.i4.1
+      IL_0015:  brtrue.s   IL_0018
+      IL_0017:  nop
+      IL_0018:  ldloc.s    V_7
+      IL_001a:  box        ""int""
+      IL_001f:  stloc.s    V_8
+      IL_0021:  br.s       IL_0023
+      IL_0023:  ldloc.s    V_8
+      IL_0025:  ret
     }
 ");
         }
