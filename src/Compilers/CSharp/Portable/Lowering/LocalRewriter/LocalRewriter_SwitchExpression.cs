@@ -31,10 +31,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             private SwitchExpressionLocalRewriter(BoundConvertedSwitchExpression node, LocalRewriter localRewriter)
                 : base(node.Syntax, localRewriter, node.SwitchArms.SelectAsArray(arm => arm.Syntax))
             {
-                GenerateSequencePoints =
-                    !node.WasCompilerGenerated &&
-                    localRewriter.Instrument &&
-                    localRewriter._compilation.Options.OptimizationLevel != OptimizationLevel.Release;
+                GenerateSequencePoints = !node.WasCompilerGenerated && localRewriter.Instrument;
             }
 
             protected override bool GenerateSequencePoints { get; }
@@ -49,6 +46,9 @@ namespace Microsoft.CodeAnalysis.CSharp
 
             private BoundExpression LowerSwitchExpression(BoundConvertedSwitchExpression node)
             {
+                // When compiling for Debug (not Release), we produce the most detailed sequence points.
+                var produceDetailedSequencePoints =
+                    GenerateSequencePoints && _localRewriter._compilation.Options.OptimizationLevel != OptimizationLevel.Release;
                 _factory.Syntax = node.Syntax;
                 var result = ArrayBuilder<BoundStatement>.GetInstance();
                 var outerVariables = ArrayBuilder<LocalSymbol>.GetInstance();
@@ -64,8 +64,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                 (ImmutableArray<BoundStatement> loweredDag, ImmutableDictionary<SyntaxNode, ImmutableArray<BoundStatement>> switchSections) =
                     LowerDecisionDag(decisionDag);
 
-                // then add the rest of the lowered dag that references that input
-                if (GenerateSequencePoints)
+                if (produceDetailedSequencePoints)
                 {
                     var syntax = (SwitchExpressionSyntax)node.Syntax;
                     result.Add(new BoundSaveSequencePoint(syntax, restorePointForEnclosingStatement));
@@ -76,6 +75,8 @@ namespace Microsoft.CodeAnalysis.CSharp
                     result.Add(new BoundStepThroughSequencePoint(node.Syntax, span: spanForSwitchBody));
                     result.Add(new BoundSaveSequencePoint(syntax, restorePointForSwitchBody));
                 }
+
+                // add the rest of the lowered dag that references that input
                 result.Add(_factory.Block(loweredDag));
                 // A branch to the default label when no switch case matches is included in the
                 // decision tree, so the code in result is unreachable at this point.
@@ -115,7 +116,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                 if (node.DefaultLabel != null)
                 {
                     result.Add(_factory.Label(node.DefaultLabel));
-                    if (GenerateSequencePoints)
+                    if (produceDetailedSequencePoints)
                         result.Add(new BoundRestorePreviousSequencePoint(node.Syntax, restorePointForSwitchBody));
                     var objectType = _factory.SpecialType(SpecialType.System_Object);
                     var thrownExpression =
@@ -129,8 +130,9 @@ namespace Microsoft.CodeAnalysis.CSharp
                 }
 
                 result.Add(_factory.Label(afterSwitchExpression));
-                if (GenerateSequencePoints)
+                if (produceDetailedSequencePoints)
                     result.Add(new BoundRestorePreviousSequencePoint(node.Syntax, restorePointForEnclosingStatement));
+
                 outerVariables.Add(resultTemp);
                 outerVariables.AddRange(_tempAllocator.AllTemps());
                 return _factory.SpillSequence(outerVariables.ToImmutableAndFree(), result.ToImmutableAndFree(), _factory.Local(resultTemp));
