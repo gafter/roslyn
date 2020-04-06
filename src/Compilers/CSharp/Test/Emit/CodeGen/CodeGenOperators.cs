@@ -5831,7 +5831,7 @@ class C
         }
 
         [Fact, WorkItem(41760, "https://github.com/dotnet/roslyn/issues/41760")]
-        public void NullableBoolOperatorSemantics()
+        public void NullableBoolOperatorSemantics_01()
         {
             // The C# specification has a section outlining the behavior of the bool operators `|` and `&`
             // on operands of type `bool?`.  We check that these are the semantics obeyed by the compiler.
@@ -5938,6 +5938,33 @@ Wrong for n?.T & f         Expected: False  Actual: null
 Wrong for n?.T & nf        Expected: False  Actual: null
 Done.
 ");
+        }
+
+        [Fact, WorkItem(41760, "https://github.com/dotnet/roslyn/issues/41760")]
+        public void NullableBoolOperatorSemantics_02()
+        {
+            var source = @"
+using System;
+
+public class SomeObject
+{
+    public bool BoolValue;
+}
+
+public class OtherClass
+{
+    static void Main()
+    {
+        SomeObject obj = null;
+        Console.Write(obj?.BoolValue | true);
+        Console.Write(obj?.BoolValue & false);
+    }
+}
+";
+            var comp = CreateCompilation(source, options: TestOptions.ReleaseExe);
+            comp.VerifyDiagnostics(
+                );
+            CompileAndVerify(comp, expectedOutput: @"TrueFalse");
         }
     }
 }
