@@ -9,6 +9,7 @@ using Microsoft.CodeAnalysis.CSharp.UnitTests.Emit;
 using Microsoft.CodeAnalysis.Test.Utilities;
 using Roslyn.Test.Utilities;
 using System.Collections.Immutable;
+using System.Text;
 using Xunit;
 
 namespace Microsoft.CodeAnalysis.CSharp.UnitTests.CodeGen
@@ -5827,6 +5828,116 @@ class C
                 // (6,14): error CS8652: The feature 'unconstrained type parameters in null coalescing operator' is not available in C# 7.3. Please use language version 8.0 or greater.
                 //         t1 = t1 ?? t2;
                 Diagnostic(ErrorCode.ERR_FeatureNotAvailableInVersion7_3, "t1 ?? t2").WithArguments("unconstrained type parameters in null coalescing operator", "8.0").WithLocation(6, 14));
+        }
+
+        [Fact, WorkItem(41760, "https://github.com/dotnet/roslyn/issues/41760")]
+        public void NullableBoolOperatorSemantics()
+        {
+            // The C# specification has a section outlining the behavior of the bool operators `|` and `&`
+            // on operands of type `bool?`.  We check that these are the semantics obeyed by the compiler.
+            var sourceStart = @"
+using System;
+
+public class C
+{
+    bool T => true;
+    bool F => false;
+    static bool? True => true;
+    static bool? False => false;
+    static bool? Null => null;
+
+    static void Main()
+    {
+        C n = null;
+        C c = new C();
+        bool t = true;
+        bool f = false;
+        bool? nt = true;
+        bool? nf = false;
+        bool? nn = null;
+";
+            var sourceEnd =
+@"        Console.WriteLine(""Done."");
+    }
+
+    static bool? And(bool? x, bool? y)
+    {
+        if (x == false || y == false)
+            return false;
+        if (x == null || y == null)
+            return null;
+        return true;
+    }
+
+    static bool? Or(bool? x, bool? y)
+    {
+        if (x == true || y == true)
+            return true;
+        if (x == null || y == null)
+            return null;
+        return false;
+    }
+
+    static bool? Xor(bool? x, bool? y)
+    {
+        if (x == null || y == null)
+            return null;
+        return x.Value != y.Value;
+    }
+}
+
+static class Assert
+{
+    public static void Equal<T>(T expected, T actual, string message)
+    {
+        if (!object.Equals(expected, actual))
+            Console.WriteLine($""Wrong for {message,-15}  Expected: {expected?.ToString() ?? ""null"",-5}  Actual: {actual?.ToString() ?? ""null""}"");
+    }
+}
+";
+            var builder = new StringBuilder();
+            var forms = new string[]
+            {
+                "null",
+                "nn",
+                "true",
+                "t",
+                "nt",
+                "false",
+                "f",
+                "nf",
+                "c?.T",
+                "c?.F",
+                "n?.T",
+                "Null",
+                "True",
+                "False",
+            };
+            foreach (var left in forms)
+            {
+                foreach (var right in forms)
+                {
+                    if (left == "null" && right == "null")
+                        continue;
+                    builder.AppendLine(@$"        Assert.Equal<bool?>(Or({left}, {right}), {left} | {right}, ""{left} | {right}"");");
+                    builder.AppendLine(@$"        Assert.Equal<bool?>(And({left}, {right}), {left} & {right}, ""{left} & {right}"");");
+                    if (left != "null" && right != "null")
+                        builder.AppendLine(@$"        Assert.Equal<bool?>(Xor({left}, {right}), {left} ^ {right}, ""{left} ^ {right}"");");
+                }
+            }
+            var source = sourceStart + builder.ToString() + sourceEnd;
+            var comp = CreateCompilation(source, options: TestOptions.ReleaseExe);
+            comp.VerifyDiagnostics(
+                );
+            CompileAndVerify(comp, expectedOutput: @"
+Wrong for n?.T | true      Expected: True   Actual: null
+Wrong for n?.T | t         Expected: True   Actual: null
+Wrong for n?.T | nt        Expected: True   Actual: null
+Wrong for n?.T & false     Expected: False  Actual: null
+Wrong for n?.T & f         Expected: False  Actual: null
+Wrong for n?.T & nf        Expected: False  Actual: null
+Done.
+");
         }
     }
 }
