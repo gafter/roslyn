@@ -921,42 +921,47 @@ namespace Microsoft.CodeAnalysis.CSharp
             return final.IsParams && ((ParameterSymbol)final.OriginalDefinition).Type.IsSZArray();
         }
 
+        /// <summary>
+        /// Does <paramref name="overrider"/> override <paramref name="overridden"/>?
+        /// </summary>
         private static bool IsOverride(Symbol overridden, Symbol overrider)
         {
-            if (TypeSymbol.Equals(overridden.ContainingType, overrider.ContainingType, TypeCompareKind.ConsiderEverything2) ||
+            if (!overrider.IsOverride ||
+                !IsBaseClass(derivedType: overrider.ContainingType, baseType: overridden.ContainingType) ||
                 !MemberSignatureComparer.SloppyOverrideComparer.Equals(overridden, overrider))
             {
                 // Easy out.
                 return false;
             }
 
-            // Does overrider override overridden?
-            var current = overrider;
-            while (true)
+            // Rather than following the member.GetOverriddenMember() chain, we check to see if both
+            // methods ultimately override the same original method.  This addresses issues in binary compat
+            // scenarios where the override chain may skip some steps.
+            // See https://github.com/dotnet/roslyn/issues/45798 for an example.
+            return overrider.GetLeastOverriddenMember(accessingTypeOpt: null).OriginalDefinition ==
+                   overridden.GetLeastOverriddenMember(accessingTypeOpt: null).OriginalDefinition;
+        }
+
+        private static bool IsBaseClass(TypeSymbol derivedType, TypeSymbol baseType)
+        {
+            Debug.Assert((object)derivedType != null);
+            Debug.Assert((object)baseType != null);
+
+            // A base class has got to be a class. The derived type might be a struct, enum, or delegate.
+            if (!baseType.IsClassType())
             {
-                if (!current.IsOverride)
-                {
-                    return false;
-                }
-                current = current.GetOverriddenMember();
+                return false;
+            }
 
-                // We could be in error recovery.
-                if ((object)current == null)
-                {
-                    return false;
-                }
-
-                if (current == overridden)
+            for (TypeSymbol b = derivedType.BaseTypeNoUseSiteDiagnostics; (object)b != null; b = b.BaseTypeNoUseSiteDiagnostics)
+            {
+                if (b.Equals(baseType, TypeCompareKind.ConsiderEverything))
                 {
                     return true;
                 }
-
-                // Don't search beyond the overridden member.
-                if (TypeSymbol.Equals(current.ContainingType, overridden.ContainingType, TypeCompareKind.ConsiderEverything2))
-                {
-                    return false;
-                }
             }
+
+            return false;
         }
 
         private static bool MemberGroupContainsOverride<TMember>(ArrayBuilder<TMember> members, TMember member)

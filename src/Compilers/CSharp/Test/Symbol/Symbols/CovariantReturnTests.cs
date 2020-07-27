@@ -2830,13 +2830,7 @@ public class Program
             // we do not test CompilationReferenceView because the changed reference would cause us to retarget
             verify2(MetadataView(comp, assignments2, references));
 
-            // The following error probably arises from the fact that Mid.M and Derived.M are unrelated (they both override Base.M directly).
-            // See https://github.com/dotnet/roslyn/issues/45798
-            verify2(RetargetingView(comp, assignments2, references, expectedDiagnostics:
-                // (8,23): error CS0121: The call is ambiguous between the following methods or properties: 'Base.M()' and 'Base.M()'
-                //         string x3 = d.M();
-                Diagnostic(ErrorCode.ERR_AmbigCall, "M").WithArguments("Base.M()", "Base.M()").WithLocation(8, 23)
-                ));
+            verify2(RetargetingView(comp, assignments2, references));
 
             static void verify1(CSharpCompilation comp, bool verifyAssignments = true)
             {

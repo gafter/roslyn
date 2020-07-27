@@ -13,13 +13,22 @@ namespace Microsoft.CodeAnalysis.CSharp.UnitTests.Emit
 {
     public class CovariantReturnTests : EmitMetadataTestBase
     {
-        private static readonly MetadataReference CorelibraryWithCovariantReturnSupport;
-
-        static CovariantReturnTests()
+        private static MetadataReference _corelibraryWithCovariantReturnSupport;
+        private static MetadataReference CorelibraryWithCovariantReturnSupport
         {
-            if (new CovarantReturnRuntimeOnly().ShouldSkip)
-                return;
+            get
+            {
+                if (_corelibraryWithCovariantReturnSupport == null)
+                {
+                    _corelibraryWithCovariantReturnSupport = MakeCoreLibrary();
+                }
 
+                return _corelibraryWithCovariantReturnSupport;
+            }
+        }
+
+        private static MetadataReference MakeCoreLibrary()
+        {
             const string corLibraryCore = @"
 namespace System
 {
@@ -217,13 +226,14 @@ namespace System.Runtime.CompilerServices
                 @"[assembly: System.Reflection.AssemblyVersion(""4.0.0.0"")]"
             }, assemblyName: "mscorlib");
             compilation.VerifyDiagnostics();
-            CorelibraryWithCovariantReturnSupport = compilation.EmitToImageReference(options: new CodeAnalysis.Emit.EmitOptions(runtimeMetadataVersion: "v5.1"));
+            return compilation.EmitToImageReference(options: new CodeAnalysis.Emit.EmitOptions(runtimeMetadataVersion: "v5.1"));
         }
 
         private static CSharpCompilation CreateCovariantCompilation(
             string source,
             CSharpCompilationOptions options = null,
-            IEnumerable<MetadataReference> references = null)
+            IEnumerable<MetadataReference> references = null,
+            string assemblyName = null)
         {
             Assert.NotNull(CorelibraryWithCovariantReturnSupport);
             references = (references == null) ?
@@ -233,11 +243,12 @@ namespace System.Runtime.CompilerServices
                 source,
                 options: options,
                 parseOptions: TestOptions.WithCovariantReturns,
-                references: references);
+                references: references,
+                assemblyName: assemblyName);
         }
 
-        [ConditionalFact(typeof(CovarantReturnRuntimeOnly))]
-        public void SimpleCovariantReturnEndToEndTest()
+        [ConditionalFact(typeof(CovariantReturnRuntimeOnly))]
+        public void SimpleCovariantReturnEndToEndTest_01()
         {
             var source = @"
 using System;
@@ -270,7 +281,168 @@ Derived.M";
             CompileAndVerify(compilation, expectedOutput: expectedOutput, verify: Verification.Skipped);
         }
 
-        [ConditionalFact(typeof(CovarantReturnRuntimeOnly))]
+        [ConditionalFact(typeof(CovariantReturnRuntimeOnly))]
+        public void SimpleCovariantReturnEndToEndTest_02()
+        {
+            var source = @"
+using System;
+class Base
+{
+    public virtual object P => ""Base.P"";
+}
+class Derived : Base
+{
+    public override string P => ""Derived.P"";
+}
+class Program
+{
+    static void Main()
+    {
+        Derived d = new Derived();
+        Base b = d;
+        string s = d.P;
+        object o = b.P;
+        Console.WriteLine(s.ToString());
+        Console.WriteLine(o.ToString());
+    }
+}
+";
+            var compilation = CreateCovariantCompilation(source, options: TestOptions.DebugExe);
+            compilation.VerifyDiagnostics();
+            var expectedOutput =
+@"Derived.P
+Derived.P";
+            CompileAndVerify(compilation, expectedOutput: expectedOutput, verify: Verification.Skipped);
+        }
+
+        [ConditionalFact(typeof(CovariantReturnRuntimeOnly))]
+        public void BinaryCompatibility_PreserveBaseOverride_01()
+        {
+            var sourceA = @"
+public class A
+{
+    public virtual object P => ""A.P"";
+}";
+            var sourceB1 = @"
+public class B : A
+{
+}";
+            var sourceB2 = @"
+public class B : A
+{
+    public override string P => ""B.P"";
+}";
+            var sourceC = @"
+public class C : B
+{
+    public override string P => ""C.P"";
+}";
+            var sourceMain = @"
+using System;
+public class Program0
+{
+    static void Main()
+    {
+        C c = new C();
+        B b = c;
+        A a = b;
+        Console.WriteLine(a.P.ToString());
+        Console.WriteLine(b.P);
+        Console.WriteLine(c.P);
+    }
+}";
+            var compA = CreateCovariantCompilation(sourceA, options: TestOptions.DebugDll, assemblyName: "A");
+            compA.VerifyDiagnostics();
+            var imageA = compA.EmitToImageReference();
+
+            var compB1 = CreateCovariantCompilation(sourceB1, options: TestOptions.DebugDll, references: new[] { imageA }, assemblyName: "B");
+            compB1.VerifyDiagnostics();
+            var imageB1 = compB1.EmitToImageReference();
+
+            var compB2 = CreateCovariantCompilation(sourceB2, options: TestOptions.DebugDll, references: new[] { imageA }, assemblyName: "B");
+            compB2.VerifyDiagnostics();
+            var imageB2 = compB2.EmitToImageReference();
+
+            var compC = CreateCovariantCompilation(sourceC, options: TestOptions.DebugDll, references: new[] { imageA, imageB1 }, assemblyName: "C");
+            compC.VerifyDiagnostics();
+            var imageC = compC.EmitToImageReference();
+
+            var expectedOutput =
+@"C.P
+C.P
+C.P";
+            // The point of this test is that B.P is seen by the runtime as being overridden by C.P
+            var compMain = CreateCovariantCompilation(sourceMain, options: TestOptions.DebugExe, references: new[] { imageA, imageB2, imageC }, assemblyName: "Main").VerifyDiagnostics();
+            CompileAndVerify(compMain, expectedOutput: expectedOutput);
+        }
+
+        [ConditionalFact(typeof(CovariantReturnRuntimeOnly))]
+        public void BinaryCompatibility_PreserveBaseOverride_02()
+        {
+            var sourceA = @"
+public class A
+{
+    public virtual object M() => ""A.M"";
+}";
+            var sourceB1 = @"
+public class B : A
+{
+}";
+            var sourceB2 = @"
+public class B : A
+{
+    public override string M() => ""B.M"";
+}";
+            var sourceC = @"
+public class C : B
+{
+    public override string M() => ""C.M"";
+}";
+            var sourceMain = @"
+using System;
+public class Program0
+{
+    static void Main()
+    {
+        C c = new C();
+        B b = c;
+        A a = b;
+        Console.WriteLine(a.M().ToString());
+        Console.WriteLine(b.M());
+        Console.WriteLine(c.M());
+    }
+}";
+            var compA = CreateCovariantCompilation(sourceA, options: TestOptions.DebugDll, assemblyName: "A");
+            compA.VerifyDiagnostics();
+            var imageA = compA.EmitToImageReference();
+
+            var compB1 = CreateCovariantCompilation(sourceB1, options: TestOptions.DebugDll, references: new[] { imageA }, assemblyName: "B");
+            compB1.VerifyDiagnostics();
+            var imageB1 = compB1.EmitToImageReference();
+
+            var compB2 = CreateCovariantCompilation(sourceB2, options: TestOptions.DebugDll, references: new[] { imageA }, assemblyName: "B");
+            compB2.VerifyDiagnostics();
+            var imageB2 = compB2.EmitToImageReference();
+
+            var compC = CreateCovariantCompilation(sourceC, options: TestOptions.DebugDll, references: new[] { imageA, imageB1 }, assemblyName: "C");
+            compC.VerifyDiagnostics();
+            var imageC = compC.EmitToImageReference();
+
+            var expectedOutput =
+@"C.M
+C.M
+C.M";
+            // The point of this test is that B.M is seen by the runtime as being overridden by C.M
+            var compMain = CreateCovariantCompilation(sourceMain, options: TestOptions.DebugExe, references: new[] { imageA, imageB2, imageC }, assemblyName: "Main").VerifyDiagnostics(
+                //// There should be no errors; See https://github.com/dotnet/roslyn/issues/45798
+                //// (12,29): error CS0121: The call is ambiguous between the following methods or properties: 'A.M()' and 'A.M()'
+                ////         Console.WriteLine(c.M());
+                //Diagnostic(ErrorCode.ERR_AmbigCall, "M").WithArguments("A.M()", "A.M()").WithLocation(12, 29)
+                );
+            CompileAndVerify(compMain, expectedOutput: expectedOutput);
+        }
+
+        [ConditionalFact(typeof(CovariantReturnRuntimeOnly))]
         public void CovariantRuntimeHasRequiredMembers()
         {
             var source = @"
